@@ -14,17 +14,27 @@
 │   ~40 GB de dump, fuera del repo                                     │
 └──────────────────────────────────────────────────────────────────────┘
                               │
-                              ▼  Blender 4.2 LTS (importar + reescalar)
+                              ▼  Blender 4.2 LTS + Blender MCP server
 ┌──────────────────────────────────────────────────────────────────────┐
-│ .fbx exportado para Unity                                            │
+│ .blend (rig + N actions importadas de .psa)                          │
+│ scripts/blender/import_all_psa.py    (batch import .psa → actions)   │
+│ scripts/blender/export_anims_fbx.py  (export armature + actions)     │
+│ → Aline.fbx       (mesh + rig)                                       │
+│ → Aline_Anims.fbx (rig only + animation takes)                       │
 └──────────────────────────────────────────────────────────────────────┘
                               │
                               ▼  Unity 2019.4.28f1 + VivifyTemplate
 ┌──────────────────────────────────────────────────────────────────────┐
 │ VivifyTemplate/Assets/Aline/                                         │
-│   Prefabs/aline.prefab     (con Directional Lights dentro)           │
-│   Textures/                 (sin aplicar todavía)                    │
-│   Materials/                (a crear durante texturizado)            │
+│   Prefabs/aline.prefab          (Animator en SK_Curator_Aline child) │
+│   Textures/                      (PNG de FModel)                     │
+│   Materials/                     (M_Aline_Body_1/2, M_Aline_Black)   │
+│   Shaders/Aline/Standard.shader  (unlit + alpha cutout + Cull Off)   │
+│   Animations/Aline_AC.controller (state machine 26 estados)          │
+│   Editor/PostBuildSyncCRCs.cs    (auto CRC sync)                     │
+│   Editor/AlineAnimsImporter.cs   (loopTime auto al importar FBX)     │
+│   Editor/BuildAlineAnimator.cs   (Tools menu: regenera AC)           │
+│   Editor/InspectAlineClips.cs    (Tools menu: dump fcurves)          │
 └──────────────────────────────────────────────────────────────────────┘
                               │
                               ▼  F5 / Vivify > Build > Build Configuration Window
@@ -35,12 +45,13 @@
 │   bundleinfo.json            (CRCs + paths de assets)                │
 └──────────────────────────────────────────────────────────────────────┘
                               │
-                              ▼  Sync manual de CRCs
+                              ▼  Sync auto de CRCs (Editor watcher)
 ┌──────────────────────────────────────────────────────────────────────┐
 │ beatsaber-map/Info.dat                                               │
 │   _customData._assetBundle._windows2021 = <CRC>                      │
 │ beatsaber-map/ExpertPlusStandard.dat                                 │
-│   _customEvents → InstantiatePrefab, AnimateTrack, DestroyPrefab     │
+│   _customEvents → InstantiatePrefab, AnimateTrack, DestroyPrefab,    │
+│                   SetAnimatorProperty (Bool/Float/Int/Trigger)       │
 └──────────────────────────────────────────────────────────────────────┘
                               │
                               ▼  Beat Saber 1.34.2 + Vivify mod
@@ -60,10 +71,12 @@
 | Mod | Chroma | **2.9.22+1.34.2** | Iluminación custom. |
 | Mod | NoodleExtensions | **1.7.20+1.34.2** | Movimiento custom de notas. |
 | Editor | Unity | **2019.4.28f1** | Versión obligada por VivifyTemplate (Single Pass Instanced para Windows 2021). |
-| 3D | Blender | **4.2 LTS** | Para limpiar/reescalar el mesh antes de importar a Unity. |
+| 3D | Blender | **4.2 LTS** | Importar `.psa` (addon DarklightGames PSK/PSA), exportar FBX para Unity. |
+| 3D — automation | Blender MCP | `uvx blender-mcp` (ahujasid/blender-mcp) | Permite a Claude Code ejecutar Python en Blender (inspección de rig, batch imports, export FBX). |
 | Asset explorer | FModel | (última) | Extracción de UE5 assets. |
 | Map editor | ChroMapper | (última) | Editor visual del mapa. |
 | Scripting | ReMapper | (master) | Generación programática de notas/eventos. **Aún sin usar.** |
+| Unity automation | unity-mcp (CoplayDev) | requiere Unity 2021.3+ | **No instalado** en este proyecto (incompat. 2019.4). Side-project: port mínimo a 2019.4 documentado en NEXT_STEPS. |
 
 ## Qué archivo vive dónde y por qué
 
@@ -75,6 +88,9 @@
 | `.gitignore` | Reglas de versionado | Sí |
 | `.claude/skills/*/SKILL.md` | Instrucciones para Claude Code | Sí |
 | `scripts/snapshot-map.ps1` | Tool local para snapshots manuales | Sí |
+| `scripts/sync-crcs.ps1` | CRC sync post-build (invocado por Editor watcher) | Sí |
+| `scripts/blender/import_all_psa.py` | Batch import `.psa` → Blender actions | Sí |
+| `scripts/blender/export_anims_fbx.py` | Export armature + actions a FBX para Unity | Sí |
 | `docs/map-snapshots/.gitkeep` | Marcador de carpeta | Sí |
 | `docs/map-snapshots/*/` | Snapshots de los `.dat` antes de cambios grandes | **No** (ignorado por carpeta) |
 | `VivifyTemplate/Assets/**` (sin binarios) | Prefabs, scripts, materiales (`.mat`), shaders, `.meta` | Sí |
@@ -153,6 +169,54 @@ Salida: bundles + `bundleinfo.json` en `beatsaber-map/`.
 | `_android2021` | Quest | Single Pass Instanced |
 
 Por defecto solo construimos `_windows2021`. Si en algún momento queremos sacar versión Quest, marcar también `_android2021` en la Build Configuration y sincronizar su CRC.
+
+## Pipeline de animaciones
+
+Sub-flujo independiente del de prefab/material. Se ejecuta una vez para generar los AnimationClips, después solo se invocan vía evento `SetAnimatorProperty`.
+
+```
+.psa de FModel
+   │  scripts/blender/import_all_psa.py  (vía Blender MCP o Scripting workspace)
+   ▼
+Blender actions en bpy.data.actions (372 bones matched, scale fcurves no se importan)
+   │  scripts/blender/export_anims_fbx.py
+   │     - push actions a NLA tracks muted (force per-take baking)
+   │     - export armature only, takes via bake_anim_use_nla_strips
+   ▼
+Aline_Anims.fbx (185 MB, gitignored, .meta sí versionado)
+   │  Unity 2019.4 FBX importer + Editor/AlineAnimsImporter (loopTime auto en idles)
+   ▼
+26 AnimationClips como sub-assets (path "<root>", "root", "root/pelvis", ...)
+   │  Tools > Aline > Build Animator Controller (Editor/BuildAlineAnimator)
+   ▼
+Aline_AC.controller con 26 estados, 26 triggers (Any State → X), auto-return a Idle1
+   │  Asignado al Animator component DEL HIJO SK_Curator_Aline (no del prefab root)
+   ▼
+Runtime: Vivify SetAnimatorProperty con id del prefab + trigger name
+```
+
+### Por qué el Animator vive en `SK_Curator_Aline`, no en `aline` (root)
+
+El prefab root `aline` tiene `localScale: 0.01` baked (conversión Unreal cm → Unity m, ver [DECISIONES.md](DECISIONES.md)). Los AnimationClips exportados desde Blender contienen curvas `m_LocalScale` en path `<root>` (la GameObject del Animator) por cómo bakea el FBX exporter — son curvas constantes 1.0 que no animan nada pero al sample sobreescribirían el localScale del GameObject del Animator. Si el Animator está en el root, el 0.01 se pisa con 1.0 → modelo 100x grande. Ponerlo en `SK_Curator_Aline` (que ya está a scale 1) hace que el sample sea no-op.
+
+### Naming convention de triggers
+
+Los triggers en el AnimatorController tienen el nombre del clip menos el prefijo `Paintress_`:
+
+| Clip name | Trigger name |
+|---|---|
+| `SK_Curator_Aline\|Paintress_Idle1` | `Idle1` |
+| `SK_Curator_Aline\|Paintress_Skill3` | `Skill3` |
+| `SK_Curator_Aline\|Paintress_Idle1_to_idle2_transition` | `Idle1_to_idle2_transition` |
+| `SK_Curator_Aline\|Skill_Aline_P3_Skill1` | `Skill_Aline_P3_Skill1` |
+
+Eso es lo que va en `properties[].id` del evento `SetAnimatorProperty` en el `.dat`.
+
+### Skill `vivify-animations`
+
+Documenta este pipeline incluyendo gotchas concretos (PSA addon no auto-linkea action, `bake_anim_use_all_actions` poco fiable bajo MCP context, scale curve scope, FBX rig settings, Generic vs Humanoid). Consultar antes de tocar nada del flujo.
+
+---
 
 ## `bundleinfo.json` como fuente de verdad
 

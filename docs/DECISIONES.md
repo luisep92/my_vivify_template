@@ -117,6 +117,24 @@ Decisiones grandes con su porqué. Formato ADR ligero.
 
 ---
 
+### 2026-04-26 — Animator component en `SK_Curator_Aline`, no en el root del prefab
+
+**Contexto:** El prefab `aline` tiene `localScale: 0.01` baked en su Transform raíz (conversión Unreal cm → Unity m). Las AnimationClips exportadas desde Blender contienen curvas `m_LocalScale` en path `<root>` (la GameObject del Animator) — son curvas constantes 1.0 que el bake del FBX exporter mete por defecto aunque la source action no tenga fcurves de scale. Cuando el Animator samplea, escribe scale=1 al GameObject del Animator, pisando el 0.01 → modelo 100x grande.
+
+**Decisión:** El componente `Animator` vive en el GameObject hijo `SK_Curator_Aline` (el armature raíz, scale 1), no en el prefab root `aline`.
+
+**Por qué:**
+- El sample del scale curve a path `<root>` se aplica al GameObject del Animator. Si ese GameObject está a scale 1, el sample (que es 1) es no-op. Si está a scale 0.01, el sample lo pisa con 1 → bug.
+- Stripping de las scale curves en post-import desde Unity es lento (~10 min de hang con `AnimationUtility.SetEditorCurve(..., null)` × 34944 calls). El export limpio desde Blender no es trivial (`bake_anim` siempre baja scale, no hay flag para skipearlo).
+- La separación es además semánticamente correcta: el prefab root maneja la escala extrínseca (cm→m), el armature maneja la animación. Cada cosa en su sitio.
+
+**Alternativas descartadas:**
+- **Animator en `aline` root + AssetPostprocessor strippeando curves**: lento e impone reimport caro cada vez que el FBX cambia.
+- **Re-exportar desde Blender sin scale curves**: Blender's `bake_anim=True` siempre samplea scale; no hay flag. Modificar el exporter es fragil.
+- **Cambiar el `localScale` del prefab a 1 y mover el 0.01 al evento `InstantiatePrefab`**: el evento ya aplica `scale: [0.01, ...]`; con prefab a 1 daría 0.01 final igual, pero rompe consistencia con el committed state previo y obliga a tocar el `.dat`. Más cambios, menos clean.
+
+---
+
 ### 2026-04-26 — Snapshots del mapa con `scripts/snapshot-map.ps1` (manual + auto)
 
 **Contexto:** Los `.dat` del mapa viven fuera del repo (en el junction). Queremos versionar momentos clave sin copiarlos a mano y sin meter el `.ogg` ni los bundles.

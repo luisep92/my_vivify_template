@@ -31,7 +31,7 @@ Idioma de la documentación: español. **Idioma de los commits: inglés** (a par
 | Mapa Beat Saber (junction al juego) | `beatsaber-map/` | NO se versiona. Junction local. |
 | Logs de Beat Saber (junction) | `beatsaber-logs/` | NO se versiona. `_latest.log` para la sesión actual; `*.log.gz` para sesiones anteriores. |
 | Proyecto Unity (prefabs, materiales, shaders) | `VivifyTemplate/` | Su propio `.gitignore` cubre Library/Temp/etc |
-| Skills de Claude Code | `.claude/skills/` | vivify-mapping, unity-rebuild, vivify-materials, remapper-scripting |
+| Skills de Claude Code | `.claude/skills/` | vivify-mapping, unity-rebuild, vivify-materials, vivify-animations, remapper-scripting |
 | Dependencias del juego | [BS_Dependencies.txt](BS_Dependencies.txt) | Versiones de mods exactas |
 
 Fuera del repo (en `d:\vivify_repo\`):
@@ -74,5 +74,6 @@ Los `.dat` del mapa (notas, eventos, custom events) se editan directamente, sin 
 
 - **vivify-mapping** — editar `.dat`, V2 syntax, eventos Vivify, CRC sync, debugging de prefabs que no cargan.
 - **unity-rebuild** — flujo F5 / Build Configuration Window, sync de CRCs, errores de build.
-- **vivify-materials** — `TO BE DONE`. Se rellena cuando empecemos a aplicar texturas a Aline.
+- **vivify-materials** — receta unlit-cutout-double-sided, mapping FModel→Unity de materiales, troubleshooting magenta/missing/missing-shader.
+- **vivify-animations** — pipeline `.psa` → Blender → FBX → Unity Animator → Vivify `SetAnimatorProperty`. Scripts de import/export en `scripts/blender/`, Editor scripts en `Assets/Aline/Editor/`. Gotchas conocidos del export Blender→FBX.
 - **remapper-scripting** — `TO BE DONE`. Se rellena cuando empecemos a usar ReMapper.
