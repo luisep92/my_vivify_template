@@ -74,3 +74,12 @@ Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en eventos concre
 - `vivify-materials/SKILL.md` con contenido real — empieza junto al texturizado.
 - `remapper-scripting/SKILL.md` con contenido real — empieza junto al setup de ReMapper.
 - Quest support — fuera de scope salvo decisión expresa.
+
+## Diferido post-torneo
+
+Cuando el mapa esté entregado y haya margen, sesión de limpieza:
+
+- **Rename `my_vivify_template/` → `aline-boss-fight/`**. Bloqueado durante la sesión de setup porque VSCode tiene handle abierto en `.git/`. Procedimiento: cerrar VSCode, `cd d:\vivify_repo && ren my_vivify_template aline-boss-fight`, reabrir VSCode en la nueva ruta. El `.git`, los junctions y todo lo demás viajan con la carpeta (los junctions apuntan a paths absolutos de Steam, no se rompen).
+- **Traducir docs/skills al inglés** si en algún momento se quiere compartir el repo con la comunidad de Vivify (que es internacional). Decisión actual: español, proyecto personal.
+- **Limpiar `.idea/` y `.vscode/` de VivifyTemplate** del staging si entran cambios espurios en commits.
+- **Cambiar `origin/main`** del template upstream (`Swifter1243/VivifyTemplate`) al remote propio cuando se monte en GitHub.
