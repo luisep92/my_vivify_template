@@ -1,1 +1,138 @@
-TO BE DONE
+---
+name: vivify-materials
+description: Use when creating or modifying materials/shaders for prefabs that ship in a Vivify bundle (characters, props, environments). Trigger when user mentions 'crear material', 'asignar material', 'shader Vivify', 'texturizar', 'aplicar texturas', 'magenta en BS', 'missing material', or after importing a model from FModel that needs materials. Covers the unlit cutout recipe, FModel JSON-to-Unity material mapping, and common errors.
+---
+
+# Vivify Materials Workflow
+
+Cómo construir materiales para prefabs que viven dentro de un bundle Vivify. Los shaders por defecto de Unity (Standard, URP) no compilan en bundles de Vivify (Built-in render pipeline + restricciones). Hay que ir con shader custom + materiales locales del proyecto.
+
+## Receta default: unlit cutout, double-sided
+
+Para un personaje 3D que aparece en escena BS (caso típico: boss, NPC, prop animado), el shader por defecto recomendado es **unlit con cutout y `Cull Off`**. Razones:
+
+1. **BS no ilumina los bundles de Vivify por defecto**. Si el shader es lit, el modelo se ve gris/oscuro o requiere luces metidas dentro del prefab — y la luz direccional siempre deja la cara opuesta a oscuras.
+2. **Texturas exportadas de Unreal con FModel** suelen tener BlendMode=Masked + TwoSided (cutout + caras dobles). Replicar esto en Unity = `Cull Off` + `clip(col.a - cutoff)`.
+3. **Unlit es performante** y predecible. Sin sorpresas de cálculo de iluminación.
+
+Ejemplo: [Assets/Aline/Shaders/AlineStandard.shader](../../../VivifyTemplate/Assets/Aline/Shaders/AlineStandard.shader). Patrón reutilizable para cualquier personaje.
+
+```hlsl
+Shader "Aline/Standard"
+{
+    Properties
+    {
+        _MainTex ("Texture", 2D) = "white" {}
+        _Color ("Tint", Color) = (1,1,1,1)
+        _AlphaCutoff ("Alpha Cutoff", Range(0,1)) = 0
+    }
+    SubShader
+    {
+        Tags { "RenderType"="TransparentCutout" "Queue"="AlphaTest" }
+        Cull Off
+        Pass
+        {
+            // ... vert/frag standard ...
+            fixed4 frag (v2f i) : SV_Target
+            {
+                fixed4 col = tex2D(_MainTex, i.uv) * _Color;
+                clip(col.a - _AlphaCutoff);
+                return col;
+            }
+        }
+    }
+}
+```
+
+`_MainTex` con default `"white"` + `_Color` permite reutilizar el mismo shader para materiales sin texture (e.g., negro sólido) sin necesidad de un shader separado.
+
+## El template `Hidden/Vivify/Templates/Standard` no se puede usar tal cual
+
+[VivifyTemplate/.../Templates/Standard.shader](../../../VivifyTemplate/Assets/VivifyTemplate/Utilities/Shaders/Templates/Standard.shader) es la base recomendada por VivifyTemplate, pero su nombre empieza por `Hidden/` → no aparece en el dropdown del Inspector de Material. **Hay que duplicarlo** a `Assets/<Project>/Shaders/` y renombrar el shader path a algo visible (e.g., `"Aline/Standard"`).
+
+Es también opaque y single-side por defecto — al duplicar añadir cutout + Cull Off según receta de arriba.
+
+## Mapping de FModel → Unity (texturas a material slots del FBX)
+
+Cuando importas un FBX exportado vía FModel→Blender→FBX, el FBX trae **N material slots con nombres tipo `MI_<algo>` o `M_<algo>`**. Los `MI_*.json` y `M_*.json` que FModel volcó al lado de las texturas son la **fuente de verdad** para saber qué textura va con qué slot.
+
+Pasos:
+
+1. **Inventariar slots del FBX**. Dos opciones:
+   - **Inspector de Unity**: SkinnedMeshRenderer → Materials → ver Element 0..N con sus nombres originales.
+   - **Grep al binario** (sin Unity abierto):
+     ```bash
+     grep -aboE "(MI_|M_)[A-Za-z0-9_]+" path/to/Model.fbx | sort -u
+     ```
+     El byte offset (col 1) da el orden de los slots en `m_Materials`.
+
+2. **Leer cada `MI_*.json` / `M_*.json`** del dump de FModel. Estructura típica:
+   ```json
+   {
+     "Textures": {
+       "Base Color Map": "/Game/.../<TextureName>.<TextureName>",
+       "Normal Map": "...",
+       "ORM Map": "..."
+     },
+     "Parameters": {
+       "BlendMode": 1,
+       "Properties": {
+         "BasePropertyOverrides": {
+           "TwoSided": true,
+           "BlendMode": "EBlendMode::BLEND_Masked",
+           "OpacityMaskClipValue": 0.3333
+         }
+       }
+     }
+   }
+   ```
+   - `Base Color Map` → la textura que va al `_MainTex` del material Unity.
+   - `BlendMode: BLEND_Masked` + `OpacityMaskClipValue` → confirma que necesitas cutout (`_AlphaCutoff` = ese valor).
+   - `TwoSided: true` → confirma `Cull Off` en el shader.
+
+3. **Algunos slots no tienen Base Color**. Materiales tipo "fresnel edge effect", "translucent paint", "glow" no exportan diffuse — son procedurales en Unreal. Para v1 = aproximar con material sólido (e.g., negro plano). Apuntar como pendiente de polish a v2 si visualmente queda raro.
+
+4. **Los `.json` pueden estar en folders distintos** del que contiene las texturas. Búscalos con find:
+   ```bash
+   find /path/to/Sandfall -name "MI_<Personaje>*.json" -o -name "M_<Personaje>*.json"
+   ```
+
+## Material creation flow
+
+1. Folders esperados (crear si faltan):
+   - `Assets/<Project>/Shaders/` — el .shader duplicado/custom
+   - `Assets/<Project>/Materials/` — los .mat
+   - `Assets/<Project>/Textures/` — los PNGs (gitignored, .meta versionados)
+
+2. **Crear shader**: duplicar `Hidden/Vivify/Templates/Standard.shader`, renombrar el shader path, añadir cutout + Cull Off + properties extra que necesites.
+
+3. **Importar texturas**: copiar PNGs de FModel a `Assets/<Project>/Textures/`. Unity los importa automáticamente al volver al Editor.
+
+4. **Crear .mat**: Right-click → Create → Material en `Materials/`. Inspector → Shader dropdown → tu shader nuevo. Asignar `_MainTex`, `_Color`, `_AlphaCutoff`.
+
+5. **Asignar al prefab**: abrir el `.prefab`, seleccionar el Renderer, arrastrar tus .mat a los Element 0..N (en el orden que descubriste en el paso "Mapping").
+
+6. **Verificar en escena**: el modelo se ve texturizado en la Scene view de Unity, sin warnings de "missing material" en consola.
+
+7. **Build**: F5. Sync de CRCs es automático vía el Editor watcher (ver skill `unity-rebuild`).
+
+## Errores comunes
+
+| Síntoma | Causa | Fix |
+|---|---|---|
+| Aline/personaje en magenta en BS | Shader no compila en el bundle | Revisar que el shader sigue la receta (Built-in pipeline, no URP/HDRP). Mirar consola Unity al hacer build. |
+| Aline en magenta pero solo desde un ángulo | Falta `Cull Off` | Añadir `Cull Off` al SubShader. |
+| Cara/back oscura en BS | Shader es lit y BS no manda luces | Migrar a unlit (la receta default). |
+| Bordes duros en pelo/ropa donde debería haber alpha cutout | `_AlphaCutoff` = 0 o falta `clip()` | `_AlphaCutoff` = 0.333 (o el valor del `OpacityMaskClipValue` del JSON Unreal). |
+| Slot mal asignado (parte del cuerpo con textura equivocada) | Orden de Element 0..N no match con lo que asumiste | Verificar nombres de Material en el Inspector. Reasignar acordemente. |
+| `Material has no _MainTex` warning | Material asignado a un shader que no tiene esa property | Pasar al shader correcto, o usar default `"white"` en la property declaration. |
+| Cambios en .mat no se ven en BS | F5 no se ha hecho, o CRCs no synced | F5 (auto-sync via Editor watcher hace el resto). Si auto-sync está off, run `.\scripts\sync-crcs.ps1`. |
+
+## Upgrade path: unlit → lit/PBR
+
+Si en algún momento se quiere PBR completo (normales, roughness, metallic, emissive):
+
+1. Importar las texturas adicionales que ya hay en el dump (Normal, ORM, Emissive). Los `.json` ya describen qué van con cada material slot.
+2. Construir un shader nuevo que samplee esas texturas (typical: `_NormalMap`, `_ORM`, `_Emissive`).
+3. Decidir el modelo de iluminación: lambert simple, PBR completo (BRDF), o stylized (cel-shaded, matcap).
+4. Si va a haber luces en el bundle: meterlas como child del prefab y diseñarlas para que iluminen razonablemente desde varios ángulos (no una sola directional). O activar ambient en Unity y configurarlo para que el bundle lo respete.
