@@ -13,8 +13,10 @@ After modifying any prefab, material, shader, or asset in the VivifyTemplate Uni
     - **F5** (atajo rápido) — equivale a "Build Working Version Uncompressed". Para iteración.
     - **`Vivify > Build > Build Configuration Window`** — ventana con control sobre plataformas (Windows 2019 / Windows 2021 / Android 2021) y modo Compressed/Uncompressed. **Compressed** obligatorio antes de subir el mapa a producción.
 2. Unity exporta `bundleWindows2021.vivify` (y otros variantes según config) + `bundleinfo.json` a la carpeta del mapa.
-3. **Sincronizar CRCs**: `.\scripts\sync-crcs.ps1` (PowerShell). Lee `bundleCRCs` de `bundleinfo.json` y patcha surgically los CRCs en `Info.dat._customData._assetBundle`, preservando el formato exacto del .dat. Idempotente: no escribe si los CRCs ya matchean. Si bash: `powershell -ExecutionPolicy Bypass -File ./scripts/sync-crcs.ps1`.
+3. **Sync de CRCs es automático.** El Editor script [`PostBuildSyncCRCs.cs`](../../../VivifyTemplate/Assets/Aline/Editor/PostBuildSyncCRCs.cs) tiene un `FileSystemWatcher` sobre `bundleinfo.json` y lanza `scripts/sync-crcs.ps1` cada vez que Vivify reescribe el archivo. Output del sync se ve en la consola de Unity (`[sync-crcs] ...`). Toggleable desde `Tools/Aline/Auto-sync CRCs after Vivify build`.
 4. Reiniciar Beat Saber (o solo relanzar el mapa) — Vivify recarga bundles por launch.
+
+**Manual fallback** (auto-sync desactivado o trabajando sin Unity abierto): `.\scripts\sync-crcs.ps1` (PowerShell). Desde bash: `powershell -ExecutionPolicy Bypass -File ./scripts/sync-crcs.ps1`. Mismo script que invoca el watcher — single source of truth.
 
 ## Estructura de los CRCs
 
