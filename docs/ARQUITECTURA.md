@@ -90,19 +90,37 @@
 | `ReMapper-master/` | Tool de scripting Deno/TS | Tiene su propio `.git`. Mejor accesible al lado del repo. |
 | `FModel.exe` | Tool .exe ~47 MB | Binario, mejor fuera. |
 
-### El junction `beatsaber-map/`
+### Junctions a la instalación de Beat Saber
 
-Junction de Windows (`mklink /J`) que apunta a:
+Dos junctions de Windows (`mklink /J`) — ninguno versionado, hay que recrearlos a mano por máquina.
 
-```
-C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\CustomWIPLevels\Test\
-```
-
-Permite leer `Info.dat`, `ExpertPlusStandard.dat`, `BPMInfo.dat`, `bundleinfo.json` y `bundle*.vivify` con un path relativo desde el repo. **NO se versiona** (lista en `.gitignore`). Hay que recrearlo a mano si se cambia de máquina o se reinstala Beat Saber:
+#### `beatsaber-map/` → `CustomWIPLevels\Test\`
 
 ```cmd
 mklink /J beatsaber-map "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\CustomWIPLevels\Test"
 ```
+
+Permite leer `Info.dat`, `ExpertPlusStandard.dat`, `BPMInfo.dat`, `bundleinfo.json` y `bundle*.vivify` con un path relativo desde el repo.
+
+#### `beatsaber-logs/` → `Beat Saber\Logs\`
+
+```cmd
+mklink /J beatsaber-logs "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Logs"
+```
+
+Permite leer logs de IPA + Vivify desde el repo. Estructura:
+
+- **`_latest.log`** — sesión actual sin comprimir. Es el que normalmente leemos.
+- **`<timestamp>.log`** — sesión actual sin comprimir (mismo contenido que `_latest.log`).
+- **`<timestamp>.log.gz`** — sesiones anteriores comprimidas con gzip. Para leer una concreta: `gzip -dc <archivo>` (Git Bash) o `Expand-Archive` desde PowerShell.
+
+Útiles para diagnosticar:
+
+- `[Vivify/InstantiatePrefab] Enabled` (positivo: el evento se procesa).
+- `Could not find UnityEngine.GameObject` (path mal escrito en el evento).
+- `[Vivify/AssetBundleManager] Checksum not defined` (CRCs desactualizados).
+- `Asset bundle could not be loaded` (bundle ausente o corrupto).
+- `[Vivify] Track does not exist` (orden temporal de eventos roto).
 
 (Comando `cmd`, no PowerShell — `mklink` es interno de cmd.)
 

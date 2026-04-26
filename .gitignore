@@ -1,5 +1,6 @@
-# === Beat Saber map (junction al juego, no versionable entre máquinas) ===
+# === Junctions a la instalación de Beat Saber (no versionables entre máquinas) ===
 beatsaber-map/
+beatsaber-logs/
 
 # === Asset dumps y herramientas que viven fuera del repo ===
 # Si en algún momento reaparecen dentro por error, no se versionan.

@@ -29,6 +29,7 @@ Idioma de la documentación: español.
 | Notas vivas, scratchpad | [docs/my-notes.md](docs/my-notes.md) | Lo que aún no encaja en otro sitio |
 | Snapshots manuales del mapa | [docs/map-snapshots/](docs/map-snapshots/) | Generados con `scripts/snapshot-map.ps1` |
 | Mapa Beat Saber (junction al juego) | `beatsaber-map/` | NO se versiona. Junction local. |
+| Logs de Beat Saber (junction) | `beatsaber-logs/` | NO se versiona. `_latest.log` para la sesión actual; `*.log.gz` para sesiones anteriores. |
 | Proyecto Unity (prefabs, materiales, shaders) | `VivifyTemplate/` | Su propio `.gitignore` cubre Library/Temp/etc |
 | Skills de Claude Code | `.claude/skills/` | vivify-mapping, unity-rebuild, vivify-materials, remapper-scripting |
 | Dependencias del juego | [BS_Dependencies.txt](BS_Dependencies.txt) | Versiones de mods exactas |

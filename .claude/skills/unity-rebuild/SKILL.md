@@ -57,7 +57,7 @@ Cambiar en `Vivify > Build > Build Configuration Window`.
 
 ## Cuando los CRCs no matchean
 
-Síntoma: `[Vivify/AssetBundleManager] Checksum not defined`. Siempre significa que los CRCs en `Info.dat` no matchean el archivo bundle. Releer `bundleinfo.json` y resyncar.
+Síntoma: `[Vivify/AssetBundleManager] Checksum not defined` (en `beatsaber-logs/_latest.log`). Siempre significa que los CRCs en `Info.dat` no matchean el archivo bundle. Releer `bundleinfo.json` y resyncar.
 
 ## Bypass para iteración
 

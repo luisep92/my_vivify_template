@@ -68,9 +68,15 @@ exactamente (lowercase). Esto corta el ciclo "edito el evento → abro el juego
 | Evento ignorado silenciosamente | Falta `_` en V2 (`type` vs `_type`) | V2: TODO con underscore en root, sin underscore dentro de `_data` |
 | Cambios en `.dat` no se reflejan en BS | Beat Saber está cacheando | Salir al menú principal y reentrar al mapa (no hace falta reiniciar BS) |
 
+## Dónde está el log
+
+`beatsaber-logs/_latest.log` (junction al directorio de logs de BS). Para la
+sesión actual leer ese; para sesiones anteriores hay `*.log.gz` en la misma
+carpeta (descomprimir con `gzip -dc` o `Expand-Archive`).
+
 ## Debugging checklist cuando un prefab no aparece
 
-1. Buscar `[Vivify/InstantiatePrefab] Enabled` en el log — si no está, el evento es malformado
+1. Abrir `beatsaber-logs/_latest.log` y buscar `[Vivify/InstantiatePrefab] Enabled` — si no está, el evento es malformado
 2. Buscar `Checksum not defined` — CRCs desactualizados, copiar de `bundleinfo.json`
 3. Buscar `Could not find UnityEngine.GameObject [path]` — path mal escrito o no expuesto en bundle (verificar contra `bundleinfo.json`)
 4. Si todo el log sale limpio pero no se ve: revisar `position`/`scale` (UE5 cm → Unity m, scale 0.01) y que la cámara lo enfoque
