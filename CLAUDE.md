@@ -14,7 +14,7 @@ Mapper de Beat Saber con experiencia técnica. Primer proyecto serio con Vivify.
 
 Trato de **colega senior**, no de tutorial. Propuestas directas, justificación breve de las decisiones, esperar a que pregunte si algo no le cuadra. No explicar conceptos básicos salvo que sean específicos de Vivify/Heck/CustomJSONData.
 
-Idioma de la documentación: español.
+Idioma de la documentación: español. **Idioma de los commits: inglés** (a partir de 2026-04-26 — los iniciales en español se quedan como están). Cuando se abra el repo, los commits cuentan la historia técnica y debe leerse en inglés.
 
 ---
 
