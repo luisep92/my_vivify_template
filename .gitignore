@@ -1,0 +1,63 @@
+# === Beat Saber map (junction al juego, no versionable entre máquinas) ===
+beatsaber-map/
+
+# === Asset dumps y herramientas que viven fuera del repo ===
+# Si en algún momento reaparecen dentro por error, no se versionan.
+Sandfall/
+ReMapper-master/
+FModel.exe
+
+# === Bundles compilados, audio, paquetes Unity (los regenera la build) ===
+*.vivify
+*.ogg
+*.wav
+*.mp3
+*.unitypackage
+
+# === Modelos 3D y texturas pesadas (los .meta SÍ se versionan) ===
+# Excepción: para versionar una textura concreta pequeña, añadir
+# !VivifyTemplate/Assets/path/concreta.png debajo.
+*.fbx
+*.blend
+*.blend1
+*.psa
+*.psk
+*.uasset
+*.uexp
+*.ubulk
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.tga
+*.exr
+*.hdr
+*.tif
+*.tiff
+*.xcf
+
+# === Páginas web guardadas (chromapper como referencia) — solo .md propios ===
+# La carpeta tiene HTML + JS + descargas parciales que no aportan versionados
+docs/chromapper/
+
+# === Descargas parciales del navegador ===
+*.descarga
+*.crdownload
+*.part
+
+# === Windows shortcuts ===
+*.lnk
+
+# === Output local de ReMapper si en el futuro lo invocamos desde scripts ===
+remapper-output/
+
+# === Snapshots: la carpeta se versiona (con .gitkeep), los snapshots no ===
+docs/map-snapshots/*/
+
+# === Sistema ===
+.DS_Store
+Thumbs.db
+
+# Nota: VivifyTemplate/.gitignore cubre Library/, Temp/, Logs/, UserSettings/,
+# .vs/, .idea/, *.csproj, *.sln, *.user, *.userprefs, MemoryCaptures/,
+# Recordings/, ExportedObj/, /Project_2021/, /Assets/XR/. No duplicamos.

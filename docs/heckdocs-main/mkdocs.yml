@@ -1,0 +1,53 @@
+site_name: modhcarts
+site_url: https://heck.aeroluna.dev/
+theme:
+  name: material
+  logo: assets/icon.png
+  favicon: assets/favicon.ico
+  palette:
+    scheme: slate
+    primary: custom
+  features:
+    - search.suggest
+    - search.highlight
+    - navigation.sections
+extra_css:
+  - assets/stylesheets/extra.css
+  - assets/stylesheets/github-permalink-style.css
+plugins:
+  - search
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: ''
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Settings Setter: settings.md
+  - Modifying Existing Items:
+    - Objects (Notes/Walls): items/objects.md
+    - Lighting Events: items/events.md
+  - Modifying Environments:
+    - Environment Enhancements: environment/environment.md
+    - User Shared Environments: environment/user-shared.md
+  - Animation:
+    - Tracks and Points: animation/tracks-and-points.md
+    - Additional Events: animation/additional-events.md
+    - Properties: animation/properties.md
+  - Vivify:
+    - Getting Started with Vivify: vivify/getting-started-with-vivify.md
+    - Events: vivify/events.md

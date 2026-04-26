@@ -1,0 +1,15 @@
+#!/bin/sh
+# pre-commit hook: snapshot automático del mapa antes de cada commit.
+#
+# - Modo -Auto: ring buffer de 5, dedup por hash (no crea duplicados).
+# - Si beatsaber-map/ no existe (otra máquina sin Beat Saber), skip silencioso.
+# - Si snapshot-map.ps1 falla, NO bloqueamos el commit (|| true).
+#
+# Para activarlo en un clone nuevo del repo (una sola vez):
+#   git config core.hooksPath scripts/hooks
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "$REPO_ROOT/scripts/snapshot-map.ps1" -Auto || true
+
+exit 0
