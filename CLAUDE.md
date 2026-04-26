@@ -46,7 +46,7 @@ Fuera del repo (en `d:\vivify_repo\`):
 
 1. **Asset paths siempre en lowercase** dentro de eventos del mapa. `assets/aline/prefabs/aline.prefab`, no `Assets/Aline/...`. Match exacto con `bundleinfo.json`.
 2. **Map format V2.** Todas las claves del root con underscore (`_time`, `_type`, `_data`, `_customEvents`). Dentro de `_data` SIN underscore (`asset`, `id`, `track`, `position`).
-3. **Después de cada rebuild de Unity, sincronizar CRCs.** Los CRCs en `beatsaber-map/Info.dat` (`_customData._assetBundle`) deben matchear los de `beatsaber-map/bundleinfo.json`. La skill `unity-rebuild` cubre el flujo.
+3. **Después de cada rebuild de Unity, sincronizar CRCs.** `.\scripts\sync-crcs.ps1` patchea `Info.dat._customData._assetBundle` con los CRCs de `bundleinfo.json`. La skill `unity-rebuild` cubre el flujo.
 4. **No commitear** archivos pesados. Lista en `.gitignore`: `*.vivify`, `*.ogg`, modelos 3D (`.fbx`, `.blend`, `.psa`...), texturas binarias (`.png`, `.tga`, `.exr`...). Los `.meta` de Unity sí se versionan.
 5. **Snapshots del mapa**:
    - Manual con label antes de cambios grandes: `.\scripts\snapshot-map.ps1 -Label "antes-de-X"`. Persiste hasta que se borre.

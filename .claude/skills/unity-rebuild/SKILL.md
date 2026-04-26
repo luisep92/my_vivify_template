@@ -12,26 +12,13 @@ After modifying any prefab, material, shader, or asset in the VivifyTemplate Uni
 1. Build (dos opciones equivalentes):
     - **F5** (atajo rápido) — equivale a "Build Working Version Uncompressed". Para iteración.
     - **`Vivify > Build > Build Configuration Window`** — ventana con control sobre plataformas (Windows 2019 / Windows 2021 / Android 2021) y modo Compressed/Uncompressed. **Compressed** obligatorio antes de subir el mapa a producción.
-2. Unity exporta `bundleWindows2021.vivify` (y otros variantes según config) + `bundleinfo.json` a la carpeta del mapa
-3. **Los CRCs cambian en cada rebuild.** Leer los nuevos desde `beatsaber-map/bundleinfo.json`
-4. Actualizar `beatsaber-map/Info.dat` campo `_customData._assetBundle` con los nuevos CRCs
-5. Reiniciar Beat Saber (o solo relanzar el mapa) — Vivify recarga bundles por launch
+2. Unity exporta `bundleWindows2021.vivify` (y otros variantes según config) + `bundleinfo.json` a la carpeta del mapa.
+3. **Sincronizar CRCs**: `.\scripts\sync-crcs.ps1` (PowerShell). Lee `bundleCRCs` de `bundleinfo.json` y patcha surgically los CRCs en `Info.dat._customData._assetBundle`, preservando el formato exacto del .dat. Idempotente: no escribe si los CRCs ya matchean. Si bash: `powershell -ExecutionPolicy Bypass -File ./scripts/sync-crcs.ps1`.
+4. Reiniciar Beat Saber (o solo relanzar el mapa) — Vivify recarga bundles por launch.
 
-## CRC update template
+## Estructura de los CRCs
 
-```json
-"_customData": {
-  ...,
-  "_assetBundle": {
-    "_windows2021": <NEW_CRC_FROM_BUNDLEINFO>,
-    "_windows2019": <SOLO_SI_TAMBIEN_CONSTRUYES_2019>
-  }
-}
-```
-
-## Cómo leer los CRCs nuevos
-
-`bundleinfo.json` puede contener hasta 3 CRCs:
+`bundleinfo.json` (escrito por Vivify) contiene hasta 3 CRCs según las plataformas que construyas:
 
 ```json
 {
@@ -43,7 +30,18 @@ After modifying any prefab, material, shader, or asset in the VivifyTemplate Uni
 }
 ```
 
-`Info.dat._customData._assetBundle` debe contener exactamente los CRCs que aparezcan en `bundleinfo.json`. Si solo construyes Windows 2021 (caso normal de este proyecto), solo incluyes `_windows2021`.
+`Info.dat._customData._assetBundle` tiene que matchear exactamente los CRCs de `bundleinfo.json`:
+
+```json
+"_customData": {
+  ...,
+  "_assetBundle": {
+    "_windows2021": <CRC_DEL_BUNDLEINFO>
+  }
+}
+```
+
+`sync-crcs.ps1` se encarga de mantener esto sincronizado. **Primera vez**: si la clave `_windows2021` (u otra plataforma) no existe aún en `Info.dat._customData._assetBundle`, hay que añadirla a mano una vez con valor placeholder (e.g. `0`); el script la detecta y la actualiza. En sucesivos rebuilds queda automatizado.
 
 ## Plataformas — cuándo construir cada una
 
@@ -68,7 +66,7 @@ Para iteración rápida sin resyncar CRCs cada vez, lanzar Beat Saber con flag `
 | Síntoma | Causa | Fix |
 |---|---|---|
 | `BuildAssetBundles error` | Algún asset corrupto en `Assets/` | Revisar la consola de Unity, suele señalar el `.prefab`/`.mat` concreto |
-| Build OK pero `Info.dat` sigue rompiendo | CRCs no actualizados tras el rebuild | Resync (sección "Cómo leer los CRCs nuevos") |
+| Build OK pero `Info.dat` sigue rompiendo | CRCs no actualizados tras el rebuild | `.\scripts\sync-crcs.ps1` |
 | `Unity version mismatch` al abrir el proyecto | Unity != 2019.4.28f1 | Instalar exactamente esa versión desde Unity Hub |
 | Falta una plataforma en el output | Build Configuration no la incluía | `Vivify > Build > Build Configuration Window` y marcar Windows 2019 / 2021 / Android 2021 |
 | Mapa publicado se ve mal pero en local va bien | Subiste un build Uncompressed | Re-build en modo Compressed antes de publicar |
