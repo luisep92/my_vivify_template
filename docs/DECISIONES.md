@@ -162,3 +162,30 @@ Disparado por:
 - Scheduled task cada N minutos — ruidoso, snapshots aunque no haya tocado nada.
 - Solo modo manual sin auto — perfecto para momentos intencionales pero deja huecos en iteración pura.
 - Versionar el junction completo — pesa MB y no es portable entre máquinas.
+
+---
+
+### 2026-04-27 — Fork minimal del unity-mcp en lugar de PR upstream
+
+**Contexto:** El upstream `CoplayDev/unity-mcp` declara `"unity": "2021.3"` en `package.json`. Vivify recomienda Unity 2019.4.28f1 oficialmente para max compat con Beat Saber 1.34.2. Necesitamos AI-driven Unity tooling (al menos `read_console`, `refresh_unity`, `execute_code` con C# arbitrario) para diagnosticar el bug de animaciones de Aline. Tres caminos: usar upstream sin modificar (no compila en 2019), full PR upstream (1-2 días, incluye migrar wizard UI Toolkit→UIElements legacy), fork minimal stripado (4-8h estimadas).
+
+**Decisión:** Fork minimal en repo privado nuevo (`luisep92/unity_vivify_mcp`), trabajando en `main` directamente (no en branch separado), con el upstream añadido como remote `upstream` para preservar historia y permitir rebase / cherry-pick a una PR futura si se decide.
+
+**Por qué:**
+- El bottleneck inmediato (animaciones de Aline) requiere las tools ya, no en 1-2 días.
+- Stripping superficie agresivamente (wizard UI, 21 configurators, services no-core, tools no-aplicables) reduce el área a reescribir de ~17 ficheros con C# 8+ a un subset enfocado en lo que necesitamos.
+- El server Python es Unity-agnostic, no lo tocamos. Solo el lado C# del bridge necesita port.
+- El fork queda con commits cherry-pickables si decidimos PR upstream más tarde.
+- Coste real: ~6h reales para llegar al "Bridge Status: running, mode: stdio" + smoke test de `execute_code`. Ajustado al estimado.
+
+**Alcance del strip y reescrituras:** Detalle completo en [unity-mcp/README.md](../../unity-mcp/README.md). Resumen: 23 commits sobre `upstream/beta`, ~50+ sites de C# 8/9 → 7.3, ~10 APIs 2020+ shim-eadas a 2019.4, default flippeado a stdio.
+
+**Decisiones secundarias dentro del fork:**
+- **No vendorizar `Newtonsoft.Json.dll`** en el package — depender del DLL del proyecto host. VivifyTemplate trae uno en `Assets/VivifyTemplate/Exporter/Dependencies/`. El asmdef con `precompiledReferences: ["Newtonsoft.Json.dll"]` y `overrideReferences: false` lo recoge automáticamente. Razón: vendorizar uno propio creaba duplicate-DLL conflict que silenciosamente abortaba la compilación del package entero (síntoma: menu items no aparecen, Console limpia, no DLL en `Library/ScriptAssemblies/`).
+- **Stdio default** (era HTTP). HTTP requería el `ServerManagementService` para gestionar el process del Python server local, y eso lo borramos en el strip. Stdio es lo natural para single-agent Claude Code (`claude mcp add` lanza el server vía stdin).
+- **Borrar Graphics tools** en lugar de reescribir. Las APIs (`LightingSettings`, `ProfilerCategory`, `Unity.Profiling.LowLevel.Unsafe`) son post-2020.1; reescribir contra equivalentes 2019.4 vale más que la utilidad para Aline (no bakeamos lighting, no manipulamos profiler).
+
+**Alternativas descartadas:**
+- **Full PR upstream desde el primer día**: bloqueaba demasiado tiempo el progreso de Aline. La estrategia "strip first, evaluar PR cuando tenga rodaje" preserva la opción.
+- **Cherry-pick selectivo de tools individuales sin tocar el bridge**: imposible — el bridge tiene dependencias en el ServiceLocator que el strip cambió.
+- **Conditional compilation con `#if UNITY_2019_4` en upstream**: viable pero inflaría upstream con condicionales en 50+ sites y la wizard UI Toolkit no tiene equivalente legacy razonable.

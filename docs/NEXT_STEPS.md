@@ -10,13 +10,14 @@ Pipeline funcionando end-to-end:
 - **Sync de CRCs automatizado**: Editor watcher dispara `scripts/sync-crcs.ps1` cada vez que Vivify reescribe `bundleinfo.json`. Cero pasos manuales tras F5.
 - Mods de Aeroluna instalados a mano desde GitHub (versiones en [BS_Dependencies.txt](../BS_Dependencies.txt)).
 - Mapa V2 con `_customEvents` operativo: `InstantiatePrefab` testeado.
+- **Unity MCP operativo end-to-end**: bridge stdio en port 6400 (fork minimal en `d:\vivify_repo\unity-mcp/`), Claude Code conectado. Tools disponibles: `read_console`, `refresh_unity`, `execute_code`, `manage_animation`, `manage_asset`, `manage_material`, `manage_prefabs`, etc. Desbloquea diagnóstico in-editor del bug de animaciones.
 - **Pipeline de animaciones — infrastructure montada, last mile pendiente**:
   - 26 actions importadas en Blender desde `.psa` de FModel vía `scripts/blender/import_all_psa.py`.
   - Export a `Aline_Anims.fbx` vía `scripts/blender/export_anims_fbx.py` (NLA tracks).
   - `Aline_AC.controller` generado con 26 estados + triggers vía `Editor/BuildAlineAnimator.cs`.
   - Animator component reubicado en `SK_Curator_Aline` child para evitar el bug de scale curves a path `<root>`.
   - Aline aparece en BS a tamaño correcto en T-pose (estado de `git HEAD` antes de animaciones funcionando).
-  - **Pendiente**: las clips llegan a Unity sin movimiento real (fcurves identity). Probable bug del bake al exportar bajo MCP context. Investigar al volver con Unity MCP funcionando.
+  - **Pendiente**: las clips llegan a Unity sin movimiento real (fcurves identity). Probable bug del bake al exportar bajo MCP context. **Unity MCP ya operativo** (sesión 2026-04-27) — próximo paso: usar `execute_code` y `manage_animation` para inspeccionar las curves directamente y aislar dónde se pierde el bake.
 
 Lo que **no** está hecho todavía: animaciones reproduciéndose en runtime, canción definitiva, scripting con ReMapper, narrativa por fases concreta.
 
@@ -60,6 +61,16 @@ Lo que **no** está hecho todavía: animaciones reproduciéndose en runtime, can
 - **`scripts/sync-crcs.ps1`**: PowerShell que lee `bundleCRCs` de `bundleinfo.json` y patcha surgically (regex) los CRCs en `Info.dat._customData._assetBundle`. Preserva el formato exacto del `.dat` (sin churn de hash en snapshots), tolerante a junction missing, idempotente (no escribe si no hay cambio).
 - **`Assets/Aline/Editor/PostBuildSyncCRCs.cs`**: Editor script con `[InitializeOnLoad]` que monta un `FileSystemWatcher` sobre `bundleinfo.json` y lanza el `.ps1` cada vez que Vivify hace build. Toggleable desde `Tools/Aline/Auto-sync CRCs after Vivify build`. Skill `unity-rebuild` actualizada en consecuencia.
 
+### 2026-04-27 — Port unity-mcp a Unity 2019.4 + integración con Aline
+
+- **Fork operativo del unity-mcp para 2019.4** en `d:\vivify_repo\unity-mcp/` (remote `origin = luisep92/unity_vivify_mcp`, `upstream = CoplayDev/unity-mcp`). Los hallazgos de exploración del 04-26 se ejecutaron: 23 commits cherry-pickables sobre `upstream/beta` que strippan wizard UI Toolkit + 21 configurators + servicios no-core (Package*, ServerManagement, TestRunner, ResourceDiscovery, Migrations, Dependencies) + tools no-aplicables (Build, ProBuilder, Profiler, Vfx, Graphics, ManagePackages, ManageUI, ManageTexture, RunTests), reescriben ~50+ sites de C# 8/9 a 7.3 (switch expressions, `is not T x`, `??=`, target-typed `new()`, range syntax, `using` declarations, `#nullable`), y shimean APIs 2020+ (PrefabStageUtility namespace, `string.Contains(char)`, `Math.Clamp`, `Task.IsCompletedSuccessfully`, `Dictionary.Remove(k, out v)`, `MaterialPropertyBlock.HasColor`). Detalle completo en [unity-mcp/README.md](../../unity-mcp/README.md).
+- **Wireado al proyecto Aline**: `VivifyTemplate/Packages/manifest.json` referencia el package localmente con `"com.coplaydev.unity-mcp": "file:../../../unity-mcp/MCPForUnity"`. El asmdef recoge automáticamente el `Newtonsoft.Json.dll` que VivifyTemplate ya trae en `Assets/VivifyTemplate/Exporter/Dependencies/`.
+- **Server Python registrado en Claude Code** con scope user: `claude mcp add -s user unity-mcp -- uv run --directory d:/vivify_repo/unity-mcp/Server mcp-for-unity --transport stdio`. La extensión VSCode lo recoge tras restart.
+- **End-to-end validado**: Claude Code → Python MCP server → TCP 6400 → bridge stdio en Unity → Console + arbitrary C# (`Application.unityVersion` → `2019.4.28f1`).
+- **Default flippeado a stdio**. HTTP transport requería `ServerManagementService` que se borró en el strip; el menu `Window > MCP For Unity > Use Stdio Transport` fija EditorPref para casos donde quedó set previo.
+- **Bug arquitectural caught + fixed durante el bring-up**: el compilador CodeDom de `execute_code` abortaba al toparse con la `Newtonsoft.Json.dll` legacy (PE32 32-bit Mono build) que VivifyTemplate ship — `AssemblyName.GetAssemblyName` la lee, csc.exe no. Fix: retry-loop que parsea el error "Metadata file 'X' does not contain valid metadata" y droppea X del reference set.
+- **Aprendizaje aplicado a la skill**: si un menu item no aparece en Unity y la Console está limpia, mira `Library/ScriptAssemblies/`. Si no hay DLLs ahí, hay un conflict silencioso (DLL duplicado solapando plataformas, asmdef roto). Memoria guardada para futuras sesiones.
+
 ---
 
 ## Próximos pasos (en orden)
@@ -72,10 +83,11 @@ Decidir pieza concreta del OST de Expedition 33. Importar `.ogg` al `beatsaber-m
 
 Pipeline `.psa` → Blender → FBX → Unity Animator → Vivify `SetAnimatorProperty` montado al completo (ver Changelog 2026-04-26 e [ARQUITECTURA.md#pipeline-de-animaciones](ARQUITECTURA.md)). Pendiente:
 
-- **Diagnosticar por qué los clips llegan con fcurves identity** (no animan en preview ni runtime). Sospechas:
-  - `bake_anim_use_all_actions` o `bake_anim_use_nla_strips` no muestreando los keyframes de cada action correctamente bajo MCP context.
-  - Posible mismatch entre el rig exportado y el avatar de Aline.fbx (rest pose dispar).
-  - Investigar inspeccionando el FBX exportado directamente o reabriendo el `.blend` y exportando con la UI de Blender (no MCP) como control.
+- **Diagnosticar por qué los clips llegan con fcurves identity** (no animan en preview ni runtime). Con Unity MCP operativo desde 2026-04-27 esto se ataca in-editor:
+  - `manage_animation` para listar clips e inspeccionar bindings/curves del `Aline_Anims.fbx`.
+  - `execute_code` para volcar las `AnimationCurve` de un clip concreto y comparar contra los keyframes que Blender exporta.
+  - Sospechas: `bake_anim_use_all_actions` o `bake_anim_use_nla_strips` no muestreando bajo MCP de Blender; mismatch rig/avatar (rest pose dispar); o el FBX exportado simplemente no contiene curves (caso descartable rápido leyendo el FBX).
+  - Si el FBX está bien, control: reabrir `.blend` y exportar con la UI nativa de Blender (no MCP) para aislar el bake-under-MCP.
 - Una vez Idle1 anime en BS: añadir un evento `SetAnimatorProperty` con trigger `Idle1` al `.dat` para confirmar que Vivify dispara el state machine. Snapshot + commit como checkpoint.
 - Después: wireado del state machine narrativo (qué skill dispara qué transición). Esto es contenido, no infra.
 
@@ -105,32 +117,13 @@ Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en eventos concre
 
 ## Side-projects (portfolio)
 
-### Port mínimo de unity-mcp a Unity 2019.4
+### Port mínimo de unity-mcp a Unity 2019.4 — DONE
 
-[CoplayDev/unity-mcp](https://github.com/CoplayDev/unity-mcp) declara `"unity": "2021.3"` en `package.json` y los Vivify mappers están atados a 2019.4.28f1 por la doc oficial (`docs/heckdocs-main/docs/vivify/getting-started-with-vivify.md:10` — "for maximum compatibility, you should use 2019.4.28f"). Un fork compatible con 2019 desbloquea el ecosistema BS Vivify para usar AI-driven Unity tooling. Valor de portfolio + comunidad agradecida.
+**Estado**: operativo, conectado a este proyecto Aline. Repo en `d:\vivify_repo\unity-mcp/` (remote `origin = git@github.com:luisep92/unity_vivify_mcp.git`, `upstream = CoplayDev/unity-mcp`). Ver [README.md](../../unity-mcp/README.md) del fork para el detalle completo.
 
-**Hallazgos del clone preliminar** (2026-04-26, repo en `d:\vivify_repo\unity-mcp/`):
+**Lo que desbloqueó**: Claude Code puede ejecutar tools MCP contra el editor de Aline (`read_console`, `refresh_unity`, `execute_code` con C# arbitrario, `manage_animation`, `manage_asset`, `manage_material`, etc.). Conexión vía stdio en port 6400. Manifest del proyecto referencia el package localmente: `"com.coplaydev.unity-mcp": "file:../../../unity-mcp/MCPForUnity"`.
 
-- `package.json:6` declara constraint `"unity": "2021.3"` — aflojarlo es 1 línea pero no es suficiente.
-- Depende de `com.unity.nuget.newtonsoft-json 3.0.2` (ese package se añadió al registry en 2020.1; en 2019.4 hay que vendorizar la DLL en `Plugins/`).
-- `com.unity.test-framework 1.1.31` — relajar a 1.1.24 (es la que ship 2019.4).
-- 257 archivos C# en `MCPForUnity/`. **41 usos de C# 8+** (switch expressions, pattern matching avanzado, `with`-expressions) repartidos en 17 archivos. Unity 2019.4 fija C# 7.3 sin override; cada sitio hay que reescribirlo. Ficheros con más densidad: `Services/MCPServiceLocator.cs` (11), `Tools/ManageScriptableObject.cs` (4), `Tools/ManageScript.cs` (3), `Tools/Animation/ClipCreate.cs` (3), `External/Tommy.cs` (3).
-- El wizard UI usa **UI Toolkit** post-2021. Unity 2019 tiene UIElements legacy con API distinta — migración no trivial, posiblemente infactible sin reescribir la ventana.
-- 22 Configurators para clientes MCP (Claude Code, Cursor, Windsurf, Cline, Codex, Gemini, Trae, Kilo, Kiro, OpenClaw, OpenCode, etc.), dependency manager, ProBuilder/VFX/profiler tools — superficie post-2021 que se puede strippar para una versión mínima.
-
-**Estrategia recomendada — port mínimo (4-8 h)**:
-
-1. Strip wizard UI y los 22 configurators (los clientes se configuran a mano vía `claude mcp add`).
-2. Vendorizar `Newtonsoft.Json.dll` en `Plugins/`, eliminar dependencia del package.
-3. Mantener core: Python server (sin tocar) + Unity-side WebSocket bridge + 8-10 tools clave (`ManageScript`, `ManageAsset`, `ControllerCreate`, `ClipCreate`, `ManagePrefab`, `BuildAssetBundle`, `RefreshUnity`, etc.).
-4. Reescribir los 41 sitios C# 8+ a C# 7.3.
-5. Test en VivifyTemplate 2019.4 con `uvx` server desde Python.
-
-**Estrategia full (1-2 días)** — para PR a upstream:
-
-Lo de arriba + migración UI Toolkit→UIElements del wizard + tests pasando + actualización de docs y README. Output: PR a CoplayDev mergeable. Mayor valor para portfolio porque toca todo el repo, no solo un subset.
-
-**Estado actual**: clone shallow en `d:\vivify_repo\unity-mcp/` (no versionado en este repo, igual que `ReMapper-master/`). Investigación documentada arriba — al retomar, partir de aquí sin re-explorar.
+**Pendiente (cuando lleve unas sesiones rodando)**: evaluar PR a upstream `CoplayDev/unity-mcp` desde el branch `main` del fork. Los commits están organizados con un cambio conceptual cada uno y mensajes descriptivos en inglés, pensados para cherry-pick limpio. Decisión actual: dejarlo madurar antes de proponerlo.
 
 ---
 
