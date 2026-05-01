@@ -76,6 +76,16 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
+### Animaciones que desplazan a Aline usan root motion (no AnimateTrack compensation)
+
+**Regla:** Para clips donde Aline se desplaza horizontalmente (DashIn-Idle1, DashOut-Idle2, sus aliases, futuros mele), la posición del prefab cambia vía **root motion extraído del FBX** + `Apply Root Motion = ON` en el Animator. NO se gestiona la posición vía eventos `AnimateTrack` cross-clip en el `.dat`.
+
+**Por qué:** los clips de la `.psa` están diseñados para encadenar via root delta — donde un clip acaba, el siguiente empieza (DashIn termina en posición melee, DashOut arranca desde melee). Compensar manualmente con `AnimateTrack` clip-a-clip se vuelve insostenible: cada nuevo clip suma un nivel más de coordinación cumulativa, y los teleports/blends entre eventos rompen la continuidad. Probado y descartado: `_offsetPosition` se ignora en tracks Vivify-prefab; `_position` con valores en world o lane units introduce teleports en cada AnimateTrack y exige cálculo manual de displacement por clip. El path correcto es preparar el FBX para que Unity extraiga root motion estándar y dejar que el Animator traslade el GO automáticamente.
+
+**Coste asumido:** depende de que Blender exporte el motion en el bone raíz del rig (no distribuido en pelvis/spine). Si el `.psa` actual no lo expone, hay que re-exportar desde Blender. Detalle operativo en la skill `vivify-animations`.
+
+---
+
 ### Animator en prefab root + `preserveHierarchy=true` en `Aline_Anims.fbx`
 
 **Regla:** El componente `Animator` vive en el root del prefab `aline.prefab`. El importer de `Aline_Anims.fbx` tiene `preserveHierarchy=true` (forzado por `AlineAnimsImporter.OnPreprocessModel`).

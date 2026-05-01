@@ -28,7 +28,8 @@ Aline_Anims.fbx  (~185 MB, gitignored, .meta sí versionado)
     │  Tools > Aline > Build Animator Controller
     ▼
 Aline_AC.controller con state machine
-   (Any State → X via trigger, auto-return a Idle1 al exit time para no-loops)
+   (Any State → X via trigger; estados no-loop chainan a un destino contextual
+    según ChainOverrides, o a Idle1 default si no hay override)
     │  Asignado al Animator del PREFAB ROOT (no de SK_Curator_Aline child)
     ▼
 Runtime: Vivify SetAnimatorProperty con id=prefab_id + properties[].id=trigger_name
@@ -45,15 +46,19 @@ Runtime: Vivify SetAnimatorProperty con id=prefab_id + properties[].id=trigger_n
 
 3. **Esperar el reimport en Unity** — la primera vez ~2 min (FBX de 185 MB). El `AlineAnimsImporter` (AssetPostprocessor) corre solo:
    - `OnPreprocessModel` → `preserveHierarchy = true` (impide que Unity colapse el nodo `SK_Curator_Aline`).
-   - `OnPreprocessAnimation` → marca `loopTime = true` en los idles canónicos.
+   - `OnPreprocessAnimation`:
+     - Marca `loopTime = true` en los idles canónicos (`LoopingSuffixes`).
+     - Para clips con motion horizontal real (`XzRootMotionSuffixes`: `DashIn-Idle1`, `DashOut-Idle2`, `DefaultSlot`, `DefaultSlot (1)`) setea `lockRootPositionXZ = false` y `keepOriginalPositionXZ = false` para que Unity extraiga el delta XZ como root motion. El resto de clips quedan con XZ baked en pose (default conservador para idles y transiciones).
 
 4. **Configurar avatar manual una vez**:
    - `Aline.fbx` (mesh+rig): Animation Type = `Generic`, Avatar Definition = `Create From This Model`, Root node = `SK_Curator_Aline`. Apply.
    - `Aline_Anims.fbx`: Animation Type = `Generic`, Avatar Definition = `Copy From Other Avatar` → `AlineAvatar` (sub-asset del Aline.fbx). Apply.
 
-5. **Generar el AnimatorController** — menu `Tools > Aline > Build Animator Controller`. Idempotente (borra y recrea). 26 estados + 26 triggers (`Idle1`, `Skill1`, …, sin prefijo `Paintress_`). Default = `Idle1`.
+5. **Generar el AnimatorController** — menu `Tools > Aline > Build Animator Controller`. Idempotente (borra y recrea). 26 estados + 26 triggers (`Idle1`, `Skill1`, …, sin prefijo `Paintress_`). Default = `Idle1`. Ver "Patrón del AnimatorController" más abajo para los chain-overrides aplicados.
 
-6. **Animator en el prefab** — el component `Animator` vive en el prefab root (`aline.prefab` raíz), NO en el child `SK_Curator_Aline`. Avatar = `AlineAvatar`, Controller = `Aline_AC`.
+6. **Animator en el prefab** — el component `Animator` vive en el prefab root (`aline.prefab` raíz), NO en el child `SK_Curator_Aline`. Avatar = `AlineAvatar`, Controller = `Aline_AC`. **`Apply Root Motion = ON`** si tienes clips con `XzRootMotionSuffixes` y quieres que Aline se traslade de verdad (paso 3 del importer); si está OFF, los clips de DashIn/DashOut harán "snap-back" al terminar.
+
+   > **Nota (2026-05-01):** la regen del controller borra el `.controller` y crea uno nuevo con GUID nuevo. Eso rompe la referencia del Animator del prefab al controller. Tras cada regen toca re-asignar `Aline_AC` al campo Controller del Animator y guardar el prefab. Pendiente: hacer la regen idempotente preservando GUID.
 
 7. **Verificar runtime** — abre el prefab en escena, dale al play del Animator (Window > Animation > Animator), o samplea programáticamente:
 
@@ -112,6 +117,73 @@ Runtime: Vivify SetAnimatorProperty con id=prefab_id + properties[].id=trigger_n
 `id` = el id del `InstantiatePrefab` que metió a Aline en escena. `properties[].id` = el nombre del trigger del Animator. Vivify busca todos los Animator components dentro del prefab con ese id y aplica.
 
 Ver [`docs/heckdocs-main/docs/vivify/events.md`](../../../docs/heckdocs-main/docs/vivify/events.md) para Bool/Float/Integer.
+
+**Regla operativa:** **no dispares un trigger del estado actual de Aline.** El AnyState transition tiene `canTransitionToSelf = false`, así que el trigger no consume — queda queued. Cuando Aline pasa a OTRO estado por un trigger posterior, el queued se dispara también y aborta el clip recién entrado tras 4-5 frames. Síntoma: "la anim se mueve un poco y vuelve a idle". La default state ya cubre el inicio en Idle1 — no necesita re-disparo. No re-dispares Idle2 si ya está flotando por chain-override de DashOut. Etc.
+
+## Patrón del AnimatorController
+
+Generado por [`Assets/Aline/Editor/BuildAlineAnimator.cs`](../../../VivifyTemplate/Assets/Aline/Editor/BuildAlineAnimator.cs). Tres reglas que dictan cómo encadena cada estado:
+
+1. **`Any State → estado` por trigger** (todos los 26 triggers). Blend `duration = 0.1f`, `hasExitTime = false`, `canTransitionToSelf = false`. El blend de 0.1s suaviza mismatches de pose entre clips no relacionados; hard cut (0) deja saltos visibles, blend más largo introduce sprints raros.
+
+2. **Chain-override al exit time (95%) para no-loops**, vía la dict `ChainOverrides`:
+   - `Paintress_Idle1_to_idle2_transition` → `Paintress_Idle2`
+   - `Paintress_Idle2_to_idle3_transition` → `Paintress_Idle3`
+   - `Paintress_DashOut-Idle2` → `Paintress_Idle2`
+   - `Paintress_DashIn-Idle1` → `Paintress_Idle1` (vuelve a default tras el dash, pose neutra)
+   - El resto de no-loops sin override caen al `defaultState` (Idle1) con `duration = 0.15f`.
+
+3. **`NoFallback`** (HashSet). Estados que se quedan en su última frame y NO chainan a nada. Vacío por defecto. Útil si algún día un clip termina en pose que NO debería volver a idle (p.ej. una pose final de impacto que se queda colgada hasta el siguiente trigger).
+
+Si añades un clip cuyo destino canónico no es Idle1 (p.ej. una skill de fase 2 que debería volver a Idle2 flotando), edita `ChainOverrides` en `BuildAlineAnimator.cs` añadiendo `{ "Paintress_NewSkill", "Paintress_Idle2" }`. Regenera vía `Tools > Aline > Build Animator Controller`.
+
+## Locomotion sandbox
+
+`beatsaber-map/EasyStandard.dat` es la difficulty Easy del mapa, dedicada a probar animaciones aisladas (sin VFX, sin notas, sin audio significativo). Su `_customEvents` tiene un `InstantiatePrefab` de Aline + una cadena de `SetAnimatorProperty` que recorre los idles y transiciones canónicos a 100 BPM. El `Info.dat` la registra junto a `ExpertPlusStandard.dat`.
+
+Cuándo usarla:
+- Validar un cambio en `BuildAlineAnimator.cs` (regenerar controller + ver si las transiciones encadenan en BS).
+- Validar un cambio en `AlineAnimsImporter.cs` (re-importar FBX + ver si los clips se comportan distinto).
+- Probar un trigger nuevo aislado antes de meterlo en un prototipo de familia.
+
+Cómo usarla: `Ctrl+R` en BS recarga los `.dat` (no el bundle — para un cambio de bundle hay que F5 desde Unity). Lanza el mapa Test, selecciona difficulty Easy. Sin VFX ni notas, lo único que pasa es Aline ejecutando la cadena.
+
+Editar `EasyStandard.dat` directamente para añadir/quitar triggers de prueba. **No commitear cambios de prueba al `.dat`** — vive bajo la junction y no se versiona, lo cual es bueno para sandbox pero también significa que si quieres preservar un setup de test específico, hay que copiar el `.dat` a `docs/map-snapshots/`.
+
+## Root motion para clips con desplazamiento
+
+Algunos clips (DashIn-Idle1, DashOut-Idle2 y aliases) llevan motion horizontal: Aline se aproxima al jugador, golpea, retrocede. Si el motion vive como **root delta** en el FBX, Unity puede extraerlo y trasladar el GameObject de verdad. Si vive **baked en bones internos** (pelvis/spine sin que el root bone tenga curve de posición), la mesh se ve moverse pero el GO no — y al terminar el clip, los bones vuelven a neutral y la mesh "salta" de vuelta al GO.
+
+**Estado actual (2026-05-01):** el `AlineAnimsImporter` está configurado para extraer XZ root motion en los 4 clips con motion (`XzRootMotionSuffixes`), y el flujo asume `Apply Root Motion = ON` en el Animator. Pero los `.psa` actuales tienen el motion baked en bones internos, no en root, así que la extracción no produce delta y Aline sigue snapping. **Pendiente:** re-export desde Blender con root motion canónico en el bone raíz. Ver paso 2.5 de `NEXT_STEPS.md`.
+
+Cómo verificar si un clip tiene root motion extraíble:
+- Selecciona `Aline_Anims.fbx` en Project. Inspector → tab Animation → click en el clip.
+- En el panel inferior busca el indicador de "Average Velocity". Si > 0 en X o Z, hay root motion en ese eje.
+- 0 en todos los ejes pese a motion visible = motion baked en bones internos, no extraíble.
+
+## Caminos cerrados (no perder tiempo aquí)
+
+Cosas que parecen razonables pero ya descartadas con coste de debugging — documentadas para que el siguiente no las repita.
+
+### NO usar `AnimateTrack` con `_offsetPosition` sobre tracks Vivify-prefab
+
+Probado: el evento se procesa silenciosamente (no errora, no logea) y **no afecta a la posición** del prefab instanciado. Posiblemente Heck-AnimateTrack en V2 espera tracks de notas, y la propiedad `_offsetPosition` no se aplica al track parent que crea Vivify para el prefab. **Comportamiento documentado en heckdocs `properties.md` aplica a notas, no a Vivify-prefabs.**
+
+### NO usar `AnimateTrack` con `_position` para gestionar la posición de Aline cross-clip
+
+Probado: `_position` SÍ afecta al track Vivify-prefab (test de elevación lo confirmó), pero las unidades no matchean las del `position` de `InstantiatePrefab`. World [0,1,8] del InstantiatePrefab no equivale a `_position` [0,1,8] ni a [0, 1.667, 13.333] (lane equivalent). Cualquier valor probado introduce teleports al inicio o al final de cada AnimateTrack. Encima, gestionar la posición clip-a-clip por compensación se vuelve insostenible al añadir clips intermedios — cada nuevo clip suma un nivel más de coordinación, las compensaciones son cumulativas. **El camino correcto es root motion (FBX importer + Apply Root Motion ON), no compensación AnimateTrack.**
+
+### NO esperar que `Apply Root Motion = ON` resuelva el snap-back por sí solo
+
+Probado: marcar el toggle en el Animator del prefab no produce delta si los clips tienen el motion baked en pose (default Unity para Generic). Hay que ANTES configurar el FBX importer para extraer (`lockRootPositionXZ = false` + `keepOriginalPositionXZ = false`). Y aún así, depende de que el FBX TENGA el motion en el root bone — si el `.psa` lo distribuyó en pelvis/spine, no hay nada que extraer.
+
+### NO regenerar el `.controller` sin re-asignar el controller al prefab
+
+`AssetDatabase.DeleteAsset` + `CreateAnimatorControllerAtPath` borra el `.meta` y crea GUID nuevo. La referencia del prefab al `Aline_AC` queda rota. Síntoma: tras regen, Aline aparece en T-pose en BS porque el Animator no tiene controller. **Solución temporal:** tras cada regen, abrir `aline.prefab`, arrastrar `Aline_AC` al campo Controller, guardar. **Solución pendiente:** hacer `BuildAlineAnimator.cs` idempotente preservando GUID (limpia el contenido en lugar de borrar el asset).
+
+### NO disparar triggers redundantes desde el `.dat`
+
+Si Aline ya está en Idle1 (default state) y disparas el trigger `Idle1`, no transiciona (`canTransitionToSelf = false`). El trigger queda queued y se dispara cuando Aline cambia a otro estado, abortando ese estado tras 4-5 frames. Mismo con cualquier otro trigger redundante. **Default state cubre el arranque, chain-overrides cubren los destinos canónicos** — solo dispara triggers que representan transiciones de verdad.
 
 ## Gotchas conocidos
 
@@ -182,7 +254,9 @@ Tamaño 185 MB con 26 takes × 4480 curves × hasta 480 frames cada una. Es lo q
 ✅ Import .psa → Blender (26 actions, addon manual fix)
 ✅ Export Blender → FBX (NLA strips unmuted, named con armature prefix, ~185 MB en ~150 s)
 ✅ Import FBX → Unity (`preserveHierarchy=true`, avatar copy, loopTime auto)
-✅ Generación AnimatorController (26 estados + triggers)
+✅ Generación AnimatorController (26 estados + triggers + chain-overrides para destinos contextuales)
 ✅ Animator en prefab root, scale curves no-op (no hay 100x bug)
 ✅ Aline visible en BS a tamaño correcto, animaciones reproduciéndose
 ✅ Preview del FBX inspector animando con la mesh de Aline.fbx
+✅ Locomotion sandbox (`EasyStandard.dat`) validado en BS: idles, transiciones, dashes, stuns encadenan limpio modulo el snap-back de DashIn/DashOut.
+🟡 Root motion para clips con desplazamiento: importer configurado (`XzRootMotionSuffixes`), pero `.psa` actuales no exponen delta extraíble en root bone. Pendiente re-export Blender con root motion canónico para que DashIn/DashOut trasladen el GO.

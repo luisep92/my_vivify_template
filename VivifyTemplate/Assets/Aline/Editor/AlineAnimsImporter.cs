@@ -26,6 +26,20 @@ namespace Aline.Editor
             "Paintress_Skill2_Loop",
         };
 
+        // Clips que tienen motion horizontal real (root del rig se mueve en XZ).
+        // Para estos forzamos extracción de root motion: el GO traslada de
+        // verdad (Apply Root Motion ON en el Animator) y la mesh no salta de
+        // vuelta al origen al terminar el clip. Los demás clips bakean motion
+        // en bones (default), aceptable para idles y poses estáticas.
+        // Y rotación se quedan baked (Aline no flota via root, no spinea via root).
+        private static readonly HashSet<string> XzRootMotionSuffixes = new HashSet<string>
+        {
+            "Paintress_DashIn-Idle1",
+            "Paintress_DashOut-Idle2",
+            "DefaultSlot",
+            "DefaultSlot (1)",
+        };
+
         private static string ActionSuffix(string clipName)
         {
             int pipe = clipName.IndexOf('|');
@@ -64,18 +78,29 @@ namespace Aline.Editor
                 clips = importer.defaultClipAnimations;
 
             int looped = 0;
+            int xzExtracted = 0;
             for (int i = 0; i < clips.Length; i++)
             {
-                bool shouldLoop = LoopingSuffixes.Contains(ActionSuffix(clips[i].name));
+                var actionSuffix = ActionSuffix(clips[i].name);
+
+                bool shouldLoop = LoopingSuffixes.Contains(actionSuffix);
                 if (clips[i].loopTime != shouldLoop)
                 {
                     clips[i].loopTime = shouldLoop;
                 }
                 if (shouldLoop) looped++;
+
+                // Por defecto Generic baked motion en bones. Para clips con
+                // motion horizontal real, desbloquear y normalizar XZ para que
+                // Unity extraiga el delta como root motion.
+                bool extractXz = XzRootMotionSuffixes.Contains(actionSuffix);
+                clips[i].lockRootPositionXZ = !extractXz;
+                clips[i].keepOriginalPositionXZ = !extractXz;
+                if (extractXz) xzExtracted++;
             }
 
             importer.clipAnimations = clips;
-            Debug.Log("[AlineAnimsImporter] " + clips.Length + " clips procesados, " + looped + " marcados loopTime=true.");
+            Debug.Log("[AlineAnimsImporter] " + clips.Length + " clips procesados, " + looped + " marcados loopTime=true, " + xzExtracted + " con XZ root motion extraído.");
         }
 
     }

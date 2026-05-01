@@ -146,6 +146,8 @@ T_impact_0 + delta : (repetir descenso/nota/destroy para i1)
 
 **Mecánica:** Aline ejecuta un golpe mele tras aproximarse al jugador. Telegraph = aproximación (DashIn) + línea/streak en la dirección del slash. Parry = una nota con dirección **opuesta** (parry real).
 
+> **Bloqueada por root motion (2026-05-01).** Los clips DashIn/DashOut tienen el desplazamiento baked en bones internos del rig, no en root delta. Aline se ve moverse pero el GameObject no se traslada, y al terminar DashIn la mesh "salta" de vuelta a la posición del prefab. Hasta resolverlo (re-export Blender con root motion canónico, ver paso 2.5 de [NEXT_STEPS.md](../../../docs/NEXT_STEPS.md)), **no prototipar Familia B**. El contrato siguiente es válido, pero la coreografía DashIn → idle/skill → DashOut no se podrá ejecutar limpia sin root motion. Detalles operativos y caminos descartados en la skill [`vivify-animations`](../vivify-animations/SKILL.md).
+
 ### Inputs requeridos
 
 | Input | Valor | Notas |

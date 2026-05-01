@@ -115,7 +115,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|DefaultSlot
       takeName: SK_Curator_Aline|DefaultSlot
-      internalID: 0
+      internalID: 2091917793201856229
       firstFrame: 0
       lastFrame: 83
       wrapMode: 0
@@ -144,7 +144,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_DashIn-Idle1
       takeName: SK_Curator_Aline|Paintress_DashIn-Idle1
-      internalID: 0
+      internalID: -5127567736771898720
       firstFrame: 0
       lastFrame: 83
       wrapMode: 0
@@ -173,7 +173,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|DefaultSlot (1)
       takeName: SK_Curator_Aline|DefaultSlot
-      internalID: 0
+      internalID: -2671659824610240793
       firstFrame: 0
       lastFrame: 83
       wrapMode: 0
@@ -202,7 +202,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_DashOut-Idle2
       takeName: SK_Curator_Aline|Paintress_DashOut-Idle2
-      internalID: 0
+      internalID: 8269306201579216498
       firstFrame: 0
       lastFrame: 87
       wrapMode: 0
@@ -231,7 +231,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Idle1
       takeName: SK_Curator_Aline|Paintress_Idle1
-      internalID: 0
+      internalID: 5702910701438006417
       firstFrame: 0
       lastFrame: 280
       wrapMode: 0
@@ -244,10 +244,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -260,7 +260,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Idle1_to_idle2_transition
       takeName: SK_Curator_Aline|Paintress_Idle1_to_idle2_transition
-      internalID: 0
+      internalID: 8048420713252750257
       firstFrame: 0
       lastFrame: 62
       wrapMode: 0
@@ -273,10 +273,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -289,7 +289,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Idle2
       takeName: SK_Curator_Aline|Paintress_Idle2
-      internalID: 0
+      internalID: 2060684307269927821
       firstFrame: 0
       lastFrame: 100
       wrapMode: 0
@@ -302,10 +302,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -318,7 +318,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Idle2_Stun
       takeName: SK_Curator_Aline|Paintress_Idle2_Stun
-      internalID: 0
+      internalID: -953370061624666052
       firstFrame: 0
       lastFrame: 100
       wrapMode: 0
@@ -331,10 +331,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -347,7 +347,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Idle2_to_idle3_transition
       takeName: SK_Curator_Aline|Paintress_Idle2_to_idle3_transition
-      internalID: 0
+      internalID: -8626959011702625207
       firstFrame: 0
       lastFrame: 104
       wrapMode: 0
@@ -360,10 +360,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -376,7 +376,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Idle3
       takeName: SK_Curator_Aline|Paintress_Idle3
-      internalID: 0
+      internalID: 3251353584595421728
       firstFrame: 0
       lastFrame: 60
       wrapMode: 0
@@ -389,10 +389,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -405,7 +405,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Idle_Countered
       takeName: SK_Curator_Aline|Paintress_Idle_Countered
-      internalID: 0
+      internalID: -6803138481368656995
       firstFrame: 0
       lastFrame: 100
       wrapMode: 0
@@ -418,10 +418,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -434,7 +434,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill1
       takeName: SK_Curator_Aline|Paintress_Skill1
-      internalID: 0
+      internalID: 3475321442523519133
       firstFrame: 0
       lastFrame: 190
       wrapMode: 0
@@ -447,10 +447,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -463,7 +463,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill10
       takeName: SK_Curator_Aline|Paintress_Skill10
-      internalID: 0
+      internalID: 6320046956372752496
       firstFrame: 0
       lastFrame: 201
       wrapMode: 0
@@ -476,10 +476,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -492,7 +492,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill12
       takeName: SK_Curator_Aline|Paintress_Skill12
-      internalID: 0
+      internalID: 995544728812368667
       firstFrame: 0
       lastFrame: 386
       wrapMode: 0
@@ -505,10 +505,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -521,7 +521,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill2_End
       takeName: SK_Curator_Aline|Paintress_Skill2_End
-      internalID: 0
+      internalID: -6153732786310147231
       firstFrame: 0
       lastFrame: 43
       wrapMode: 0
@@ -534,10 +534,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -550,7 +550,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill2_Loop
       takeName: SK_Curator_Aline|Paintress_Skill2_Loop
-      internalID: 0
+      internalID: 4206739463995315004
       firstFrame: 0
       lastFrame: 30
       wrapMode: 0
@@ -563,10 +563,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -579,7 +579,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill2_Start
       takeName: SK_Curator_Aline|Paintress_Skill2_Start
-      internalID: 0
+      internalID: -4660773233645352490
       firstFrame: 0
       lastFrame: 55
       wrapMode: 0
@@ -592,10 +592,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -608,7 +608,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill3
       takeName: SK_Curator_Aline|Paintress_Skill3
-      internalID: 0
+      internalID: 5103056806836842691
       firstFrame: 0
       lastFrame: 127
       wrapMode: 0
@@ -621,10 +621,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -637,7 +637,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill4
       takeName: SK_Curator_Aline|Paintress_Skill4
-      internalID: 0
+      internalID: 6463612025312421237
       firstFrame: 0
       lastFrame: 335
       wrapMode: 0
@@ -650,10 +650,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -666,7 +666,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill5
       takeName: SK_Curator_Aline|Paintress_Skill5
-      internalID: 0
+      internalID: 591041694141597666
       firstFrame: 0
       lastFrame: 195
       wrapMode: 0
@@ -679,10 +679,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -695,7 +695,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill6
       takeName: SK_Curator_Aline|Paintress_Skill6
-      internalID: 0
+      internalID: 8745011837547583967
       firstFrame: 0
       lastFrame: 290
       wrapMode: 0
@@ -708,10 +708,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -724,7 +724,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill7
       takeName: SK_Curator_Aline|Paintress_Skill7
-      internalID: 0
+      internalID: -8018420687234345659
       firstFrame: 0
       lastFrame: 351
       wrapMode: 0
@@ -737,10 +737,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -753,7 +753,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill7_MaelleBurningCanvasVersion
       takeName: SK_Curator_Aline|Paintress_Skill7_MaelleBurningCanvasVersion
-      internalID: 0
+      internalID: 9187441455881560093
       firstFrame: 0
       lastFrame: 351
       wrapMode: 0
@@ -766,10 +766,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -782,7 +782,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Paintress_Skill8
       takeName: SK_Curator_Aline|Paintress_Skill8
-      internalID: 0
+      internalID: -3903904669401602444
       firstFrame: 0
       lastFrame: 480
       wrapMode: 0
@@ -795,10 +795,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -811,7 +811,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Skill_Aline_P3_Skill1
       takeName: SK_Curator_Aline|Skill_Aline_P3_Skill1
-      internalID: 0
+      internalID: -9151437173979666908
       firstFrame: 0
       lastFrame: 340
       wrapMode: 0
@@ -824,10 +824,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
@@ -840,7 +840,7 @@ ModelImporter:
     - serializedVersion: 16
       name: SK_Curator_Aline|Skill_Aline_P3_Skill2
       takeName: SK_Curator_Aline|Skill_Aline_P3_Skill2
-      internalID: 0
+      internalID: -436133532681454175
       firstFrame: 0
       lastFrame: 378
       wrapMode: 0
@@ -853,10 +853,10 @@ ModelImporter:
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
-      loopBlendPositionXZ: 0
+      loopBlendPositionXZ: 1
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 0
+      keepOriginalPositionXZ: 1
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000

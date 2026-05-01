@@ -21,29 +21,27 @@ Pipeline funcionando end-to-end:
 
 Cinco familias (A/B/D/E/F) + modificador C apilable formalizadas en [`families.md`](../.claude/skills/vivify-mapping/families.md): inputs, secuencia de eventos, encoding del parry, parámetros tunables, no-conflicto. Mapeo completo Animator→familia incluido. Visión de fase a fase en [PRODUCTO.md](PRODUCTO.md).
 
-### 2. Sandbox de locomoción — validación de transiciones encadenadas
+### 2. Sandbox de locomoción — validado modulo open issue
 
-Identificación de los 26 triggers ya hecha por inspección visual contra vídeo (mapeo completo en [`families.md`](../.claude/skills/vivify-mapping/families.md)). **Falta** validar que las animaciones, una vez disparadas vía eventos `SetAnimatorProperty` en Vivify, encadenan limpio en Beat Saber sin saltos, T-poses entre estados, o desincronizaciones.
+Implementado en `beatsaber-map/EasyStandard.dat` (difficulty Easy del mapa Test, registrada en `Info.dat`). Cadena de `SetAnimatorProperty` recorre idles, transiciones, dashes y stuns canónicos. Validado en BS: el AnimatorController encadena limpio cuando los triggers son discretos y no redundantes (ver patrón y gotchas en la skill [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md)).
 
-**Por qué paso aparte y no mezclado con el primer prototipo:** si un ataque falla con VFX + parry + animación a la vez, no se sabe cuál sistema está roto. Validar locomoción en aislamiento **antes** acota el espacio de debug del primer ataque al VFX y al encoding del parry.
+**Open issue: snap-back de DashIn/DashOut.** Los clips con motion horizontal (`DashIn-Idle1`, `DashOut-Idle2`, `DefaultSlot`, `DefaultSlot (1)`) tienen el desplazamiento baked en bones internos (pelvis/spine) en vez de en root delta. Apply Root Motion ON no extrae nada porque el root bone del rig no tiene curve de posición. Resultado: la mesh se ve moverse durante el clip pero el GameObject no se traslada, y al terminar el clip los bones vuelven a neutral y la mesh "salta" al GO (origin).
 
-**Concreto a testear** (en un mapa/dificultad sandbox, sin notas ni VFX):
+Probado y descartado:
+- `AnimateTrack` con `_offsetPosition` o `_position` para compensar — primero se ignora silenciosamente, segundo introduce teleports y exige cálculo manual de displacement por clip (insostenible al añadir clips intermedios).
+- `Apply Root Motion = ON` por sí solo — no extrae si el FBX bakea motion en bones, no en root.
+- `AlineAnimsImporter` con `lockRootPositionXZ = false` + `keepOriginalPositionXZ = false` por clip — configurado y aplicado, pero los `.psa` actuales no exponen delta extraíble.
 
-```
-T+0   : Idle1 baseline (Aline en suelo)
-T+3   : DashIn-Idle1   (aproximación)
-T+6   : DashOut-Idle2  (retirada)
-T+9   : Idle1_to_idle2_transition  (sube)
-T+12  : Idle2          (flotando)
-T+15  : Idle2_Stun     (encorvada adelante)
-T+18  : Idle_Countered (encorvada atrás)
-T+21  : Idle2_to_Idle3_transition  (cae)
-T+24  : Idle3          (derrotada)
-```
+### 2.5. Re-export `Aline_Anims.fbx` desde Blender con root motion canónico
 
-Opcional: añadir un par de skill triggers ligeros (`Skill1`, `Skill7`) sin VFX ni notas para confirmar que las skill-anims también dispatchan limpio.
+**Bloqueante de Familia B (mele) y posiblemente E (multi-hit chain con desplazamiento).** Hasta que los clips expongan motion en el root bone del rig, no podemos prototipar Familia B con coreografía DashIn → idle/skill → DashOut sin el snap-back.
 
-**Output esperado:** vídeo o nota en `docs/my-notes.md` confirmando que las transiciones se ven correctas, o lista de las que necesitan ajuste antes de seguir.
+Path probable (a confirmar al tirar):
+- Investigar si los `.psa` originales tienen root motion que se está distribuyendo en pelvis/spine al importar a Blender.
+- Si sí: configurar el import o un script que lo "consolide" en el root bone antes del export FBX.
+- Si no: los `.psa` ya vienen sin root motion (Unreal usa otro sistema), y hay que generar el motion del root sintéticamente desde la posición de pelvis o equivalente.
+
+Fuera de scope de NEXT_STEPS: la solución concreta vive en `vivify-animations` cuando se ataque. Lo único que importa aquí es que es el siguiente paso bloqueante.
 
 ### 3. Prototipo de cada familia en sandbox
 
