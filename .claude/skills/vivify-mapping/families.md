@@ -2,37 +2,48 @@
 
 Este archivo formaliza los **contratos de ataque** del boss fight. Lo describe [PRODUCTO.md](../../../docs/PRODUCTO.md): cada habilidad de Aline es una **familia reutilizable** (prefab + animación + secuencia de eventos `.dat` + encoding del parry). Una vez una familia está definida y validada con un prototipo, instanciarla N veces en el mapa con timings/posiciones distintos es trabajo mecánico.
 
-Si añades un ataque nuevo, **busca primero en este catálogo** una familia existente que encaje. Solo crea familia nueva (E, F...) si el ataque no encaja en ninguna existente.
+Si añades un ataque nuevo, **busca primero en este catálogo** una familia existente que encaje. Solo crea familia nueva (G, H...) si el ataque no encaja en ninguna existente.
 
-> **Dependencia de identificación de triggers.** Los inputs marcados `TBD` en cada familia (qué `Skill_X` del Animator es la animación correcta) se resuelven en el paso 2 de [NEXT_STEPS.md](../../../docs/NEXT_STEPS.md) — sandbox de locomoción/identificación. Hasta que ese paso esté hecho, los prototipos de cada familia están bloqueados. Cuando se identifiquen, sustituir los `TBD` por el nombre concreto y rellenar la tabla de abajo.
+## Tabla de identificación de triggers
 
-## Tabla de identificación de triggers (a rellenar)
+Mapeo confirmado del Animator de Aline (`Aline_AC.controller`) a las familias de ataque. El nombre del **trigger** (parámetro del Animator) no lleva prefijo `Paintress_`; el **clip** sí lo lleva en algunos casos (artefacto del FBX importer).
 
-| Trigger | Clip identificado | Familia destino | Notas |
-|---|---|---|---|
-| `Idle1` | TBD | — | idle base |
-| `Idle2` | TBD | — | — |
-| `Idle3` | TBD | — | — |
-| `Idle1_to_idle2_transition` | TBD | — | — |
-| `Idle2_to_idle3_transition` | TBD | — | — |
-| `DashIn-Idle1` | TBD | — | aterrizaje? entrada en escena? |
-| `DashOut-Idle2` | TBD | — | salida? |
-| `Idle2_Stun` | TBD | — | — |
-| `Idle_Countered` | TBD | — | reacción a parry exitoso? |
-| `Skill1` | TBD | TBD (B?) | — |
-| `Skill2_Start` / `_Loop` / `_End` | TBD | TBD | skill multi-fase |
-| `Skill3` | TBD | TBD | — |
-| `Skill4` | TBD | TBD | — |
-| `Skill5` | TBD | TBD (A?) | — |
-| `Skill6` | TBD | TBD | — |
-| `Skill7` | TBD | TBD (A?) | candidato a ranged sequence |
-| `Skill7_MaelleBurningCanvasVersion` | TBD | TBD | variante visual |
-| `Skill8` | TBD | TBD | — |
-| `Skill9` | TBD | TBD | — |
-| `Skill10` | TBD | TBD | — |
-| `Skill12` | TBD | TBD | — |
-| `Skill_Aline_P3_Skill1` | TBD | TBD | fase 3 |
-| `Skill_Aline_P3_Skill2` | TBD | TBD (C?) | fase 3, candidato a distortion window |
+| Trigger | Clip | Fase | Familia | Notas |
+|---|---|---|---|---|
+| `Idle1` | `Paintress_Idle1` | 1 | — | Idle base fase 1 (en suelo) |
+| `Idle2` | `Paintress_Idle2` | 2 | — | Idle base fase 2 (flotando) |
+| `Idle3` | `Paintress_Idle3` | 3 | — | Idle derrotada (en suelo) |
+| `Idle1_to_idle2_transition` | `Paintress_Idle1_to_idle2_transition` | 1→2 | — | Transición entre idles |
+| `Idle2_to_idle3_transition` | `Paintress_Idle2_to_Idle3_transition` | 2→3 | — | Cae de flotar al suelo |
+| `Idle2_Stun` | `Paintress_Idle2_Stun` | 2 | — | Encorvada hacia adelante (stun) |
+| `Idle_Countered` | `Paintress_Idle_Countered` | 2 | — | Reacción a impacto, encorvada hacia atrás |
+| `DashIn-Idle1` | `Paintress_DashIn-Idle1` | 1 | **B** | Dash in + golpe mele |
+| `DashOut-Idle2` | `Paintress_DashOut-Idle2` | 1 | B (post) | Retirada tras mele, devuelve a posición lejana |
+| `DefaultSlot` | (sin prefijo) | 1 | B (alias) | Mismo clip que `DashIn-Idle1` |
+| `DefaultSlot (1)` | (sin prefijo) | 1 | B (alias) | Mismo clip que `DashIn-Idle1` |
+| `Skill1` | `Paintress_Skill1` | 1 | **E** | Aspavientos con explosiones (multi-hit chain con VFX explosivo) |
+| `Skill2_Start` | `Paintress_Skill2_Start` | 1 | **F** (intro) | Aline se eleva, levanta brazo |
+| `Skill2_Loop` | `Paintress_Skill2_Loop` | 1 | **F** (sustain) | Idle elevada, bola de energía cargando |
+| `Skill2_End` | `Paintress_Skill2_End` | 1 | **F** (resolve) | Aline baja a tierra tras la explosión |
+| `Skill3` | `Paintress_Skill3` | 1 | **A** | "Toca el harpa" + 3 piedras gigantes secuenciales |
+| `Skill4` | `Paintress_Skill4` | 1 | **A** | "Toca el harpa" + giro + N proyectiles pequeños |
+| `Skill5` | `Paintress_Skill5` | 1 | **B + modificador C** | Mele con distorsión (entorno gris al jugador) |
+| `Skill6` | `Paintress_Skill6` | 1→2 | — | Transición narrativa: salta, flota, se arma con pincel grande, distorsión |
+| `Skill7` | `Paintress_Skill7` | 2 | **E** | 5 golpes con dash-back-return, pincel grande |
+| `Skill7_MaelleBurningCanvasVersion` | (variante) | 2 | E (variante) | Casi idéntico a `Skill7` visualmente |
+| `Skill8` | `Paintress_Skill8` | 2 | **caso especial** | Aline gigante de fondo + bolas de energía + serie de golpes (ver "Diferidos" en NEXT_STEPS) |
+| `Skill9` | (NO existe en clips) | 2? | — | Sospechoso: ataque de Aline gigante; extracción pendiente desde FModel |
+| `Skill10` | `Paintress_Skill10` | 2 | **E** | Serie de golpes en sitio |
+| `Skill11` | (NO existe en clips) | — | — | Gap en numeración del Animator |
+| `Skill12` | `Paintress_Skill12` | 2 | **E** | Serie larga con saltos |
+| `Skill_Aline_P3_Skill1` | (sin prefijo Paintress_) | 3 | — | Curación al jugador, Aline ya no pelea |
+| `Skill_Aline_P3_Skill2` | (sin prefijo Paintress_) | 3 | — | Variante de curación |
+
+### Composición por fase
+
+- **Fase 1 (suelo, `Idle1`):** A (Skill3, Skill4), B (DashIn-Idle1), B+C (Skill5), E (Skill1), F (Skill2 multi-stage). Transiciona a fase 2 vía `Idle1_to_idle2_transition` + `Skill6`.
+- **Fase 2 (flotando, `Idle2`):** E (Skill7, Skill10, Skill12), caso especial (Skill8). Transiciona a fase 3 vía `Idle2_to_idle3_transition`.
+- **Fase 3 (derrotada, `Idle3`):** sin combate. P3_Skill1 / P3_Skill2 son curaciones narrativas.
 
 ---
 
@@ -48,13 +59,13 @@ Cada **instancia** de un ataque genera un **track ID único**. Convención:
 atk_<familia>_<NNN>
 ```
 
-Donde `<familia>` ∈ `{a, b, c, d, ...}` y `<NNN>` es un contador de 3 dígitos por familia (`atk_a_001`, `atk_a_002`, ..., `atk_b_017`). Si una instancia genera múltiples objetos (p.ej. familia A con N proyectiles), añade sufijo `_iN`: `atk_a_001_i0`, `atk_a_001_i1`, etc.
+Donde `<familia>` ∈ `{a, b, d, e, f, ...}` y `<NNN>` es un contador de 3 dígitos por familia (`atk_a_001`, `atk_a_002`, ..., `atk_e_017`). Si una instancia genera múltiples objetos (p.ej. familia A con N proyectiles), añade sufijo `_iN`: `atk_a_001_i0`, `atk_a_001_i1`, etc.
 
 **Por qué:** el `AssignTrackParent` y el `DestroyPrefab` necesitan localizar el track sin ambigüedad. Sin namespace estructurado, tracks de ataques distintos colisionan y limpiar uno borra otro.
 
 **Lo que NO usa este namespace:**
 - Animaciones de Aline → siempre track `alineTrack` (definido en el `InstantiatePrefab` original de Aline al cargar el mapa).
-- Filtros de post-process (familia C) → track `postFx_<NNN>` aparte, no `atk_*`.
+- Filtros de post-process (modificador C) → track `postFx_<NNN>` aparte, no `atk_*`.
 
 ### Separación de tracks de Aline vs ataque
 
@@ -74,160 +85,123 @@ Las notas del parry se colocan en el `_notes` array del `.dat` con su `_time` ca
 
 ## Familia A — Ranged Sequence
 
-**Mecánica:** Aline lanza N proyectiles que orbitan brevemente y caen secuencialmente sobre el jugador. Cada proyectil = un parry.
+**Mecánica:** Aline lanza N proyectiles que aparecen sobre/junto a ella y caen secuencialmente sobre el jugador. Cada proyectil = un parry.
 
 ### Inputs requeridos
 
 | Input | Valor | Notas |
 |---|---|---|
-| Animator trigger | `Skill5` o `Skill7` (TBD por inspección visual de clips) | Anim de Aline lanzando los proyectiles al aire |
-| Prefab proyectil | `assets/aline/prefabs/projectile.prefab` (TBD — pendiente crear) | VFX del proyectil; si no existe aún se prototipa con un cubo unlit emisivo |
-| Prefab ring (opcional) | `assets/aline/prefabs/projectile_ring.prefab` (TBD) | Spawner visual: el círculo de origen donde orbitan los N proyectiles antes de caer |
+| Animator trigger | `Skill3` (3 piedras gigantes, fase 1) o `Skill4` (N proyectiles pequeños tras giro, fase 1) | Las dos variantes encajan en A; cambia VFX y N |
+| Prefab proyectil | `assets/aline/prefabs/projectile_*.prefab` (TBD — pendiente crear/extraer) | Skill3: piedras grandes; Skill4: proyectiles pequeños tipo pincelada/tinta |
+| Prefab spawner (opcional) | indicador visual del origen (encima de Aline) | El propio movimiento de "tocar harpa" lo telegraph; spawner separado puede no ser necesario |
 
 ### Secuencia de eventos `.dat`
 
 Tiempos relativos al instante de impacto del **primer** proyectil (`T_impact_0`). Asume `delta` = separación entre proyectiles consecutivos.
 
 ```
-T_impact_0 - 2.0s : SetAnimatorProperty (Skill5 trigger) → alineTrack
-T_impact_0 - 1.5s : InstantiatePrefab (projectile_ring) → atk_a_NNN_ring
-T_impact_0 - 1.5s : InstantiatePrefab × N (projectile_i0..iN-1) → atk_a_NNN_i0..iN-1
-T_impact_0 - 1.5s : AnimateTrack (orbit) sobre cada atk_a_NNN_iX por 1.0s
+T_impact_0 - 2.5s : SetAnimatorProperty (Skill3 ó Skill4) → alineTrack
+T_impact_0 - 1.5s : InstantiatePrefab × N (projectile_i0..iN-1) sobre Aline → atk_a_NNN_i0..iN-1
+T_impact_0 - 1.0s : AnimateTrack (orbit/hold sobre Aline) en cada atk_a_NNN_iX por 0.5s
 T_impact_0 - 0.5s : AnimateTrack (descenso a posición de impacto) sobre atk_a_NNN_i0 por 0.5s
 T_impact_0 + 0.0s : nota de parry #0 llega al jugador
 T_impact_0 + 0.0s : DestroyPrefab atk_a_NNN_i0
 T_impact_0 + delta : (repetir descenso/nota/destroy para i1)
 ...
-T_impact_0 + (N-1)*delta + 0.5s : DestroyPrefab atk_a_NNN_ring
 ```
+
+> Los offsets exactos hay que afinarlos con la duración real del clip (`Skill3` y `Skill4` tienen duración distinta — el descenso de los proyectiles debe sincronizar con el "lanzamiento" visible en la animación).
 
 ### Encoding del parry
 
-- Tipo: `_notes` con `_cutDirection` codificando **el cuadrante de origen del proyectil** desde el ring spawner.
-- Distribución típica: ring centrado encima de Aline → proyectiles caen en arco frontal → notas en filas 1-2 (medio/alto), cualquier columna 0-3.
+- Tipo: `_notes` con `_cutDirection` codificando **el cuadrante de origen del proyectil**.
+- Distribución típica: proyectiles caen en arco frontal → notas en filas medias/altas.
 - Cada nota va separada de la siguiente por `delta` (60/BPM × beats).
-- Color (`_type` 0/1) puede alternar para forzar parries con ambas manos, o monocolor si la fase pide tensión.
+- Color (`_type` 0/1) puede alternar para forzar parries con ambas manos.
 
 ### Parámetros tunables (por instancia)
 
 | Parámetro | Rango típico | Notas |
 |---|---|---|
-| `T_impact_0` | cualquier `_time` del mapa | inicio del ataque |
-| `N` | 3-9 | E33 usa 7 en este patrón concreto |
-| `delta` | 0.2s-0.8s | más bajo = más intenso, menos legible |
-| Direcciones de notas | 8 valores BS | una por proyectil, codifica cuadrante de origen |
+| `T_impact_0` | cualquier `_time` | inicio del ataque |
+| `N` | 3 (Skill3) o 5-7 (Skill4) | dictado por la animación |
+| `delta` | 0.3s-0.8s | bajo = más intenso, menos legible |
+| Direcciones de notas | 8 valores BS | una por proyectil |
 
-### NO tunable (parte del contrato)
+### NO tunable
 
 - Estructura de eventos (orden y deltas relativos del telegraph).
 - Que cada proyectil tenga su propio track `_iX`.
-- Que el ring se destruya **después** del último proyectil, no a la vez.
+- N debe matchear el lanzamiento visible en la animación.
 
 ### Reglas de no-conflicto
 
-- Tracks usados: `atk_a_NNN`, `atk_a_NNN_ring`, `atk_a_NNN_i0..iN-1`. Reservar el rango `NNN` antes de añadir otra instancia.
-- No solapar con otra familia A en `T_impact_0 ± 2s`: confunde la lectura.
-- Sí compatible con familia B/C/D simultánea **si están en otra zona del grid** (no encima del ring).
+- Tracks usados: `atk_a_NNN`, `atk_a_NNN_i0..iN-1`.
+- No solapar dos familia A en `T_impact_0 ± 2s`: confunde la lectura.
+- Compatible con B/D/E/F simultáneas si están en otra zona del grid.
 
 ---
 
 ## Familia B — Melee Directional Slash
 
-**Mecánica:** Aline ejecuta un corte rápido. Telegraph = línea/streak en la dirección del slash. Parry = una nota con dirección **opuesta** (parry real).
+**Mecánica:** Aline ejecuta un golpe mele tras aproximarse al jugador. Telegraph = aproximación (DashIn) + línea/streak en la dirección del slash. Parry = una nota con dirección **opuesta** (parry real).
 
 ### Inputs requeridos
 
 | Input | Valor | Notas |
 |---|---|---|
-| Animator trigger | `Skill1`, `Skill3`, o `Skill_Aline_P3_Skill1` (TBD por inspección de clips melee) | Anim del corte |
-| Prefab streak | `assets/aline/prefabs/slash_streak.prefab` (TBD — pendiente crear) | Línea/trail que dibuja el eje del slash |
+| Animator trigger | `DashIn-Idle1` (golpe estándar, fase 1) o `Skill5` (golpe con distorsión — combina con modificador C) | El clip incluye aproximación + golpe |
+| Trigger de retirada | `DashOut-Idle2` | Devuelve a Aline a posición lejana tras el golpe |
+| Prefab streak | `assets/aline/prefabs/slash_streak.prefab` (TBD — pendiente crear) | Línea/trail dibujando el eje del slash |
 | Material streak | unlit emissive con alpha; reutilizable para todas las instancias B | — |
+
+### Choreography (parte del contrato)
+
+El ataque consume tres beats: **aproximación → golpe → retirada**. Tiempos aproximados:
+
+- `T_impact - 1.5s` : `DashIn-Idle1` trigger (Aline empieza aproximación)
+- `T_impact - 0.6s` : streak aparece, Aline ya cerca
+- `T_impact + 0.0s` : golpe + nota
+- `T_impact + 0.5s` : `DashOut-Idle2` trigger (retirada)
+
+Si la fase ya tiene a Aline cerca por contexto previo, se puede saltar el `DashIn-Idle1` y entrar desde `Idle1` directamente al impacto, pero entonces el ataque **no es Familia B canónica** — documentarlo como instancia atípica.
 
 ### Secuencia de eventos `.dat`
 
 ```
-T_impact - 1.2s : SetAnimatorProperty (Skill1 trigger) → alineTrack
+T_impact - 1.5s : SetAnimatorProperty (DashIn-Idle1 ó Skill5) → alineTrack
 T_impact - 0.6s : InstantiatePrefab (slash_streak) → atk_b_NNN
 T_impact - 0.6s : AnimateTrack (escalado/extensión del streak) sobre atk_b_NNN por 0.6s
 T_impact + 0.0s : nota de parry llega al jugador
-T_impact + 0.2s : DestroyPrefab atk_b_NNN (fade-out del streak)
+T_impact + 0.2s : DestroyPrefab atk_b_NNN
+T_impact + 0.5s : SetAnimatorProperty (DashOut-Idle2) → alineTrack
 ```
 
 ### Encoding del parry
 
-- **Una sola nota.** Dirección = **opuesta al eje del streak**. Si el streak va izquierda→derecha (horizontal), la nota es horizontal hacia la izquierda.
-- Posición típica: centro de pantalla (línea 1, layer 1) — un slash es un golpe único, no un patrón espacial.
-- Color: el que corresponda por flow de la fase. Familia B no impone color.
+- **Una sola nota.** Dirección = **opuesta al eje del streak** (Si el streak va izquierda→derecha, la nota es horizontal hacia la izquierda).
+- Posición típica: centro de pantalla — un slash es un golpe único.
+- Color: el que corresponda por flow.
 
 ### Parámetros tunables
 
-| Parámetro | Rango típico | Notas |
+| Parámetro | Rango | Notas |
 |---|---|---|
 | `T_impact` | cualquier `_time` | — |
 | Eje del slash | 8 direcciones | el VFX del streak debe matchear |
-| Anim trigger | varios `Skill_*` melee | depende de fase |
+| Anim trigger | `DashIn-Idle1` ó `Skill5` | Skill5 implica modificador C activo |
+| Saltar DashIn | bool | si la fase ya tiene a Aline cerca |
 
 ### NO tunable
 
 - Que la nota sea **una sola**.
-- Que su dirección sea **opuesta** al streak (es la representación del parry, no del corte).
-- Ventana telegraph→impacto (~0.6s): más rápido es ilegible, más lento pierde tensión.
+- Que su dirección sea **opuesta** al streak.
+- Ventana telegraph→impacto (~0.6s).
 
 ### Reglas de no-conflicto
 
 - Track usado: `atk_b_NNN`.
-- Compatible con cualquier otra familia simultánea siempre que no usen el mismo cuadrante visual (no quieres un proyectil de familia A cruzándose con el streak de B).
-
----
-
-## Familia C — Distortion Window
-
-**Mecánica:** filtro post-process desaturado se activa, abre la "ventana de distorsión" durante la cual viene un golpe garantizado. Parry = una nota dentro de la ventana grayscale.
-
-### Inputs requeridos
-
-| Input | Valor | Notas |
-|---|---|---|
-| Animator trigger | `Skill_Aline_P3_Skill2` o similar fase 3 (TBD) | Anim contemplativa/cargada que justifica el "tiempo se ralentiza" |
-| Material Blit | `assets/aline/materials/m_distortion.mat` (TBD — **pendiente crear**) | Shader que aplica desaturación + viñeta opcional |
-| Propiedad animable | `_Saturation` (float, 0.0 grayscale → 1.0 normal) | Expuesta en el shader del material |
-
-### Secuencia de eventos `.dat`
-
-```
-T_impact - 1.5s : SetAnimatorProperty (trigger) → alineTrack
-T_impact - 1.0s : Blit (m_distortion) → postFx_NNN
-T_impact - 1.0s : SetMaterialProperty (_Saturation 1.0 → 0.0) sobre m_distortion por 0.5s
-T_impact + 0.0s : nota de parry llega al jugador
-T_impact + 0.3s : SetMaterialProperty (_Saturation 0.0 → 1.0) sobre m_distortion por 0.3s
-T_impact + 0.6s : Blit clear (o desactivar postFx_NNN)
-```
-
-### Encoding del parry
-
-- **Una sola nota** en posición central.
-- Lo que define la familia es **lo visual**, no la nota.
-- Tip de diseño: la nota debería entrar en escena exactamente cuando el `_Saturation` toca 0.0 (jugador siente que la nota "aparece desde la distorsión").
-
-### Parámetros tunables
-
-| Parámetro | Rango típico | Notas |
-|---|---|---|
-| `T_impact` | cualquier `_time` | — |
-| Duración fade-in | 0.3s-0.7s | a más fade, más cinematográfico |
-| Duración fade-out | 0.2s-0.5s | normalmente más corto que fade-in |
-| Intensidad min `_Saturation` | 0.0-0.3 | 0.0 = grayscale puro, 0.3 = solo apagado |
-
-### NO tunable
-
-- Que el ataque tenga ventana de post-process activo durante el parry (es el sello de la familia).
-- Que el shader del Blit sea reutilizable: una sola instancia de `m_distortion` para todas las familias C en el mapa, no clonarlo por instancia.
-
-### Reglas de no-conflicto
-
-- Track post-fx: `postFx_NNN`.
-- **Solo una familia C activa simultáneamente** — dos Blits de saturación pisándose es ilegible.
-- Compatible con familia A/B/D simultánea siempre que el filtro no oculte el telegraph del otro ataque (revisar visualmente al prototipar combos).
+- Compatible con cualquier otra familia simultánea siempre que no usen el mismo cuadrante visual.
 
 ---
 
@@ -237,11 +211,13 @@ T_impact + 0.6s : Blit clear (o desactivar postFx_NNN)
 
 > Referencia visual: el marker que usa E33 cuando un enemigo telegrafia ataques de precisión. Adaptación, no réplica — el feel es: cuadrado con esquinas marcadas + ring exterior que se contrae hasta tocar las esquinas.
 
+> **Sin source animation en el Animator de Aline.** Esta familia es **invento nuestro**, no traducción directa de un clip existente. Se usa donde queramos forzar un parry de precisión, típicamente como overlay sobre el momento clave de otra familia (último proyectil de A, explosión de F) o como ataque standalone en el clímax.
+
 ### Inputs requeridos
 
 | Input | Valor | Notas |
 |---|---|---|
-| Animator trigger | flexible — el indicador es independiente de la animación de Aline; combinable con cualquier `Skill_*` o sin animación | Si se combina con melee/ranged, el animator trigger lo dicta esa familia, no la D |
+| Animator trigger | flexible — el indicador es independiente de la animación de Aline | Si se combina con otra familia, el animator trigger lo dicta esa familia, no D |
 | Prefab indicador | `assets/aline/prefabs/indicator_ring.prefab` (TBD — **pendiente crear**) | Cuadrado + ring concéntrico, animable por scale |
 | Material | unlit emissive blanco/dorado para matchear estética E33 | reutilizable |
 
@@ -257,11 +233,11 @@ T_impact + 0.1s : DestroyPrefab atk_d_NNN
 ### Encoding del parry
 
 - **Una sola nota** posicionada **exactamente donde está el indicador**: si el indicador está a `[x=2, y=1]` del grid de notas, la nota va en `_lineIndex=2, _lineLayer=1`.
-- La dirección de la nota puede ser cualquiera; lo que define el ataque es el **timing** (cierre del ring), no la dirección.
+- La dirección de la nota puede ser cualquiera; lo que define el ataque es el **timing** (cierre del ring).
 
 ### Parámetros tunables
 
-| Parámetro | Rango típico | Notas |
+| Parámetro | Rango | Notas |
 |---|---|---|
 | `T_impact` | cualquier `_time` | — |
 | Posición del indicador | grid 4×3 de BS | dicta la posición de la nota |
@@ -271,20 +247,169 @@ T_impact + 0.1s : DestroyPrefab atk_d_NNN
 
 ### NO tunable
 
-- Que el cierre del ring sea **monotónico** (no se expande otra vez antes del impacto): rompe la lectura.
+- Que el cierre del ring sea **monotónico** (no se expande otra vez antes del impacto).
 - Que la nota llegue **al instante exacto del cierre**, no antes.
 
 ### Reglas de no-conflicto
 
 - Track usado: `atk_d_NNN`.
-- Múltiples familia D simultáneas son **OK** (varios indicadores en grid distinto = combo de precisión). Cuidado con saturar la pantalla.
-- Combinable con A/B/C como modificador: indicador D superpuesto a un proyectil de A "convierte" el último proyectil del cluster en parry de precisión.
+- Múltiples familia D simultáneas son **OK** (varios indicadores en grid distinto = combo de precisión).
+- Combinable como overlay sobre A (último proyectil), F (momento de explosión), o E (último hit de la cadena).
+
+---
+
+## Familia E — Multi-hit Chain
+
+**Mecánica:** cadena de N parries en sucesión rápida durante una única animación de Aline que tiene N hits embebidos. Diferente de A en que el ataque es mele (no proyectiles). Diferente de B en que son N hits, no 1.
+
+### Inputs requeridos
+
+| Input | Valor | Notas |
+|---|---|---|
+| Animator trigger | `Skill1` (fase 1, magia gestual con explosiones) / `Skill7` o `Skill7_MaelleBurningCanvasVersion` (fase 2, pincel grande, dash-back-return × 5) / `Skill10` (fase 2, en sitio) / `Skill12` (fase 2, larga con saltos) | Cada uno tiene N hits embebidos en el clip |
+| VFX por hit | depende del trigger: explosión (Skill1), trazo de pincel (Skill7-12) | parametrizable por instancia |
+| Prefab/material del VFX | TBD según skill | extraer de FModel o crear custom |
+
+### Secuencia de eventos `.dat`
+
+Tiempos relativos al **primer hit** (`T_first_hit`). Asume `delta` = separación entre hits consecutivos, dictado por la animación.
+
+```
+T_first_hit - 1.0s : SetAnimatorProperty (trigger) → alineTrack
+T_first_hit + 0.0s : InstantiatePrefab (vfx_hit_0) → atk_e_NNN_h0
+T_first_hit + 0.0s : nota de parry #0
+T_first_hit + 0.3s : DestroyPrefab atk_e_NNN_h0
+T_first_hit + delta : (repetir InstantiatePrefab/nota/destroy para h1..hN-1)
+```
+
+> El `delta` y N están **dictados por el clip** — afinarlo con la animación real (Skill7 ≈ 5 hits, Skill10 ≈ varios en sitio, Skill12 ≈ los más largos con saltos, Skill1 ≈ aspavientos en serie).
+
+### Encoding del parry
+
+- Cadena de N notas con separación `delta` (típicamente 0.4-0.7s).
+- Direcciones pueden ser variadas si la anim sugiere movimiento (Skill12 con saltos), o más uniformes si la anim es estática (Skill10).
+- Skill7 con dash-back-return: cada hit viene "desde lejos" — la dirección puede codificar el ángulo de aproximación de Aline.
+
+### Parámetros tunables
+
+| Parámetro | Rango | Notas |
+|---|---|---|
+| `T_first_hit` | cualquier `_time` | — |
+| Trigger | `Skill1` / `Skill7` / `Skill7_Maelle...` / `Skill10` / `Skill12` | cada uno con su N y delta canónicos |
+| Direcciones de notas | 8 valores | una por hit |
+| VFX por hit | prefab path | varía por instancia visual |
+
+### NO tunable
+
+- N debe matchear el número de hits embebido en la animación. No se puede pedir 3 hits si el clip tiene 5 — la anim seguirá hasta el final y los hits sin nota golpearán "en vacío".
+- El primer hit no puede llegar antes de que la animación arranque.
+
+### Reglas de no-conflicto
+
+- Tracks: `atk_e_NNN`, `atk_e_NNN_hX` (X = 0..N-1).
+- No solapar dos familia E simultáneas — la cadena de notas se vuelve ilegible.
+- E + modificador C funciona bien para un hit clave dentro de la cadena (no toda la cadena).
+
+---
+
+## Familia F — Charging AoE Ball
+
+**Mecánica:** Aline se eleva, carga una bola de energía visible que crece, explota. Parry único en el momento de explosión. Telegraph muy largo (~3-4s) lo distingue de B.
+
+### Inputs requeridos
+
+| Input | Valor | Notas |
+|---|---|---|
+| Animator trigger Start | `Skill2_Start` | Aline se eleva levantando brazo |
+| Animator trigger Loop | `Skill2_Loop` | Sustained mientras la bola crece |
+| Animator trigger End | `Skill2_End` | Aline baja a tierra tras la explosión |
+| Prefab bola | `assets/aline/prefabs/energy_ball.prefab` (TBD — pendiente crear o extraer de FModel) | Bola de energía, escalable, emissive |
+| Material bola | unlit emissive con bloom (si se puede dentro de la pipeline Vivify actual) | reutilizable |
+
+### Secuencia de eventos `.dat`
+
+```
+T_explosion - 4.0s : SetAnimatorProperty (Skill2_Start) → alineTrack
+T_explosion - 3.0s : InstantiatePrefab (energy_ball, scale s_min) → atk_f_NNN
+T_explosion - 3.0s : SetAnimatorProperty (Skill2_Loop) → alineTrack
+T_explosion - 3.0s : AnimateTrack (scale s_min → s_max) sobre atk_f_NNN por 3.0s
+T_explosion + 0.0s : nota de parry llega al jugador
+T_explosion + 0.0s : DestroyPrefab atk_f_NNN (acompañar con VFX de explosión opcional)
+T_explosion + 0.3s : SetAnimatorProperty (Skill2_End) → alineTrack
+```
+
+### Encoding del parry
+
+- **Una sola nota** en posición central (la bola está delante del jugador).
+- Dirección: la que el flow pida.
+- Tip: combinable con D (shrinking indicator) sobre la nota para reforzar el "parry de precisión" en el momento exacto de explosión.
+
+### Parámetros tunables
+
+| Parámetro | Rango | Notas |
+|---|---|---|
+| `T_explosion` | cualquier `_time` | — |
+| Duración carga | 2.0s-4.0s | el `Skill2_Loop` puede sostenerse arbitrario |
+| `s_min` / `s_max` | 0.3 / 1.5-3.0 (escala mundo) | tamaño inicial / final de la bola |
+
+### NO tunable
+
+- La estructura `Skill2_Start` → `Skill2_Loop` → `Skill2_End` del trigger animator. Saltarse Loop = Aline se queda mal posicionada.
+- Que el parry sea una sola nota (es el sello de F).
+
+### Reglas de no-conflicto
+
+- Track: `atk_f_NNN`.
+- Solo una F activa simultáneamente. Dos bolas crecientes confunden el telegraph.
+- F + modificador C combina muy bien para clímax de fase 1.
+
+---
+
+## Modificador C — Distortion Overlay
+
+**No es una familia.** Es una **transformación visual** apilable sobre A/B/D/E/F en una instancia concreta del ataque, que aplica un filtro post-process al jugador (desaturación / grayscale) durante una ventana específica del telegraph o del parry. Replica la mecánica de "distorsión" de E33 (`Skill5`, posiblemente otros futuros).
+
+### Inputs requeridos
+
+| Input | Valor | Notas |
+|---|---|---|
+| Material Blit | `assets/aline/materials/m_distortion.mat` (TBD — **pendiente crear**) | Shader que aplica desaturación + viñeta opcional |
+| Propiedad animable | `_Saturation` (float, 0.0 grayscale → 1.0 normal) | Expuesta en el shader del material |
+
+### Eventos a inyectar (snippet)
+
+Se compone con la secuencia de la familia base sumando estos eventos. Típicamente la ventana abre antes del impacto y cierra justo después.
+
+```
+T_window_start - 0.5s : Blit (m_distortion) → postFx_NNN
+T_window_start - 0.5s : SetMaterialProperty (_Saturation 1.0 → 0.0) sobre m_distortion por 0.5s
+T_window_end + 0.0s  : SetMaterialProperty (_Saturation 0.0 → 1.0) sobre m_distortion por 0.3s
+T_window_end + 0.3s  : Blit clear postFx_NNN
+```
+
+### Composabilidad
+
+- **B + C** → mele con distorsión (caso canónico, `Skill5` vanilla).
+- **A + C** → cascada de proyectiles con distorsión sobre el descenso final.
+- **E + C** → cadena multi-hit con distorsión durante 1-2 hits clave.
+- **F + C** → bola cargando con distorsión durante el momento de explosión.
+- **D + C** → indicador de precisión con distorsión (clímax).
+
+### NO tunable
+
+- Que el shader del Blit sea **reutilizable**: una sola instancia de `m_distortion` para todo el mapa, no clonarlo por instancia.
+- Que **solo haya un C activo simultáneamente** en el mapa. Dos distorsiones se pisan visualmente.
+
+### Restricciones
+
+- Track post-fx: `postFx_NNN` (separado del namespace `atk_*`).
+- Si la familia base ya satura visualmente la pantalla, C puede ser redundante o ilegible — verificar al prototipar.
 
 ---
 
 ## Hueco para familias futuras
 
-Si surge un patrón que no encaja en A/B/C/D, añadir aquí siguiendo el mismo schema (Inputs / Secuencia / Encoding / Tunables / NO tunable / No-conflicto). Candidatos identificados pero no necesarios todavía:
+Si surge un patrón que no encaja en A/B/D/E/F, añadir aquí siguiendo el mismo schema (Inputs / Secuencia / Encoding / Tunables / NO tunable / No-conflicto). Candidatos identificados pero no necesarios todavía:
 
-- **E — Multi-hit chain:** combo de slashes encadenados que parecen uno solo (parry chain). Probable en fase 3.
-- **F — AoE telegraphed area:** zona del grid se marca como "no estar aquí cuando el timer cierre". Cambia la mecánica: en lugar de golpear, el jugador **evita**. Posible si encontramos cómo encajar "no golpear" con el cubo de BS (¿walls? ¿bombas?).
+- **G — AoE telegraphed area:** zona del grid se marca como "no estar aquí cuando el timer cierre". Cambia la mecánica: en lugar de golpear, el jugador **evita**. Posible si encontramos cómo encajar "no golpear" con BS (¿walls? ¿bombas? ¿saber-clear?).
+- **Caso especial Skill8 (clímax fase 2):** Aline gigante de fondo + bolas de energía + serie de golpes. No es familia reutilizable — es un beat narrativo único. Ver "Diferidos" en NEXT_STEPS.md, requiere conversación de diseño dedicada (ataque "impresionante" identificado por el usuario).

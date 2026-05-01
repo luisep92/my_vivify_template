@@ -17,26 +17,27 @@ Pipeline funcionando end-to-end:
 
 > Pivot: con la decisión de **showcase map** ([DECISIONES.md](DECISIONES.md)), el orden cambia. La canción y el state machine narrativo dependen de tener primero los **sistemas de ataque** definidos como contratos reutilizables. Componer fases sobre sistemas inestables es la receta del embolado.
 
-### 1. Catálogo de familias de ataque + contratos
+### 1. Catálogo de familias de ataque + contratos — **hecho**
 
-Las cuatro familias iniciales (Ranged Sequence, Melee Slash, Distortion Window, Shrinking Indicator) están descritas a alto nivel en [PRODUCTO.md](PRODUCTO.md). Falta formalizarlas como **contratos** en la skill `vivify-mapping/`: inputs requeridos, secuencia de eventos `.dat`, encoding del parry, parámetros tunables, reglas de no-conflicto entre tracks.
+Cinco familias (A/B/D/E/F) + modificador C apilable formalizadas en [`families.md`](../.claude/skills/vivify-mapping/families.md): inputs, secuencia de eventos, encoding del parry, parámetros tunables, no-conflicto. Mapeo completo Animator→familia incluido. Visión de fase a fase en [PRODUCTO.md](PRODUCTO.md).
 
-### 2. Sandbox de locomoción + identificación de animaciones
+### 2. Sandbox de locomoción + identificación de animaciones — **identificación hecha**
 
-**Antes de prototipar ataques.** El Animator tiene 26 triggers (`Skill1`-`Skill12`, idles, transiciones, `Skill_Aline_P3_*`) y visualmente **no sabemos cuál es cuál**. Construir un sandbox que dispare cada trigger secuencialmente con un label en pantalla (o, más simple, dispararlos a mano y anotar en vídeo) para:
+Identificación de los 26 triggers del Animator hecha por inspección visual en Unity contra vídeo de gameplay. Mapeo completo en la tabla de [`families.md`](../.claude/skills/vivify-mapping/families.md). Composición por fase también extraída.
 
-- Identificar qué clip es cada `Skill_X` (cuál es ranged, cuál melee, cuál distortion-window).
-- Validar que las transiciones entre idles encadenan limpio (ver a Aline flotar / aterrizar / mirar / volver a idle, sin saltos bruscos).
-- Probar combinaciones (`Idle1` → `DashIn-Idle1` → `Skill1` → vuelta a `Idle1`).
-- Actualizar [`families.md`](../.claude/skills/vivify-mapping/families.md) reemplazando los `TBD` de inputs por nombres concretos.
-
-Output: tabla de "trigger → clip identificado" en `families.md`, y un sandbox map reutilizable (probablemente la propia intro del boss fight nace de aquí).
+Pendiente solo el **lado de transiciones encadenadas** (verificar en BS que `Idle1` → `DashIn-Idle1` → `Idle1` o `Idle1_to_idle2_transition` → `Idle2` se ven limpio sin saltos). Esto se valida durante el primer prototipo (paso 3) — no requiere paso aparte.
 
 ### 3. Prototipo de cada familia en sandbox
 
-Con los triggers ya identificados (paso 2). Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de tocar el mapa real. Criterio de éxito por prototipo: animación + VFX + parry + cleanup, instanciable dos veces sin estado residual. Snapshot por prototipo (`-Label "proto-fam-X"`).
+Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de tocar el mapa real. Criterio de éxito por prototipo: animación + VFX + parry + cleanup, instanciable dos veces sin estado residual. Snapshot por prototipo (`-Label "proto-fam-X"`).
 
-**Orden sugerido de prototipado:** Familia A primero (ranged, más cómoda — VFX simple, encoding de notas claro). Después B/C/D según interesen.
+**Orden sugerido:**
+1. **A con `Skill3`** (3 piedras gigantes, fase 1) — el más cómodo: VFX claro, N pequeño, encoding de notas obvio. Sirve también para validar que las animaciones de Aline encadenan limpio en BS.
+2. **B con `DashIn-Idle1`** (mele estándar, fase 1) — valida la choreography de tres beats (DashIn + golpe + DashOut).
+3. **F con `Skill2_Start/Loop/End`** (carga + explosión, fase 1) — valida secuencia multi-stage de triggers y timing largo.
+4. **E con `Skill1`** (multi-hit chain, fase 1) — valida cadena de N parries sincronizados con N hits embebidos en el clip.
+5. **D standalone** (shrinking indicator, sin source anim) — valida que el indicador construido en Unity transmite el feel de E33.
+6. **B + modificador C con `Skill5`** — valida composición familia + modificador (Blit + SetMaterialProperty).
 
 ### 4. Canción definitiva
 
@@ -63,6 +64,14 @@ Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en secuencia conc
 Fork operativo en `d:\vivify_repo\unity-mcp/` (`luisep92/unity_vivify_mcp`), enganchado al proyecto Aline. Pendiente: cuando lleve unas sesiones rodando, evaluar PR a upstream `CoplayDev/unity-mcp`. Los commits están organizados con un cambio conceptual cada uno y mensajes en inglés, pensados para cherry-pick limpio. Detalle en [unity-mcp/README.md](../../unity-mcp/README.md).
 
 ---
+
+## Decisiones de diseño abiertas
+
+Beats narrativos identificados pero pendientes de decisión, antes del wireado del state machine (paso 5):
+
+- **Clímax fase 2 — `Skill8` con Aline gigante.** El usuario lo identifica como "ataque que sería realmente impresionante meter". La animación tal cual depende de una segunda Aline (gigante, en el fondo) que da bolas de energía, más una serie de golpes propios. Tres opciones a evaluar: (a) **rip de FModel** del modelo de la Aline gigante + segundo prefab + animator separado — gran scope; (b) **recortar `Skill8`** a solo la serie de golpes y aceptar que el espectáculo de la fase 2 venga de otro sitio; (c) **reemplazar el contexto** con algo distinto que sostenga el momento sin la gigante. Conversación dedicada antes de prototipar fase 2.
+- **`Skill9` ausente.** Trigger declarado en el Animator pero **sin clip importado**. Sospecha del usuario: era el ataque de la Aline gigante en E33. Si el clímax (decisión anterior) va por la opción (a), `Skill9` es candidato a extraer del dump (`Sandfall/`) vía FModel y meterlo en el FBX. Si va por (b)/(c), `Skill9` se descarta.
+- **`Skill11` ausente.** Gap en numeración del Animator, sin pista de qué era. No prioritario.
 
 ## Diferido post-torneo
 

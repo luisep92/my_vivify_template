@@ -28,13 +28,16 @@ Pendiente de elegir definitivamente. Probable: pieza del OST de *Expedition 33* 
 
 Estructura por fases (a rellenar conforme avance el diseño):
 
-| Fase | Idea | Estado |
-|---|---|---|
-| Intro / aparición | Aline entra en escena. Puede arrancar como BS más convencional para anclar al jugador antes de pivotar. | Pendiente |
-| Combate base | Cascada de ataques telegrafiados con ventana de parry. Mezcla de familias A/B (ranged + melee). | Pendiente |
-| Transición / cambio de fase | Cambio visual del prefab, intensificación, primera aparición de la familia C (distortion window). | Pendiente |
-| Climax | Pico de espectáculo. Combinaciones de familias y/o introducción de la familia D (shrinking indicator). | Pendiente |
-| Outro | Resolución, fade, créditos visuales si aplica. | Pendiente |
+El boss fight tiene tres fases canónicas en E33, identificadas por el idle de Aline: en el suelo, flotando, derrotada. La estructura del mapa las respeta:
+
+| Fase | Idle base | Skills disponibles | Familias en juego | Estado |
+|---|---|---|---|---|
+| Intro / aparición | — | — | arranca con flow más convencional (BS estándar) antes de pivotar al primer ataque | Pendiente |
+| Fase 1 — combate en suelo | `Idle1` | `Skill1`, `Skill2`, `Skill3`, `Skill4`, `Skill5` | A (Skill3, Skill4), B (DashIn-Idle1), B+C (Skill5 con distorsión), E (Skill1), F (Skill2 multi-stage) | Pendiente |
+| Transición 1→2 | `Idle1_to_idle2_transition` + `Skill6` | — | beat narrativo: Aline flota, se arma con pincel grande, distorsión | Pendiente |
+| Fase 2 — flotando con pincel | `Idle2` | `Skill7`, `Skill8`, `Skill10`, `Skill12` | E (Skill7, Skill10, Skill12), caso especial clímax (Skill8) | Pendiente |
+| Transición 2→3 | `Idle2_to_idle3_transition` | — | Aline cae al suelo, derrotada | Pendiente |
+| Outro / fase 3 | `Idle3` | `Skill_Aline_P3_Skill1`, `Skill_Aline_P3_Skill2` | sin combate (curaciones narrativas), resolución, fade | Pendiente |
 
 Cuando se concrete cada fase, va a [DECISIONES.md](DECISIONES.md) si hay un porqué grande detrás.
 
@@ -42,14 +45,16 @@ Cuando se concrete cada fase, va a [DECISIONES.md](DECISIONES.md) si hay un porq
 
 Cada habilidad de Aline se modela como una **familia de ataque reutilizable**: prefab + animación + secuencia de eventos `.dat` + codificación de parry, definida una vez como contrato y instanciada N veces a lo largo del mapa con timings/direcciones distintos.
 
-| Familia | Mecánica | Parry |
-|---|---|---|
-| **A — Ranged Sequence** | Aline lanza N proyectiles que caen secuencialmente sobre el jugador | Cadena de N notas, cada una codifica origen del proyectil |
-| **B — Melee Directional Slash** | Corte rápido con línea/streak telegrafiando la dirección | Una nota con dirección **opuesta** al slash |
-| **C — Distortion Window** | Filtro post-process desaturado abre ventana de parry | Nota única dentro de la ventana grayscale |
-| **D — Shrinking Indicator** | Anillo que se contrae alrededor del bloque, parry de precisión | Nota única en el momento exacto del cierre |
+| Familia | Mecánica | Parry | Source en Aline |
+|---|---|---|---|
+| **A — Ranged Sequence** | Aline lanza N proyectiles que caen secuencialmente sobre el jugador | Cadena de N notas, cada una codifica origen del proyectil | `Skill3` (3 piedras), `Skill4` (N pequeños) |
+| **B — Melee Directional Slash** | Aproximación + corte con línea/streak telegrafiando dirección + retirada | Una nota con dirección **opuesta** al slash | `DashIn-Idle1`, `Skill5` (con C) |
+| **D — Shrinking Indicator** | Anillo que se contrae alrededor del bloque, parry de precisión | Nota única en el momento exacto del cierre | invento nuestro (no source clip) |
+| **E — Multi-hit Chain** | Cadena de N parries en sucesión rápida durante una animación con N hits embebidos | N notas con separación dictada por la anim | `Skill1` (fase 1), `Skill7`, `Skill10`, `Skill12` (fase 2) |
+| **F — Charging AoE Ball** | Aline carga una bola que crece, parry único en la explosión | Nota única en el momento de explosión | `Skill2_Start` / `_Loop` / `_End` |
+| **Modificador C — Distortion Overlay** | Filtro post-process grayscale apilable sobre cualquier familia | (no impone parry; lo dicta la familia base) | `Skill5` (canónico, sobre B) |
 
-El catálogo formal con templates de eventos vive en la skill [`.claude/skills/vivify-mapping/`](../.claude/skills/vivify-mapping/). Extensible — si surgen más patrones (multi-hit chain, AoE, contraataque) se añaden como familias E/F siguiendo el mismo contrato.
+El catálogo formal con templates de eventos y el mapeo completo Animator→familia vive en [`.claude/skills/vivify-mapping/families.md`](../.claude/skills/vivify-mapping/families.md). Extensible — si surge un patrón que no encaja en ninguna existente, se añade como familia G/H siguiendo el mismo contrato.
 
 ## Criterios de éxito
 
