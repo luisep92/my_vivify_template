@@ -4,6 +4,14 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
+### Tono: showcase cinemático, no scored
+
+**Regla:** El mapa es un **showcase map** (experiencia cinemática). No optimizamos para scoring, leaderboards ni ranqueo. Densidad de notas, NJS y patrones quedan subordinados a la legibilidad de cada ataque telegrafiado de Aline. Los huecos largos entre ataques son aceptables. La música es ambiente, no driver rítmico.
+
+**Por qué:** El combate de *Expedition 33* es por turnos orquestado, no continuo — traducirlo "como mapa BS al uso" pelearía con la naturaleza del juego origen. La mecánica de parry direccional de E33 encaja 1:1 con el cubo direccional de BS, así que cada habilidad de Aline pasa a ser un ataque telegrafiado con ventana de parry. Asumimos como coste que el mapa no será rejugable competitivamente; lo compensa el wow-factor, el valor demostrativo del repo (Vivify + Unity 2019.4 + pipeline animaciones) y el hecho de que el caso de uso (E33 boss fight en BS) es viral incluso para quien no conoce BS.
+
+---
+
 ### Personaje: Aline (Curatress) de Expedition 33
 
 **Regla:** El boss del mapa es Aline.
