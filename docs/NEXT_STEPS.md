@@ -15,21 +15,44 @@ Pipeline funcionando end-to-end:
 
 ## Próximos pasos (en orden)
 
-### 1. Canción definitiva
+> Pivot: con la decisión de **showcase map** ([DECISIONES.md](DECISIONES.md)), el orden cambia. La canción y el state machine narrativo dependen de tener primero los **sistemas de ataque** definidos como contratos reutilizables. Componer fases sobre sistemas inestables es la receta del embolado.
 
-Decidir pieza concreta del OST de Expedition 33. Importar `.ogg` al `beatsaber-map/`, ajustar BPM y duración. Anotar en `DECISIONES.md`.
+### 1. Catálogo de familias de ataque + contratos
 
-### 2. Wireado narrativo del state machine
+Las cuatro familias iniciales (Ranged Sequence, Melee Slash, Distortion Window, Shrinking Indicator) están descritas a alto nivel en [PRODUCTO.md](PRODUCTO.md). Falta formalizarlas como **contratos** en la skill `vivify-mapping/`: inputs requeridos, secuencia de eventos `.dat`, encoding del parry, parámetros tunables, reglas de no-conflicto entre tracks.
 
-El pipeline de animación funciona; queda el contenido. Definir qué skill dispara qué transición en cada fase del boss fight (ver [PRODUCTO.md](PRODUCTO.md)). Añadir eventos `SetAnimatorProperty` al `.dat` con los triggers correspondientes (`Skill1`, `Skill2_Loop`, etc.). Snapshot del mapa antes de bloque grande de events.
+### 2. Sandbox de locomoción + identificación de animaciones
 
-### 3. Setup de ReMapper
+**Antes de prototipar ataques.** El Animator tiene 26 triggers (`Skill1`-`Skill12`, idles, transiciones, `Skill_Aline_P3_*`) y visualmente **no sabemos cuál es cuál**. Construir un sandbox que dispare cada trigger secuencialmente con un label en pantalla (o, más simple, dispararlos a mano y anotar en vídeo) para:
 
-Levantar Deno + primer script en `ReMapper-master/`. Output target: directo a `beatsaber-map/ExpertPlusStandard.dat` o staging intermedio. Rellenar la skill `remapper-scripting` durante este paso.
+- Identificar qué clip es cada `Skill_X` (cuál es ranged, cuál melee, cuál distortion-window).
+- Validar que las transiciones entre idles encadenan limpio (ver a Aline flotar / aterrizar / mirar / volver a idle, sin saltos bruscos).
+- Probar combinaciones (`Idle1` → `DashIn-Idle1` → `Skill1` → vuelta a `Idle1`).
+- Actualizar [`families.md`](../.claude/skills/vivify-mapping/families.md) reemplazando los `TBD` de inputs por nombres concretos.
 
-### 4. Diseño narrativo del boss fight
+Output: tabla de "trigger → clip identificado" en `families.md`, y un sandbox map reutilizable (probablemente la propia intro del boss fight nace de aquí).
 
-Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en eventos concretos: transiciones, animaciones por fase, patrones de notas que respondan a cada fase.
+### 3. Prototipo de cada familia en sandbox
+
+Con los triggers ya identificados (paso 2). Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de tocar el mapa real. Criterio de éxito por prototipo: animación + VFX + parry + cleanup, instanciable dos veces sin estado residual. Snapshot por prototipo (`-Label "proto-fam-X"`).
+
+**Orden sugerido de prototipado:** Familia A primero (ranged, más cómoda — VFX simple, encoding de notas claro). Después B/C/D según interesen.
+
+### 4. Canción definitiva
+
+Cuando los 4 contratos estén probados. Decidir pieza concreta del OST de E33 con criterio: duración suficiente para 5 fases, clima coherente con showcase. Importar `.ogg` al `beatsaber-map/`, ajustar BPM y duración. Anotar en `DECISIONES.md`.
+
+### 5. Wireado narrativo del state machine
+
+Depende del catálogo de familias (paso 1) y de la identificación de triggers (paso 2). Definir qué familia (y qué `Skill_X` del Animator) dispara cada fase del boss fight. Componer la línea de tiempo del mapa instanciando templates de la skill, no escribiendo eventos a mano cada vez. Snapshot del mapa antes de bloque grande de events.
+
+### 6. Setup de ReMapper
+
+Levantar Deno + primer script en `ReMapper-master/`. Probable pero no obligatorio: si la composición se beneficia de scriptear instanciaciones de familias, ReMapper es el sitio. Output target: directo a `beatsaber-map/ExpertPlusStandard.dat` o staging intermedio. Rellenar la skill `remapper-scripting` durante este paso.
+
+### 7. Diseño narrativo y pulido
+
+Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en secuencia concreta de ataques. Iteración de legibilidad con feedback externo (VR + ojos de tercero).
 
 ---
 

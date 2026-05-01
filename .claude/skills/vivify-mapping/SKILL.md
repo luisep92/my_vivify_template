@@ -34,6 +34,18 @@ Working on a Beat Saber map using Vivify mod for custom 3D content.
 - Common Vivify events: InstantiatePrefab, DestroyPrefab, AnimateTrack, AssignTrackParent, SetMaterialProperty, Blit
 - See docs/vivify-events.md for full reference
 
+## Catálogo de familias de ataque
+
+Para añadir un ataque al mapa, **no escribir eventos desde cero**. Cada habilidad de Aline está modelada como una **familia reutilizable** con su contrato (inputs, secuencia de eventos, encoding del parry, parámetros tunables, reglas de no-conflicto). Ver [`families.md`](families.md).
+
+Familias actuales:
+- **A — Ranged Sequence** (proyectiles secuenciales)
+- **B — Melee Directional Slash**
+- **C — Distortion Window** (post-process grayscale)
+- **D — Shrinking Indicator** (parry de precisión, estilo E33)
+
+Antes de prototipar una familia, ver paso 2 de [NEXT_STEPS.md](../../../docs/NEXT_STEPS.md) — identificación de triggers del Animator.
+
 ## Validar paths antes de usarlos
 
 `bundleinfo.json` (en `beatsaber-map/`) lista los assets reales del bundle:
