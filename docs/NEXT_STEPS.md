@@ -21,11 +21,29 @@ Pipeline funcionando end-to-end:
 
 Cinco familias (A/B/D/E/F) + modificador C apilable formalizadas en [`families.md`](../.claude/skills/vivify-mapping/families.md): inputs, secuencia de eventos, encoding del parry, parámetros tunables, no-conflicto. Mapeo completo Animator→familia incluido. Visión de fase a fase en [PRODUCTO.md](PRODUCTO.md).
 
-### 2. Sandbox de locomoción + identificación de animaciones — **identificación hecha**
+### 2. Sandbox de locomoción — validación de transiciones encadenadas
 
-Identificación de los 26 triggers del Animator hecha por inspección visual en Unity contra vídeo de gameplay. Mapeo completo en la tabla de [`families.md`](../.claude/skills/vivify-mapping/families.md). Composición por fase también extraída.
+Identificación de los 26 triggers ya hecha por inspección visual contra vídeo (mapeo completo en [`families.md`](../.claude/skills/vivify-mapping/families.md)). **Falta** validar que las animaciones, una vez disparadas vía eventos `SetAnimatorProperty` en Vivify, encadenan limpio en Beat Saber sin saltos, T-poses entre estados, o desincronizaciones.
 
-Pendiente solo el **lado de transiciones encadenadas** (verificar en BS que `Idle1` → `DashIn-Idle1` → `Idle1` o `Idle1_to_idle2_transition` → `Idle2` se ven limpio sin saltos). Esto se valida durante el primer prototipo (paso 3) — no requiere paso aparte.
+**Por qué paso aparte y no mezclado con el primer prototipo:** si un ataque falla con VFX + parry + animación a la vez, no se sabe cuál sistema está roto. Validar locomoción en aislamiento **antes** acota el espacio de debug del primer ataque al VFX y al encoding del parry.
+
+**Concreto a testear** (en un mapa/dificultad sandbox, sin notas ni VFX):
+
+```
+T+0   : Idle1 baseline (Aline en suelo)
+T+3   : DashIn-Idle1   (aproximación)
+T+6   : DashOut-Idle2  (retirada)
+T+9   : Idle1_to_idle2_transition  (sube)
+T+12  : Idle2          (flotando)
+T+15  : Idle2_Stun     (encorvada adelante)
+T+18  : Idle_Countered (encorvada atrás)
+T+21  : Idle2_to_Idle3_transition  (cae)
+T+24  : Idle3          (derrotada)
+```
+
+Opcional: añadir un par de skill triggers ligeros (`Skill1`, `Skill7`) sin VFX ni notas para confirmar que las skill-anims también dispatchan limpio.
+
+**Output esperado:** vídeo o nota en `docs/my-notes.md` confirmando que las transiciones se ven correctas, o lista de las que necesitan ajuste antes de seguir.
 
 ### 3. Prototipo de cada familia en sandbox
 
