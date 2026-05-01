@@ -14,6 +14,11 @@ Pipeline para animar personajes que viven en un bundle Vivify, desde dump de Unr
     │  scripts/blender/import_all_psa.py  (Blender MCP o Scripting workspace)
     ▼
 Blender actions  (una por .psa, en bpy.data.actions)
+    │  scripts/blender/synthesize_root_motion.py
+    │     - solo para clips con desplazamiento (DashIn-Idle1, DashOut-Idle2,
+    │       DefaultSlot/.001): mueve el motion forward de pose.bones["root"]
+    │       al armature object con axis remap correcto. Idempotente, marca
+    │       cada action procesada con custom property '_root_motion_synthesized'.
     │  scripts/blender/export_anims_fbx.py
     │     - strip scale fcurves (idempotente, las .psa traen scale=1 que no aporta)
     │     - push cada action a su NLA track UNMUTED, strip name = "<armature>|<action>"
@@ -22,7 +27,11 @@ Blender actions  (una por .psa, en bpy.data.actions)
 Aline_Anims.fbx  (~185 MB, gitignored, .meta sí versionado)
     │  Unity FBX importer + AlineAnimsImporter:
     │     - preserveHierarchy=true  (mantiene SK_Curator_Aline como GO nombrado)
+    │     - motionNodeName="SK_Curator_Aline" (motion live en location del top GO,
+    │       Unity lo extrae automáticamente como root motion del clip)
     │     - loopTime=true en idles canónicos (workaround del Inspector bug 2019.4)
+    │     - lockRootPositionXZ=false + keepOriginalPositionXZ=false + keepOriginalPositionY=false
+    │       en clips con desplazamiento (XzRootMotionSuffixes)
     ▼
 26 AnimationClips como sub-assets, paths "SK_Curator_Aline/root/pelvis/..."
     │  Tools > Aline > Build Animator Controller
@@ -39,28 +48,31 @@ Runtime: Vivify SetAnimatorProperty con id=prefab_id + properties[].id=trigger_n
 
 1. **Importar `.psa` a Blender** — abre `Aline_project.blend`, ejecuta `scripts/blender/import_all_psa.py`. Idempotente. El addon DarklightGames PSK/PSA crea actions en `bpy.data.actions` pero NO auto-linkea al armature: el script setea `arm.animation_data.action` manualmente.
 
-2. **Exportar FBX armature-only con animaciones** — ejecuta `scripts/blender/export_anims_fbx.py`. Salida en `VivifyTemplate/Assets/Aline/Animations/Aline_Anims.fbx` (~185 MB, ~150 s de export). El script:
+2. **Sintetizar root motion en clips con desplazamiento** — ejecuta `scripts/blender/synthesize_root_motion.py`. Solo aplica a `Paintress_DashIn-Idle1`, `Paintress_DashOut-Idle2`, `DefaultSlot`, `DefaultSlot.001`. Mueve `pose.bones["root"].location` al armature object con axis remap (Y bone → Z object negated; ver "Root motion para clips con desplazamiento" más abajo para el porqué). Idempotente: marca cada action procesada con custom property `_root_motion_synthesized`, detecta versiones anteriores del axis-mapping y des-aplica antes de re-aplicar. Si añades nuevos clips con motion, agrega su nombre a `TARGET_ACTIONS`.
+
+3. **Exportar FBX armature-only con animaciones** — ejecuta `scripts/blender/export_anims_fbx.py`. Salida en `VivifyTemplate/Assets/Aline/Animations/Aline_Anims.fbx` (~185 MB, ~150 s de export). El script:
    - Strippa scale fcurves de las actions (las `.psa` traen scale=1 constante que no aporta).
    - Crea un NLA track por action en el armature, **strip unmuted**, named `"<ARMATURE_NAME>|<action.name>"`.
    - Exporta con `bake_anim_use_nla_strips=True`, `bake_anim_use_all_actions=False`.
 
-3. **Esperar el reimport en Unity** — la primera vez ~2 min (FBX de 185 MB). El `AlineAnimsImporter` (AssetPostprocessor) corre solo:
+4. **Esperar el reimport en Unity** — la primera vez ~2 min (FBX de 185 MB). El `AlineAnimsImporter` (AssetPostprocessor) corre solo:
    - `OnPreprocessModel` → `preserveHierarchy = true` (impide que Unity colapse el nodo `SK_Curator_Aline`).
    - `OnPreprocessAnimation`:
+     - Setea `motionNodeName = "SK_Curator_Aline"` para que Unity trate el motion del top GO como root motion (sin esto `averageSpeed=0`).
      - Marca `loopTime = true` en los idles canónicos (`LoopingSuffixes`).
-     - Para clips con motion horizontal real (`XzRootMotionSuffixes`: `DashIn-Idle1`, `DashOut-Idle2`, `DefaultSlot`, `DefaultSlot (1)`) setea `lockRootPositionXZ = false` y `keepOriginalPositionXZ = false` para que Unity extraiga el delta XZ como root motion. El resto de clips quedan con XZ baked en pose (default conservador para idles y transiciones).
+     - Para clips con motion horizontal real (`XzRootMotionSuffixes`: `DashIn-Idle1`, `DashOut-Idle2`, `DefaultSlot`, `DefaultSlot (1)`) setea `lockRootPositionXZ=false`, `keepOriginalPositionXZ=false` y `keepOriginalPositionY=false` para que Unity desbakeie XZ e Y y extraiga el delta como root motion. El resto de clips quedan con motion baked en pose (default conservador para idles y transiciones, donde no hay desplazamiento).
 
-4. **Configurar avatar manual una vez**:
+5. **Configurar avatar manual una vez**:
    - `Aline.fbx` (mesh+rig): Animation Type = `Generic`, Avatar Definition = `Create From This Model`, Root node = `SK_Curator_Aline`. Apply.
    - `Aline_Anims.fbx`: Animation Type = `Generic`, Avatar Definition = `Copy From Other Avatar` → `AlineAvatar` (sub-asset del Aline.fbx). Apply.
 
-5. **Generar el AnimatorController** — menu `Tools > Aline > Build Animator Controller`. Idempotente (borra y recrea). 26 estados + 26 triggers (`Idle1`, `Skill1`, …, sin prefijo `Paintress_`). Default = `Idle1`. Ver "Patrón del AnimatorController" más abajo para los chain-overrides aplicados.
+6. **Generar el AnimatorController** — menu `Tools > Aline > Build Animator Controller`. Idempotente (borra y recrea). 26 estados + 26 triggers (`Idle1`, `Skill1`, …, sin prefijo `Paintress_`). Default = `Idle1`. Ver "Patrón del AnimatorController" más abajo para los chain-overrides aplicados.
 
-6. **Animator en el prefab** — el component `Animator` vive en el prefab root (`aline.prefab` raíz), NO en el child `SK_Curator_Aline`. Avatar = `AlineAvatar`, Controller = `Aline_AC`. **`Apply Root Motion = ON`** si tienes clips con `XzRootMotionSuffixes` y quieres que Aline se traslade de verdad (paso 3 del importer); si está OFF, los clips de DashIn/DashOut harán "snap-back" al terminar.
+7. **Animator en el prefab** — el component `Animator` vive en el prefab root (`aline.prefab` raíz), NO en el child `SK_Curator_Aline`. Avatar = `AlineAvatar`, Controller = `Aline_AC`. **`Apply Root Motion = ON`** para que los clips con `XzRootMotionSuffixes` trasladen el GO de verdad. Si está OFF, los clips de DashIn/DashOut harán "snap-back" al terminar.
 
    > **Nota (2026-05-01):** la regen del controller borra el `.controller` y crea uno nuevo con GUID nuevo. Eso rompe la referencia del Animator del prefab al controller. Tras cada regen toca re-asignar `Aline_AC` al campo Controller del Animator y guardar el prefab. Pendiente: hacer la regen idempotente preservando GUID.
 
-7. **Verificar runtime** — abre el prefab en escena, dale al play del Animator (Window > Animation > Animator), o samplea programáticamente:
+8. **Verificar runtime** — abre el prefab en escena, dale al play del Animator (Window > Animation > Animator), o samplea programáticamente:
 
    ```csharp
    // En execute_code del unity-mcp:
@@ -69,17 +81,19 @@ Runtime: Vivify SetAnimatorProperty con id=prefab_id + properties[].id=trigger_n
    // Los bones de SK_Curator_Aline/root/pelvis/... deben tener localRotation distinta de la rest pose.
    ```
 
-8. **Disparar desde el `.dat`** — añade un evento `SetAnimatorProperty` con `properties[].id` = trigger name (ej. `"Idle1"`, `"Skill1"`).
+9. **Disparar desde el `.dat`** — añade un evento `SetAnimatorProperty` con `properties[].id` = trigger name (ej. `"Idle1"`, `"Skill1"`).
 
 ## Tools del flujo
 
 | File | Qué hace | Cuándo correr |
 |---|---|---|
 | `scripts/blender/import_all_psa.py` | Batch-importa `.psa` de `Sandfall/.../Animation/` como Blender actions vía la API del addon DarklightGames PSK/PSA. Idempotente. | Una vez al inicio. Si añades `.psa` nuevos. |
-| `scripts/blender/export_anims_fbx.py` | Exporta `SK_Curator_Aline` armature-only con todas las actions a `Aline_Anims.fbx` vía NLA strips unmuted. Idempotente (recrea NLA tracks si no existen). | Cada vez que cambien las actions en Blender. |
-| `Assets/Aline/Editor/AlineAnimsImporter.cs` | AssetPostprocessor del FBX: setea `preserveHierarchy=true` y `loopTime=true` en idles canónicos. | Auto al reimportar el FBX. |
+| `scripts/blender/synthesize_root_motion.py` | Mueve motion del bone `root` al armature object con axis remap (Y bone → Z object negated) en clips con desplazamiento. Idempotente, marca cada action procesada con custom property y modo del axis-mapping; detecta versiones antiguas y des-aplica antes de re-aplicar. | Tras importar `.psa` nuevas que tengan motion en el bone root. Si retocas el axis remap. |
+| `scripts/blender/inspect_motion.py` | Diagnóstico read-only. Reporta location y rotation_quaternion por bone (root, pelvis, spine_01) y los top movers globales por excursión max-min. Útil para ver dónde vive el motion en una action. | Cuando un clip nuevo no se traslada en BS. |
+| `scripts/blender/export_anims_fbx.py` | Exporta `SK_Curator_Aline` armature-only con todas las actions a `Aline_Anims.fbx` vía NLA strips unmuted. Idempotente (recrea NLA tracks si no existen). | Cada vez que cambien las actions en Blender (incluido tras `synthesize_root_motion.py`). |
+| `Assets/Aline/Editor/AlineAnimsImporter.cs` | AssetPostprocessor del FBX: setea `preserveHierarchy=true`, `motionNodeName="SK_Curator_Aline"`, `loopTime=true` en idles canónicos y desbakea XZ+Y en clips con motion. | Auto al reimportar el FBX. |
 | `Assets/Aline/Editor/BuildAlineAnimator.cs` | Menu `Tools > Aline > Build Animator Controller`. Lee los clips del FBX, regenera `Aline_AC.controller` (idempotente). 1 estado + 1 trigger por clip; `Any State → X`; auto-return a `Idle1` al exit time para no-loops. | Tras el reimport del FBX. |
-| `Assets/Aline/Editor/InspectAlineClips.cs` | Diagnóstico. Menu `Tools > Aline > Inspect Clip Curves (Idle1 / Summary all)`. Vuelca curves de un clip a Console. | Cuando algo va mal y necesitas ver fcurves. |
+| `Assets/Aline/Editor/InspectAlineClips.cs` | Diagnóstico Unity-side. Menu `Tools > Aline > Inspect Clip Curves (Idle1 / Summary all)`. Vuelca curves de un clip a Console. | Cuando algo va mal y necesitas ver fcurves del clip ya importado. |
 
 ## Reglas no negociables
 
@@ -152,14 +166,44 @@ Editar `EasyStandard.dat` directamente para añadir/quitar triggers de prueba. *
 
 ## Root motion para clips con desplazamiento
 
-Algunos clips (DashIn-Idle1, DashOut-Idle2 y aliases) llevan motion horizontal: Aline se aproxima al jugador, golpea, retrocede. Si el motion vive como **root delta** en el FBX, Unity puede extraerlo y trasladar el GameObject de verdad. Si vive **baked en bones internos** (pelvis/spine sin que el root bone tenga curve de posición), la mesh se ve moverse pero el GO no — y al terminar el clip, los bones vuelven a neutral y la mesh "salta" de vuelta al GO.
+Algunos clips (DashIn-Idle1, DashOut-Idle2 y aliases) llevan motion horizontal: Aline se aproxima al jugador, golpea, retrocede. Para que el GameObject del prefab se traslade de verdad (no solo la mesh), el motion debe llegar al Animator como **root motion** y `Apply Root Motion = ON` en el componente.
 
-**Estado actual (2026-05-01):** el `AlineAnimsImporter` está configurado para extraer XZ root motion en los 4 clips con motion (`XzRootMotionSuffixes`), y el flujo asume `Apply Root Motion = ON` en el Animator. Pero los `.psa` actuales tienen el motion baked en bones internos, no en root, así que la extracción no produce delta y Aline sigue snapping. **Pendiente:** re-export desde Blender con root motion canónico en el bone raíz. Ver paso 2.5 de `NEXT_STEPS.md`.
+### El issue concreto
 
-Cómo verificar si un clip tiene root motion extraíble:
-- Selecciona `Aline_Anims.fbx` en Project. Inspector → tab Animation → click en el clip.
-- En el panel inferior busca el indicador de "Average Velocity". Si > 0 en X o Z, hay root motion en ese eje.
-- 0 en todos los ejes pese a motion visible = motion baked en bones internos, no extraíble.
+Los `.psa` originales bakean el motion forward en `pose.bones["root"].location[1]` (Y bone-local del bone "root", forward del rig de Unreal). El FBX export de Blender lo expone correctamente como `m_LocalPosition.y` del path `SK_Curator_Aline/root` en Unity. **Pero Unity 2019.4 con `Generic + Copy From Other Avatar` no extrae el motion del bone "root" como root motion**, ni con `motionNodeName="root"`, ni reconstruyendo el avatar, ni desbakeando `keepOriginalPositionY`. `hasGenericRootTransform` se queda en `False` y `averageSpeed = (0,0,0)` siempre. Es una limitación del flujo Generic+CFOA, no un bug puntual: ver "Caminos cerrados" más abajo para los intentos exhaustos.
+
+### El fix
+
+Pre-procesar la action en Blender (`scripts/blender/synthesize_root_motion.py`) para mover el motion del bone "root" al **armature object** (top GO del rig). Cuando el motion vive en `location` del armature object, Unity sí lo extrae automáticamente como root motion con `motionNodeName="SK_Curator_Aline"` (lo aplica `AlineAnimsImporter.OnPreprocessAnimation`).
+
+El script aplica un axis remap deliberado:
+
+```
+bone.location[0] (X bone-local, lateral)   → object.location[0] (X)            sign +1
+bone.location[1] (Y bone-local, forward)   → object.location[2] (Z up Blender) sign -1
+bone.location[2] (Z bone-local, vertical)  → object.location[1] (Y)            sign +1
+```
+
+El "swap Y↔Z + signo invertido en el axis 2" no es estético — es la composición exacta para que el motion termine en `+Z world` Unity (forward) tras dos transformaciones encadenadas:
+
+1. **FBX exporter Blender→Unity** (`axis_up="Y"`, `axis_forward="-Z"`) intercambia Blender Y↔Z al cruzar formato. Lo que en Blender object es location.z aparece en Unity como `m_LocalPosition.y`; lo que era location.y aparece como `m_LocalPosition.z`.
+
+2. **El armature object queda con rotation `(270°, 0, 0)` en Unity** (Z-up→Y-up requiere rotar -90° en X). Eso permuta los axes locales del GO: la Y local del SK_Curator_Aline en Unity apunta a `+Z world`, la Z local apunta a `-Y world`.
+
+Sin axis remap (copia 1:1 Y bone→Y object) el motion termina en `-Y world` (Aline cae verticalmente). Con remap a Z object pero sin negar, termina en `-Z world` (Aline avanza en sentido contrario). Con el remap final (`Z object negated`), termina en `+Z world` (forward). Variables empíricas hasta validar — el axis transform encadenado no es intuitivo.
+
+### Pipeline operativo
+
+1. **Blender**: con las actions importadas vía `import_all_psa.py`, correr `synthesize_root_motion.py`. Idempotente: marca cada action procesada con custom property `_root_motion_synthesized` con el modo aplicado (`v4-bone-y-to-object-z-negated`); detecta versiones anteriores y des-aplica antes de re-aplicar.
+2. **Blender**: re-export con `export_anims_fbx.py`.
+3. **Unity**: el reimport del FBX dispara `AlineAnimsImporter`, que setea `motionNodeName = "SK_Curator_Aline"` y, por clip en `XzRootMotionSuffixes`, `lockRootPositionXZ=false + keepOriginalPositionXZ=false + keepOriginalPositionY=false`.
+4. **Verificar**: `clip.averageSpeed` debería ser distinto de `(0,0,0)` para los 4 clips con motion. Para `DashIn-Idle1` da algo cercano a `(0, 0, ~+173)` (≈ 600 cm forward / 3.46 s). DashOut signo opuesto.
+5. **Animator**: `Apply Root Motion = ON` ya está en el prefab. El root motion extraído se aplica al transform raíz `aline.prefab`, no al child `SK_Curator_Aline`.
+
+### Cómo verificar si un clip tiene root motion extraíble
+
+- En Unity: `clip.averageSpeed` por API (preview del FBX inspector tab Animation también lo muestra como "Average Velocity").
+- Si todos los axes son `0` pese a motion visible en preview, no hay extracción. Investigar dónde vive el motion en Blender antes de tirar de configs Unity-side: `scripts/blender/inspect_motion.py` reporta motion por bone y per-axis (chequea object-level y bone-local en location y rotation_quaternion).
 
 ## Caminos cerrados (no perder tiempo aquí)
 
@@ -175,7 +219,19 @@ Probado: `_position` SÍ afecta al track Vivify-prefab (test de elevación lo co
 
 ### NO esperar que `Apply Root Motion = ON` resuelva el snap-back por sí solo
 
-Probado: marcar el toggle en el Animator del prefab no produce delta si los clips tienen el motion baked en pose (default Unity para Generic). Hay que ANTES configurar el FBX importer para extraer (`lockRootPositionXZ = false` + `keepOriginalPositionXZ = false`). Y aún así, depende de que el FBX TENGA el motion en el root bone — si el `.psa` lo distribuyó en pelvis/spine, no hay nada que extraer.
+Probado: marcar el toggle en el Animator del prefab no produce delta si los clips tienen el motion baked en pose (default Unity para Generic). Hay que ANTES configurar el FBX importer para extraer (`lockRootPositionXZ=false`, `keepOriginalPositionXZ=false`, `keepOriginalPositionY=false`) Y que el motion live en location del armature object, no del bone interno (de eso se encarga `synthesize_root_motion.py`).
+
+### NO intentar que Unity extraiga root motion del bone "root" en Generic + Copy From Other Avatar
+
+Los `.psa` de Aline bakean el motion forward en `pose.bones["root"].location[1]`. El FBX exporter SÍ lo expone como `m_LocalPosition.y` del path `SK_Curator_Aline/root` en Unity (verificable con `AnimationUtility.GetCurveBindings`). Pero Unity 2019.4 con `animationType=Generic + avatarSetup=CopyFromOtherAvatar` no extrae motion de un bone interno como root motion, **da igual lo que metas en `motionNodeName`**.
+
+Probado y descartado:
+- `motionNodeName="root"` apuntando al bone (clip importer y avatar source).
+- `motionNodeName="SK_Curator_Aline/root"` con path completo.
+- Rebuild del avatar (avatarSetup → NoAvatar → CreateFromThisModel).
+- `keepOriginalPositionY=false` por clip sin previo axis remap.
+
+En todos los casos `clip.hasGenericRootTransform` se queda en `False` y `averageSpeed=(0,0,0)`. La extracción solo funciona cuando el motion vive en `location` del armature object (top GO del rig) y `motionNodeName="SK_Curator_Aline"`. Por eso `synthesize_root_motion.py` mueve el motion del bone al object antes del export FBX.
 
 ### NO regenerar el `.controller` sin re-asignar el controller al prefab
 
@@ -225,6 +281,16 @@ La API plural `SetEditorCurves` solo aparece en Unity 2020+. En 2019.4 las opcio
 
 Si abres Unity y el FBX dice "A default asset was created because the asset importer crashed on it last time", probablemente metiste un per-curve loop en el postprocessor. Force-close Unity, revierte el postprocessor, reimporta.
 
+### Takes nuevos del FBX no aparecen en el AnimatorController tras añadir actions en Blender
+
+Síntoma: añades una action nueva en Blender (vía import_all_psa o manual), re-exportas FBX, reimportas en Unity — pero el `BuildAlineAnimator` no genera state ni trigger para ese clip, y no aparece como sub-asset listable.
+
+**Causa**: el `ModelImporter.clipAnimations` es un snapshot serializado en el `.meta`. Cuando un AssetPostprocessor lo manipula y lo guarda, queda congelado con esos N takes. Si añades take N+1 en el FBX, `defaultClipAnimations` (lectura viva del FBX) lo incluye, pero `clipAnimations` (snapshot persistido) no — el take nuevo nunca se importa.
+
+**Fix**: el `AlineAnimsImporter.cs` arranca SIEMPRE desde `importer.defaultClipAnimations` (no desde `clipAnimations`). Los settings per-clip son deterministas según suffix, así que reset+re-aplicar cada import es seguro y garantiza que takes nuevos entren al pipeline automáticamente. Si quieres añadir tus propios overrides manuales en el inspector, no se respetarán — meter su lógica en el `AlineAnimsImporter` por suffix.
+
+Caso conocido: `Paintress_DashIn-Idle2` se descubrió 2026-05-01 escondido — existía en Blender + FBX defaults, pero ni en el AnimatorController ni como AnimationClip importado. Tras el fix, los 26 takes se mantienen sincronizados.
+
 ### Inspector de Unity 2019.4 descarta toggles per-clip al cambiar de clip sin Apply
 
 Síntoma: marcas Loop Time en Idle1, vas a Idle2, vuelves a Idle1 y se ha desmarcado.
@@ -252,11 +318,11 @@ Tamaño 185 MB con 26 takes × 4480 curves × hasta 480 frames cada una. Es lo q
 ## Estado actual del pipeline (2026-05-01)
 
 ✅ Import .psa → Blender (26 actions, addon manual fix)
+✅ Synthesize root motion para clips con desplazamiento (Y bone → Z object negated)
 ✅ Export Blender → FBX (NLA strips unmuted, named con armature prefix, ~185 MB en ~150 s)
-✅ Import FBX → Unity (`preserveHierarchy=true`, avatar copy, loopTime auto)
+✅ Import FBX → Unity (`preserveHierarchy=true`, `motionNodeName="SK_Curator_Aline"`, avatar copy, loopTime auto, keepOriginalPositionY=false en clips de motion)
 ✅ Generación AnimatorController (26 estados + triggers + chain-overrides para destinos contextuales)
 ✅ Animator en prefab root, scale curves no-op (no hay 100x bug)
 ✅ Aline visible en BS a tamaño correcto, animaciones reproduciéndose
 ✅ Preview del FBX inspector animando con la mesh de Aline.fbx
-✅ Locomotion sandbox (`EasyStandard.dat`) validado en BS: idles, transiciones, dashes, stuns encadenan limpio modulo el snap-back de DashIn/DashOut.
-🟡 Root motion para clips con desplazamiento: importer configurado (`XzRootMotionSuffixes`), pero `.psa` actuales no exponen delta extraíble en root bone. Pendiente re-export Blender con root motion canónico para que DashIn/DashOut trasladen el GO.
+✅ Locomotion sandbox (`EasyStandard.dat`) validado en BS: idles, transiciones, dashes, stuns encadenan limpio. DashIn traslada el GO forward (~6m world Z), DashOut lo devuelve. Sin snap-back. Apply Root Motion = ON activo en el Animator del prefab.

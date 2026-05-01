@@ -76,13 +76,17 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
-### Animaciones que desplazan a Aline usan root motion (no AnimateTrack compensation)
+### Animaciones que desplazan a Aline usan root motion sintetizado en Blender
 
-**Regla:** Para clips donde Aline se desplaza horizontalmente (DashIn-Idle1, DashOut-Idle2, sus aliases, futuros mele), la posición del prefab cambia vía **root motion extraído del FBX** + `Apply Root Motion = ON` en el Animator. NO se gestiona la posición vía eventos `AnimateTrack` cross-clip en el `.dat`.
+**Regla:** Para clips donde Aline se desplaza horizontalmente (DashIn-Idle1, DashOut-Idle2, sus aliases, futuros mele), el motion se sintetiza en Blender vía `scripts/blender/synthesize_root_motion.py` moviendo `pose.bones["root"].location` al armature object con axis remap (Y bone → Z object negated). Unity con `motionNodeName="SK_Curator_Aline"` y `Apply Root Motion = ON` traslada el GO. NO se usa `AnimateTrack` cross-clip ni se intenta extraer del bone "root" desde Unity-side.
 
-**Por qué:** los clips de la `.psa` están diseñados para encadenar via root delta — donde un clip acaba, el siguiente empieza (DashIn termina en posición melee, DashOut arranca desde melee). Compensar manualmente con `AnimateTrack` clip-a-clip se vuelve insostenible: cada nuevo clip suma un nivel más de coordinación cumulativa, y los teleports/blends entre eventos rompen la continuidad. Probado y descartado: `_offsetPosition` se ignora en tracks Vivify-prefab; `_position` con valores en world o lane units introduce teleports en cada AnimateTrack y exige cálculo manual de displacement por clip. El path correcto es preparar el FBX para que Unity extraiga root motion estándar y dejar que el Animator traslade el GO automáticamente.
+**Por qué (cross-clip por AnimateTrack ❌):** los clips están diseñados para encadenar via root delta. Compensar manualmente con `AnimateTrack` clip-a-clip se vuelve insostenible: cada nuevo clip suma coordinación cumulativa y los teleports/blends entre eventos rompen la continuidad. `_offsetPosition` se ignora silenciosamente en tracks Vivify-prefab; `_position` introduce teleports en cada llamada y exige cálculo manual de displacement por clip.
 
-**Coste asumido:** depende de que Blender exporte el motion en el bone raíz del rig (no distribuido en pelvis/spine). Si el `.psa` actual no lo expone, hay que re-exportar desde Blender. Detalle operativo en la skill `vivify-animations`.
+**Por qué (Unity-side extraction del bone interno ❌):** los `.psa` bakean motion en `pose.bones["root"].location[1]` (Y bone-local). El FBX SÍ lo expone como `m_LocalPosition.y` del path `SK_Curator_Aline/root`, pero Unity 2019.4 con `Generic + Copy From Other Avatar` no extrae motion de un bone interno como root motion en este flujo, da igual lo que se ponga en `motionNodeName` (probado: nombre, path completo, avatar rebuild, `keepOriginalPositionY=false`). `hasGenericRootTransform` se queda en `False` y `averageSpeed=(0,0,0)` siempre.
+
+**Por qué (synthesize en Blender + axis remap ✅):** cuando el motion vive en `location` del armature object (top GO del rig), Unity sí lo extrae automáticamente. El axis remap `Y bone → Z object negated` no es estético: compensa la cadena `axis_up="Y"` del FBX exporter (intercambia Blender Y↔Z) + rotación `(270°, 0, 0)` que adquiere el armature object en Unity (conversión Z-up→Y-up). Sin remap o sin negación, Aline cae verticalmente o avanza al revés. Validado e2e en sandbox (2026-05-01): DashIn traslada ~6m forward, DashOut devuelve, sin snap-back.
+
+**Coste asumido:** depende del `synthesize_root_motion.py` corriendo cada vez que se re-importan `.psa` con motion. Es idempotente y marca cada action procesada con su modo de axis-mapping. Detalle operativo en la skill `vivify-animations`.
 
 ---
 

@@ -146,14 +146,15 @@ T_impact_0 + delta : (repetir descenso/nota/destroy para i1)
 
 **Mecánica:** Aline ejecuta un golpe mele tras aproximarse al jugador. Telegraph = aproximación (DashIn) + línea/streak en la dirección del slash. Parry = una nota con dirección **opuesta** (parry real).
 
-> **Bloqueada por root motion (2026-05-01).** Los clips DashIn/DashOut tienen el desplazamiento baked en bones internos del rig, no en root delta. Aline se ve moverse pero el GameObject no se traslada, y al terminar DashIn la mesh "salta" de vuelta a la posición del prefab. Hasta resolverlo (re-export Blender con root motion canónico, ver paso 2.5 de [NEXT_STEPS.md](../../../docs/NEXT_STEPS.md)), **no prototipar Familia B**. El contrato siguiente es válido, pero la coreografía DashIn → idle/skill → DashOut no se podrá ejecutar limpia sin root motion. Detalles operativos y caminos descartados en la skill [`vivify-animations`](../vivify-animations/SKILL.md).
+> **Root motion operativo (2026-05-01).** DashIn/DashOut trasladan el GO via root motion sintetizado en Blender (`scripts/blender/synthesize_root_motion.py`) + `motionNodeName="SK_Curator_Aline"` en el FBX importer + Apply Root Motion = ON en el Animator del prefab. Validado e2e en `EasyStandard.dat`: Aline avanza ~6m forward en DashIn, vuelve en DashOut, sin snap-back. Detalles operativos y caminos descartados en la skill [`vivify-animations`](../vivify-animations/SKILL.md) sección "Root motion para clips con desplazamiento" + "Caminos cerrados".
 
 ### Inputs requeridos
 
 | Input | Valor | Notas |
 |---|---|---|
-| Animator trigger | `DashIn-Idle1` (golpe estándar, fase 1) o `Skill5` (golpe con distorsión — combina con modificador C) | El clip incluye aproximación + golpe |
-| Trigger de retirada | `DashOut-Idle2` | Devuelve a Aline a posición lejana tras el golpe |
+| Animator trigger de aproximación | `DashIn-Idle1` (acaba en pose Idle1, vuelve a default) o `DashIn-Idle2` (acaba en pose Idle2, encadena directo a Idle2) | Ambos llevan motion forward (~6m world Z) extraído como root motion. La elección depende de qué pose quieres post-dash: Idle1 si el ataque es one-off, Idle2 si Aline encadena más combat en pose alerta |
+| Animator trigger del golpe | `Skill1` (golpe estándar) o `Skill5` (golpe con distorsión — combina con modificador C) | Clips con motion menor (256/75 cm en Y bone-local) que termina en pose neutra — no se sintetiza root motion (no hay snap-back porque no terminan desplazadas). |
+| Trigger de retirada | `DashOut-Idle2` | Devuelve a Aline a posición lejana, encadena a Idle2 |
 | Prefab streak | `assets/aline/prefabs/slash_streak.prefab` (TBD — pendiente crear) | Línea/trail dibujando el eje del slash |
 | Material streak | unlit emissive con alpha; reutilizable para todas las instancias B | — |
 

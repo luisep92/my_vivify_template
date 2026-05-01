@@ -21,29 +21,35 @@ Pipeline funcionando end-to-end:
 
 Cinco familias (A/B/D/E/F) + modificador C apilable formalizadas en [`families.md`](../.claude/skills/vivify-mapping/families.md): inputs, secuencia de eventos, encoding del parry, parámetros tunables, no-conflicto. Mapeo completo Animator→familia incluido. Visión de fase a fase en [PRODUCTO.md](PRODUCTO.md).
 
-### 2. Sandbox de locomoción — validado modulo open issue
+### 2. Sandbox de locomoción — hecho
 
-Implementado en `beatsaber-map/EasyStandard.dat` (difficulty Easy del mapa Test, registrada en `Info.dat`). Cadena de `SetAnimatorProperty` recorre idles, transiciones, dashes y stuns canónicos. Validado en BS: el AnimatorController encadena limpio cuando los triggers son discretos y no redundantes (ver patrón y gotchas en la skill [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md)).
+Implementado en `beatsaber-map/EasyStandard.dat` (difficulty Easy del mapa Test, registrada en `Info.dat`). Cadena de `SetAnimatorProperty` recorre idles, transiciones, dashes y stuns canónicos. Validado e2e en BS (2026-05-01): idles, transiciones y dashes encadenan limpio sin snap-back; DashIn traslada el GO ~6m forward, DashOut lo devuelve.
 
-**Open issue: snap-back de DashIn/DashOut.** Los clips con motion horizontal (`DashIn-Idle1`, `DashOut-Idle2`, `DefaultSlot`, `DefaultSlot (1)`) tienen el desplazamiento baked en bones internos (pelvis/spine) en vez de en root delta. Apply Root Motion ON no extrae nada porque el root bone del rig no tiene curve de posición. Resultado: la mesh se ve moverse durante el clip pero el GameObject no se traslada, y al terminar el clip los bones vuelven a neutral y la mesh "salta" al GO (origin).
+### 2.5. Re-export `Aline_Anims.fbx` con root motion canónico — hecho
 
-Probado y descartado:
-- `AnimateTrack` con `_offsetPosition` o `_position` para compensar — primero se ignora silenciosamente, segundo introduce teleports y exige cálculo manual de displacement por clip (insostenible al añadir clips intermedios).
-- `Apply Root Motion = ON` por sí solo — no extrae si el FBX bakea motion en bones, no en root.
-- `AlineAnimsImporter` con `lockRootPositionXZ = false` + `keepOriginalPositionXZ = false` por clip — configurado y aplicado, pero los `.psa` actuales no exponen delta extraíble.
+Pipeline final operativo:
+1. Los `.psa` bakean motion forward en `pose.bones["root"].location[1]` (Y bone-local). Verificable con `scripts/blender/inspect_motion.py`.
+2. Unity 2019.4 con `Generic + Copy From Other Avatar` no extrae motion de un bone interno como root motion, da igual lo que se ponga en `motionNodeName` del clip importer o del avatar source. Sí extrae si el motion vive en `location` del armature object.
+3. Solución: `scripts/blender/synthesize_root_motion.py` mueve el motion del bone "root" al armature object con axis remap (Y bone → Z object negated) compensando la cadena de transformaciones del FBX exporter (`axis_up="Y"`) + rotación 270°X que el armature object adquiere en Unity.
+4. `AlineAnimsImporter` setea `motionNodeName="SK_Curator_Aline"` + desbakea XZ e Y por clip (`XzRootMotionSuffixes`).
+5. Animator del prefab con Apply Root Motion = ON aplica el delta al root del prefab.
 
-### 2.5. Re-export `Aline_Anims.fbx` desde Blender con root motion canónico
+Detalle operativo y gotchas en la skill [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md) sección "Root motion para clips con desplazamiento" + "Caminos cerrados". Decisión consolidada en [`DECISIONES.md`](DECISIONES.md).
 
-**Bloqueante de Familia B (mele) y posiblemente E (multi-hit chain con desplazamiento).** Hasta que los clips expongan motion en el root bone del rig, no podemos prototipar Familia B con coreografía DashIn → idle/skill → DashOut sin el snap-back.
+### 3. Pulido del modelo base de Aline (slots negros, pelo, vestido)
 
-Path probable (a confirmar al tirar):
-- Investigar si los `.psa` originales tienen root motion que se está distribuyendo en pelvis/spine al importar a Blender.
-- Si sí: configurar el import o un script que lo "consolide" en el root bone antes del export FBX.
-- Si no: los `.psa` ya vienen sin root motion (Unreal usa otro sistema), y hay que generar el motion del root sintéticamente desde la posición de pelvis o equivalente.
+Antes de meterse con prototipos de familias, dejar a Aline visualmente completa. Hoy los `BlackPart`/`BlackPart1`/`CuratorFace` son negro plano; en Unreal usan fresnel + paint procedural sobre máscaras. Recreables en Vivify:
 
-Fuera de scope de NEXT_STEPS: la solución concreta vive en `vivify-animations` cuando se ataque. Lo único que importa aquí es que es el siguiente paso bloqueante.
+- **BlackPart / BlackPart1** (cuerpo y vestido oscuro): fresnel shader simple sobre el material existente. La forma física del rim depende del normal map; si ahora se ve "demasiado plano", revisar si el normal está enchufado o si hace falta un fresnel basado solo en view direction.
+- **M_CuratorFace** (cara/máscara): blend translucent de `Mask_Curator.png` + `T_Paint1.png` + `T_Aura.png`. El JSON del dump (`MI_Curator_Aline_*.json` en `Sandfall/`) lista las texturas con sus tiling/offset; reusarlas literal mientras sea posible.
+- **Pelo**: actualmente bloqueado por el material `M_Aline_Body_*` que ya cubre el pelo via tex atlas; verificar si el alpha cutout del unlit deja el pelo con bordes durillos. Si sí, considerar adaptar a un alpha clip más fino o un alpha blend dedicado solo en la sub-mesh del pelo.
+- **Paletas (`palette.pskx`, `palette1.pskx`)**: las texturas y materiales de las paletas que Aline sostiene ya están preparados (en `Sandfall/.../Curator/Materials/`). Falta solo la geometría — pipeline `pskx → Blender → FBX → child del prefab`. Validar primero si las paletas son visibles desde la cámara fija de BS antes de invertir tiempo en el rip.
 
-### 3. Prototipo de cada familia en sandbox
+Una vez el modelo se ve "como debería", pasamos a sistemas de parry/visuales/assets externos. Con la base sólida, la iteración estética en familias se hace una sola vez, no diez.
+
+Cuando esté hecho, mover este bloque y la entrada equivalente de "Diferido post-torneo" abajo.
+
+### 4. Prototipo de cada familia en sandbox
 
 Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de tocar el mapa real. Criterio de éxito por prototipo: animación + VFX + parry + cleanup, instanciable dos veces sin estado residual. Snapshot por prototipo (`-Label "proto-fam-X"`).
 
@@ -55,19 +61,19 @@ Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de t
 5. **D standalone** (shrinking indicator, sin source anim) — valida que el indicador construido en Unity transmite el feel de E33.
 6. **B + modificador C con `Skill5`** — valida composición familia + modificador (Blit + SetMaterialProperty).
 
-### 4. Canción definitiva
+### 5. Canción definitiva
 
 Cuando los 4 contratos estén probados. Decidir pieza concreta del OST de E33 con criterio: duración suficiente para 5 fases, clima coherente con showcase. Importar `.ogg` al `beatsaber-map/`, ajustar BPM y duración. Anotar en `DECISIONES.md`.
 
-### 5. Wireado narrativo del state machine
+### 6. Wireado narrativo del state machine
 
 Depende del catálogo de familias (paso 1) y de la identificación de triggers (paso 2). Definir qué familia (y qué `Skill_X` del Animator) dispara cada fase del boss fight. Componer la línea de tiempo del mapa instanciando templates de la skill, no escribiendo eventos a mano cada vez. Snapshot del mapa antes de bloque grande de events.
 
-### 6. Setup de ReMapper
+### 7. Setup de ReMapper
 
 Levantar Deno + primer script en `ReMapper-master/`. Probable pero no obligatorio: si la composición se beneficia de scriptear instanciaciones de familias, ReMapper es el sitio. Output target: directo a `beatsaber-map/ExpertPlusStandard.dat` o staging intermedio. Rellenar la skill `remapper-scripting` durante este paso.
 
-### 7. Diseño narrativo y pulido
+### 8. Diseño narrativo y pulido
 
 Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en secuencia concreta de ataques. Iteración de legibilidad con feedback externo (VR + ojos de tercero).
 
@@ -96,6 +102,4 @@ Limpieza para cuando el mapa esté entregado:
 - **Rename `my_vivify_template/` → `aline-boss-fight/`**. Procedimiento: cerrar VSCode, `cd d:\vivify_repo && ren my_vivify_template aline-boss-fight`, reabrir VSCode. Junctions y `.git` viajan con la carpeta.
 - **Traducir docs/skills al inglés** si en algún momento se publica el repo a la comunidad de Vivify (internacional).
 - **Cambiar `origin/main`** del template upstream (`Swifter1243/VivifyTemplate`) al remote propio cuando se monte en GitHub.
-- **Upgrade unlit → lit/PBR para Aline**. Normal/ORM/Emissive ya descritos en `MI_Curator_Aline_*.json` del dump. Implica copiar PNGs adicionales, ampliar `Aline/Standard` (o crear `Aline/Lit`), decidir modelo de iluminación.
-- **Polish de los slots negros** (BlackPart, BlackPart1, CuratorFace). Hoy negro plano; en Unreal usan fresnel + paint procedural. Recreables con un fresnel shader simple para BlackPart, y blend translucent de `Mask_Curator.png` + `T_Paint1.png` + `T_Aura.png` para `M_CuratorFace`.
-- **Importar `palette.pskx` y `palette1.pskx`** del dump si se quiere que Aline sostenga sus paletas. Texturas y materiales ya preparados; falta la geometría (Blender → FBX → child del prefab).
+- **Upgrade unlit → lit/PBR para Aline**. Normal/ORM/Emissive ya descritos en `MI_Curator_Aline_*.json` del dump. Implica copiar PNGs adicionales, ampliar `Aline/Standard` (o crear `Aline/Lit`), decidir modelo de iluminación. (Los slots negros y las paletas están subidos al paso 3 del orden activo.)

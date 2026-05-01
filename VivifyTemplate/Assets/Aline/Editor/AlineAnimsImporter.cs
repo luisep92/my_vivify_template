@@ -35,6 +35,7 @@ namespace Aline.Editor
         private static readonly HashSet<string> XzRootMotionSuffixes = new HashSet<string>
         {
             "Paintress_DashIn-Idle1",
+            "Paintress_DashIn-Idle2",
             "Paintress_DashOut-Idle2",
             "DefaultSlot",
             "DefaultSlot (1)",
@@ -71,11 +72,26 @@ namespace Aline.Editor
             var importer = assetImporter as ModelImporter;
             if (importer == null) return;
 
-            // Si el usuario aún no ha tocado clipAnimations, parten de los defaults
-            // del FBX. defaultClipAnimations ya contiene una entry por take.
-            var clips = importer.clipAnimations;
-            if (clips == null || clips.Length == 0)
-                clips = importer.defaultClipAnimations;
+            // El motion forward de DashIn/DashOut vive en location del armature
+            // object (synthesized en Blender via scripts/blender/synthesize_root_motion.py;
+            // los .psa originales lo bakean en pose.bones["root"].location, que
+            // Unity 2019.4 con Generic + Copy From Other Avatar no extrae). En Unity
+            // ese armature object aparece como GO 'SK_Curator_Aline' (child del
+            // prefab root). motionNodeName apuntando a ese nombre hace que Unity
+            // calcule averageSpeed != 0 y lo traduzca como root motion al prefab
+            // (con Apply Root Motion = ON en el Animator).
+            const string MotionNode = "SK_Curator_Aline";
+            if (importer.motionNodeName != MotionNode) importer.motionNodeName = MotionNode;
+
+            // Siempre arrancar desde defaultClipAnimations (snapshot vivo del
+            // FBX). Si arrancáramos desde clipAnimations, takes nuevos
+            // añadidos en Blender no entrarían hasta el siguiente reset manual
+            // del importer (síntoma: action 'Paintress_DashIn-Idle2' existe en
+            // el FBX pero el AnimatorController no la ve como clip). Los
+            // settings per-clip que aplicamos abajo (loopTime, lockRootPositionXZ,
+            // etc.) son deterministas según el suffix, así que reset cada
+            // import es seguro y garantiza coherencia.
+            var clips = importer.defaultClipAnimations;
 
             int looped = 0;
             int xzExtracted = 0;
@@ -90,12 +106,19 @@ namespace Aline.Editor
                 }
                 if (shouldLoop) looped++;
 
-                // Por defecto Generic baked motion en bones. Para clips con
-                // motion horizontal real, desbloquear y normalizar XZ para que
-                // Unity extraiga el delta como root motion.
+                // Para clips con motion horizontal (DashIn/DashOut/aliases),
+                // desbakear XZ e Y para que Unity los extraiga como root motion.
+                // El motion vive en location del armature object (synthetizado en
+                // Blender via scripts/blender/synthesize_root_motion.py — los
+                // .psa originales lo bakean en pose.bones["root"].location, que
+                // Unity 2019.4 con Generic + Copy From Other Avatar no extrae aunque
+                // el bone esté en transformPaths). Los toggles aquí solo aplican
+                // si las curvas existen — clips estáticos (idles, skills sin
+                // desplazamiento) no se ven afectados.
                 bool extractXz = XzRootMotionSuffixes.Contains(actionSuffix);
                 clips[i].lockRootPositionXZ = !extractXz;
                 clips[i].keepOriginalPositionXZ = !extractXz;
+                clips[i].keepOriginalPositionY = !extractXz;
                 if (extractXz) xzExtracted++;
             }
 

@@ -45,6 +45,7 @@ namespace Aline.Editor
             { "Paintress_Idle1_to_idle2_transition", "Paintress_Idle2" },
             { "Paintress_Idle2_to_idle3_transition", "Paintress_Idle3" },
             { "Paintress_DashOut-Idle2", "Paintress_Idle2" },
+            { "Paintress_DashIn-Idle2", "Paintress_Idle2" },
         };
 
         // Estados que se quedan en su última frame y NO chainan a ningún destino.
