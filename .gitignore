@@ -61,6 +61,8 @@ docs/map-snapshots/*/
 # === Sistema ===
 .DS_Store
 Thumbs.db
+__pycache__/
+*.pyc
 
 # Nota: VivifyTemplate/.gitignore cubre Library/, Temp/, Logs/, UserSettings/,
 # .vs/, .idea/, *.csproj, *.sln, *.user, *.userprefs, MemoryCaptures/,

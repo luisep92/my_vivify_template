@@ -4,72 +4,12 @@
 
 Pipeline funcionando end-to-end:
 
-- Vivify carga el bundle generado por Unity y instancia el prefab `aline.prefab` en escena.
-- **Aline texturizada** con shader unlit cutout double-sided. 3 materiales: `M_Aline_Body_1`, `M_Aline_Body_2` (con BaseColor de FModel) y `M_Aline_Black` (para los 3 slots sin diffuse — BlackPart, BlackPart1, CuratorFace).
-- Luces direccionales removidas de Aline y del cube de testeo (ya no hacen falta con unlit).
-- **Sync de CRCs automatizado**: Editor watcher dispara `scripts/sync-crcs.ps1` cada vez que Vivify reescribe `bundleinfo.json`. Cero pasos manuales tras F5.
-- Mods de Aeroluna instalados a mano desde GitHub (versiones en [BS_Dependencies.txt](../BS_Dependencies.txt)).
-- Mapa V2 con `_customEvents` operativo: `InstantiatePrefab` testeado.
-- **Unity MCP operativo end-to-end**: bridge stdio en port 6400 (fork minimal en `d:\vivify_repo\unity-mcp/`), Claude Code conectado. Tools disponibles: `read_console`, `refresh_unity`, `execute_code`, `manage_animation`, `manage_asset`, `manage_material`, `manage_prefabs`, etc. Desbloquea diagnóstico in-editor del bug de animaciones.
-- **Pipeline de animaciones — infrastructure montada, last mile pendiente**:
-  - 26 actions importadas en Blender desde `.psa` de FModel vía `scripts/blender/import_all_psa.py`.
-  - Export a `Aline_Anims.fbx` vía `scripts/blender/export_anims_fbx.py` (NLA tracks).
-  - `Aline_AC.controller` generado con 26 estados + triggers vía `Editor/BuildAlineAnimator.cs`.
-  - Animator component reubicado en `SK_Curator_Aline` child para evitar el bug de scale curves a path `<root>`.
-  - Aline aparece en BS a tamaño correcto en T-pose (estado de `git HEAD` antes de animaciones funcionando).
-  - **Pendiente**: las clips llegan a Unity sin movimiento real (fcurves identity). Probable bug del bake al exportar bajo MCP context. **Unity MCP ya operativo** (sesión 2026-04-27) — próximo paso: usar `execute_code` y `manage_animation` para inspeccionar las curves directamente y aislar dónde se pierde el bake.
-
-Lo que **no** está hecho todavía: animaciones reproduciéndose en runtime, canción definitiva, scripting con ReMapper, narrativa por fases concreta.
-
----
-
-## Changelog
-
-### Pre-2026-04-26 — Sesión inicial
-
-- Setup del proyecto Unity con VivifyTemplate.
-- Importación de Aline desde dump de Sandfall (FModel) → Blender → Unity.
-- Decisión de modelo (Aline sobre Dualliste), formato V2, scale 0.01.
-- Primer bundle exportado y verificado en Beat Saber.
-
-### 2026-04-26 — Setup de repo y documentación
-
-- Repo organizado: `CLAUDE.md`, `docs/PRODUCTO.md`, `docs/ARQUITECTURA.md`, `docs/NEXT_STEPS.md`, `docs/DECISIONES.md`. `my-notes.md` queda como scratchpad.
-- `.gitignore` que cubre Sandfall, ReMapper-master, FModel.exe, bundles, audio, modelos 3D, texturas binarias y el junction del mapa.
-- Junction `beatsaber-map/` creado con `mklink /J` apuntando a `CustomWIPLevels/Test/`. Lectura de `.dat` desde el repo sin paths absolutos.
-- `ReMapper-master/` y `FModel.exe` movidos fuera del repo (a `d:\vivify_repo\`).
-- `scripts/snapshot-map.ps1` con dos modos: manual (`-Label X`, sin rotación) y automático (`-Auto`, ring buffer de 5 con dedup por hash). El modo automático lo invoca un git pre-commit hook (`scripts/hooks/pre-commit`) configurado vía `core.hooksPath = scripts/hooks`. Tolerante a fallos: si no hay junction, no rompe el commit.
-- Skills `vivify-mapping` y `unity-rebuild` ampliadas con tablas de errores comunes y validación de paths vía `bundleinfo.json`. Skill nueva `remapper-scripting` (esqueleto).
-
-### 2026-04-26 — Animaciones (infrastructure) + investigación unity-mcp port
-
-- **Blender MCP** (ahujasid/blender-mcp) registrado para automatización del flujo de Blender desde Claude Code. Funciona bajo Unity 2019.4 sin problemas (no toca Unity).
-- **Import batch de `.psa`**: `scripts/blender/import_all_psa.py` carga las 27 .psa de Sandfall vía la API programática del addon DarklightGames (fork del Befzz). Diagnóstico clave: el addon no auto-linkea la action al armature tras importar; `arm.animation_data.action = action` requiere set manual. 26 actions resultantes (1 colisión de nombre `DefaultSlot` entre dos Montages).
-- **Export FBX**: `scripts/blender/export_anims_fbx.py` exporta armature + actions vía NLA tracks (workaround porque `bake_anim_use_all_actions` no itera fiable bajo MCP context). Output: `VivifyTemplate/Assets/Aline/Animations/Aline_Anims.fbx` (185 MB, gitignored). Avatar de `Aline.fbx` reusado vía `Copy From Other Avatar`.
-- **Editor scripts** en `Assets/Aline/Editor/`:
-  - `AlineAnimsImporter.cs` — AssetPostprocessor, fija `loopTime=true` en idles canónicos al importar (workaround del bug del Inspector de 2019.4 donde toggles per-clip se descartan al cambiar de clip sin Apply).
-  - `BuildAlineAnimator.cs` — Tools menu, regenera `Aline_AC.controller` con 26 estados + triggers (`Idle1`, `Skill1`, etc., sin prefijo `Paintress_`). `Any State → X` por trigger, auto-return a Idle1 al exit time para no-loops.
-  - `InspectAlineClips.cs` — Tools menu de diagnóstico, vuelca curves de un clip a Console.
-- **Bug arquitectural del Animator**: clips contienen scale curves en path `<root>` (forzadas por bake_anim del FBX export aunque las actions no tengan fcurves de scale). Si el Animator vive en el root del prefab (que tiene `localScale: 0.01` baked), las curves pisan el 0.01 con 1.0 → modelo 100x. Solución: mover el Animator a `SK_Curator_Aline` (child del prefab a scale 1) — el scale curve sample queda no-op.
-- **unity-mcp investigación + abort**: el addon UPM de [CoplayDev/unity-mcp](https://github.com/CoplayDev/unity-mcp) requiere Unity 2021.3+. Intento de instalar en 2019.4 dejó el proyecto roto temporalmente (USS post-2021, dependency `com.unity.nuget.newtonsoft-json 3.0.2` no en registry de 2019). Removed de `Packages/manifest.json` y `packages-lock.json`. Decisión: mantener Unity 2019.4 (recomendación oficial de Vivify para max compat BS) y plantear el port mínimo del unity-mcp a 2019.4 como side-project — ver sección "Side-projects".
-- **Memorias guardadas**: `feedback_learn_from_obstacles.md` (estilo de debugging que valida small rocks), `project_unity_2019_choice.md` (recordar que 2019.4 es canónico, no deuda).
-
-### 2026-04-26 — Texturizado de Aline + auto-sync de CRCs
-
-- **Texturizado**: 2 PNG (`Curator_Body_BaseColor`, `Curator_Body_BaseColor_1`) copiados del dump de Sandfall a `VivifyTemplate/Assets/Aline/Textures/`. Shader nuevo `Aline/Standard` (unlit + alpha cutout 0.333 + `Cull Off`) en `Assets/Aline/Shaders/`. 3 materiales en `Assets/Aline/Materials/` asignados a los 5 slots del prefab según mapping deducido del byte-order del FBX y de los `MI_*.json` / `M_*.json` exportados por FModel. Luces direccionales borradas de Aline y del cube de testeo. FBX movido de `Assets/Test/` a `Assets/Aline/`.
-- **Skill `vivify-materials`** rellenada con la receta unlit-cutout-double-sided, el flow de mapping FModel→Unity, y troubleshooting.
-- **`scripts/sync-crcs.ps1`**: PowerShell que lee `bundleCRCs` de `bundleinfo.json` y patcha surgically (regex) los CRCs en `Info.dat._customData._assetBundle`. Preserva el formato exacto del `.dat` (sin churn de hash en snapshots), tolerante a junction missing, idempotente (no escribe si no hay cambio).
-- **`Assets/Aline/Editor/PostBuildSyncCRCs.cs`**: Editor script con `[InitializeOnLoad]` que monta un `FileSystemWatcher` sobre `bundleinfo.json` y lanza el `.ps1` cada vez que Vivify hace build. Toggleable desde `Tools/Aline/Auto-sync CRCs after Vivify build`. Skill `unity-rebuild` actualizada en consecuencia.
-
-### 2026-04-27 — Port unity-mcp a Unity 2019.4 + integración con Aline
-
-- **Fork operativo del unity-mcp para 2019.4** en `d:\vivify_repo\unity-mcp/` (remote `origin = luisep92/unity_vivify_mcp`, `upstream = CoplayDev/unity-mcp`). Los hallazgos de exploración del 04-26 se ejecutaron: 23 commits cherry-pickables sobre `upstream/beta` que strippan wizard UI Toolkit + 21 configurators + servicios no-core (Package*, ServerManagement, TestRunner, ResourceDiscovery, Migrations, Dependencies) + tools no-aplicables (Build, ProBuilder, Profiler, Vfx, Graphics, ManagePackages, ManageUI, ManageTexture, RunTests), reescriben ~50+ sites de C# 8/9 a 7.3 (switch expressions, `is not T x`, `??=`, target-typed `new()`, range syntax, `using` declarations, `#nullable`), y shimean APIs 2020+ (PrefabStageUtility namespace, `string.Contains(char)`, `Math.Clamp`, `Task.IsCompletedSuccessfully`, `Dictionary.Remove(k, out v)`, `MaterialPropertyBlock.HasColor`). Detalle completo en [unity-mcp/README.md](../../unity-mcp/README.md).
-- **Wireado al proyecto Aline**: `VivifyTemplate/Packages/manifest.json` referencia el package localmente con `"com.coplaydev.unity-mcp": "file:../../../unity-mcp/MCPForUnity"`. El asmdef recoge automáticamente el `Newtonsoft.Json.dll` que VivifyTemplate ya trae en `Assets/VivifyTemplate/Exporter/Dependencies/`.
-- **Server Python registrado en Claude Code** con scope user: `claude mcp add -s user unity-mcp -- uv run --directory d:/vivify_repo/unity-mcp/Server mcp-for-unity --transport stdio`. La extensión VSCode lo recoge tras restart.
-- **End-to-end validado**: Claude Code → Python MCP server → TCP 6400 → bridge stdio en Unity → Console + arbitrary C# (`Application.unityVersion` → `2019.4.28f1`).
-- **Default flippeado a stdio**. HTTP transport requería `ServerManagementService` que se borró en el strip; el menu `Window > MCP For Unity > Use Stdio Transport` fija EditorPref para casos donde quedó set previo.
-- **Bug arquitectural caught + fixed durante el bring-up**: el compilador CodeDom de `execute_code` abortaba al toparse con la `Newtonsoft.Json.dll` legacy (PE32 32-bit Mono build) que VivifyTemplate ship — `AssemblyName.GetAssemblyName` la lee, csc.exe no. Fix: retry-loop que parsea el error "Metadata file 'X' does not contain valid metadata" y droppea X del reference set.
-- **Aprendizaje aplicado a la skill**: si un menu item no aparece en Unity y la Console está limpia, mira `Library/ScriptAssemblies/`. Si no hay DLLs ahí, hay un conflict silencioso (DLL duplicado solapando plataformas, asmdef roto). Memoria guardada para futuras sesiones.
+- Vivify carga el bundle de Unity e instancia `aline.prefab` en escena.
+- **Aline texturizada** con shader unlit cutout double-sided. 3 materiales: `M_Aline_Body_1`, `M_Aline_Body_2`, `M_Aline_Black`.
+- **Sync de CRCs automático**: `Editor/PostBuildSyncCRCs.cs` dispara `scripts/sync-crcs.ps1` cada vez que Vivify reescribe `bundleinfo.json`. Cero pasos manuales tras F5.
+- Mapa V2 con `_customEvents` operativo (`InstantiatePrefab` testeado).
+- **Unity MCP operativo end-to-end** (fork local en `d:\vivify_repo\unity-mcp/`, bridge stdio en port 6400). Tools `read_console`, `refresh_unity`, `execute_code`, `manage_animation`, `manage_asset`, `manage_material`, `manage_prefabs`, etc.
+- **Animaciones reproduciéndose en BS**: pipeline `.psa` → Blender → FBX → Unity Animator → Vivify funcionando, con preview del FBX inspector animando correctamente. Detalle operativo en la skill `vivify-animations`.
 
 ---
 
@@ -77,64 +17,37 @@ Lo que **no** está hecho todavía: animaciones reproduciéndose en runtime, can
 
 ### 1. Canción definitiva
 
-Decidir pieza concreta del OST de Expedition 33. Importar `.ogg` al `beatsaber-map/`, ajustar BPM y duración. Anotar la decisión en `DECISIONES.md`.
+Decidir pieza concreta del OST de Expedition 33. Importar `.ogg` al `beatsaber-map/`, ajustar BPM y duración. Anotar en `DECISIONES.md`.
 
-### 2. Animaciones de combate (infrastructure DONE, last mile pendiente)
+### 2. Wireado narrativo del state machine
 
-Pipeline `.psa` → Blender → FBX → Unity Animator → Vivify `SetAnimatorProperty` montado al completo (ver Changelog 2026-04-26 e [ARQUITECTURA.md#pipeline-de-animaciones](ARQUITECTURA.md)). Pendiente:
-
-- **Diagnosticar por qué los clips llegan con fcurves identity** (no animan en preview ni runtime). Con Unity MCP operativo desde 2026-04-27 esto se ataca in-editor:
-  - `manage_animation` para listar clips e inspeccionar bindings/curves del `Aline_Anims.fbx`.
-  - `execute_code` para volcar las `AnimationCurve` de un clip concreto y comparar contra los keyframes que Blender exporta.
-  - Sospechas: `bake_anim_use_all_actions` o `bake_anim_use_nla_strips` no muestreando bajo MCP de Blender; mismatch rig/avatar (rest pose dispar); o el FBX exportado simplemente no contiene curves (caso descartable rápido leyendo el FBX).
-  - Si el FBX está bien, control: reabrir `.blend` y exportar con la UI nativa de Blender (no MCP) para aislar el bake-under-MCP.
-- Una vez Idle1 anime en BS: añadir un evento `SetAnimatorProperty` con trigger `Idle1` al `.dat` para confirmar que Vivify dispara el state machine. Snapshot + commit como checkpoint.
-- Después: wireado del state machine narrativo (qué skill dispara qué transición). Esto es contenido, no infra.
+El pipeline de animación funciona; queda el contenido. Definir qué skill dispara qué transición en cada fase del boss fight (ver [PRODUCTO.md](PRODUCTO.md)). Añadir eventos `SetAnimatorProperty` al `.dat` con los triggers correspondientes (`Skill1`, `Skill2_Loop`, etc.). Snapshot del mapa antes de bloque grande de events.
 
 ### 3. Setup de ReMapper
 
-Levantar Deno + primer script en `ReMapper-master/` (o en un subdir local). Output target: directo a `beatsaber-map/ExpertPlusStandard.dat` o staging intermedio. **Rellenar la skill `remapper-scripting`** durante este paso.
+Levantar Deno + primer script en `ReMapper-master/`. Output target: directo a `beatsaber-map/ExpertPlusStandard.dat` o staging intermedio. Rellenar la skill `remapper-scripting` durante este paso.
 
 ### 4. Diseño narrativo del boss fight
 
-Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en eventos concretos. Definir transiciones, animaciones por fase, patrones de notas que respondan a cada fase.
+Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en eventos concretos: transiciones, animaciones por fase, patrones de notas que respondan a cada fase.
 
 ---
 
-## Known issues / pendientes
-
-- **Animation clips llegan a Unity sin movimiento**. Las clips se ven como T-pose en el preview del FBX a pesar de que en Blender la action sí tiene datos de bone transforms no-identity (verificado con sampling en frames 0/50/140 — pelvis loc cambia). Hipótesis: `bake_anim_use_nla_strips=True` con tracks muted no produce takes correctos bajo MCP context. Probable fix: probar export desde la UI de Blender directamente, o pushear NLA tracks no-muted, o iterar manualmente set/export por action. Bloquea el end-to-end de step 2.
-
----
-
-## Lo que NO toca esta sesión (apuntado para luego)
-
-- Configurar remote en GitHub. Decidir público vs privado y qué hacer con texturas si en algún momento se versionan (¿LFS?).
-- `remapper-scripting/SKILL.md` con contenido real — empieza junto al setup de ReMapper.
-- Quest support — fuera de scope salvo decisión expresa.
-
----
-
-## Side-projects (portfolio)
+## Side-projects
 
 ### Port mínimo de unity-mcp a Unity 2019.4 — DONE
 
-**Estado**: operativo, conectado a este proyecto Aline. Repo en `d:\vivify_repo\unity-mcp/` (remote `origin = git@github.com:luisep92/unity_vivify_mcp.git`, `upstream = CoplayDev/unity-mcp`). Ver [README.md](../../unity-mcp/README.md) del fork para el detalle completo.
-
-**Lo que desbloqueó**: Claude Code puede ejecutar tools MCP contra el editor de Aline (`read_console`, `refresh_unity`, `execute_code` con C# arbitrario, `manage_animation`, `manage_asset`, `manage_material`, etc.). Conexión vía stdio en port 6400. Manifest del proyecto referencia el package localmente: `"com.coplaydev.unity-mcp": "file:../../../unity-mcp/MCPForUnity"`.
-
-**Pendiente (cuando lleve unas sesiones rodando)**: evaluar PR a upstream `CoplayDev/unity-mcp` desde el branch `main` del fork. Los commits están organizados con un cambio conceptual cada uno y mensajes descriptivos en inglés, pensados para cherry-pick limpio. Decisión actual: dejarlo madurar antes de proponerlo.
+Fork operativo en `d:\vivify_repo\unity-mcp/` (`luisep92/unity_vivify_mcp`), enganchado al proyecto Aline. Pendiente: cuando lleve unas sesiones rodando, evaluar PR a upstream `CoplayDev/unity-mcp`. Los commits están organizados con un cambio conceptual cada uno y mensajes en inglés, pensados para cherry-pick limpio. Detalle en [unity-mcp/README.md](../../unity-mcp/README.md).
 
 ---
 
 ## Diferido post-torneo
 
-Cuando el mapa esté entregado y haya margen, sesión de limpieza:
+Limpieza para cuando el mapa esté entregado:
 
-- **Rename `my_vivify_template/` → `aline-boss-fight/`**. Bloqueado durante la sesión de setup porque VSCode tiene handle abierto en `.git/`. Procedimiento: cerrar VSCode, `cd d:\vivify_repo && ren my_vivify_template aline-boss-fight`, reabrir VSCode en la nueva ruta. El `.git`, los junctions y todo lo demás viajan con la carpeta (los junctions apuntan a paths absolutos de Steam, no se rompen).
-- **Traducir docs/skills al inglés** si en algún momento se quiere compartir el repo con la comunidad de Vivify (que es internacional). Decisión actual: español, proyecto personal.
-- **Limpiar `.idea/` y `.vscode/` de VivifyTemplate** del staging si entran cambios espurios en commits.
+- **Rename `my_vivify_template/` → `aline-boss-fight/`**. Procedimiento: cerrar VSCode, `cd d:\vivify_repo && ren my_vivify_template aline-boss-fight`, reabrir VSCode. Junctions y `.git` viajan con la carpeta.
+- **Traducir docs/skills al inglés** si en algún momento se publica el repo a la comunidad de Vivify (internacional).
 - **Cambiar `origin/main`** del template upstream (`Swifter1243/VivifyTemplate`) al remote propio cuando se monte en GitHub.
-- **Upgrade unlit → lit/PBR para Aline**. Los Normal/ORM/Emissive de los `MI_Curator_Aline_Body_*.json` y `MI_Curator_Aline_Palette*.json` ya están descritos en el dump de Sandfall (`Sandfall/Content/Characters/Enemies/HumanEnnemies/Aline/Textures/`). Implica: copiar las PNGs adicionales, ampliar el shader `Aline/Standard` (o crear `Aline/Lit`) con muestreo de Normal + ORM + Emissive, decidir modelo de iluminación (lambert + ambient, PBR completo, o cel-shading). Tradeoff: mejor look vs complejidad de tunear iluminación dentro del bundle de Vivify.
-- **Polish visual de los slots negros** (BlackPart, BlackPart1, CuratorFace). Hoy son negro plano. Originalmente en Unreal usan fresnel + alpha + paint procedural. Para recrear: shader fresnel simple para los BlackPart (edge darkening con `1 - dot(viewDir, normal)`), y para `M_CuratorFace` componer `Mask_Curator.png` (`Sandfall/.../Curator/Textures/`) + `T_Paint1.png` + `T_Aura.png` con un blend translucent.
-- **Importar `palette.pskx` y `palette1.pskx`** del dump (`Sandfall/.../Aline/`) si se quiere que Aline sostenga sus paletas (las "armas" del Curator). Las texturas Palette y los `MI_Curator_Aline_Palette*.json` ya están preparados; falta importar las pskx vía Blender → FBX y añadirlas como child del prefab.
+- **Upgrade unlit → lit/PBR para Aline**. Normal/ORM/Emissive ya descritos en `MI_Curator_Aline_*.json` del dump. Implica copiar PNGs adicionales, ampliar `Aline/Standard` (o crear `Aline/Lit`), decidir modelo de iluminación.
+- **Polish de los slots negros** (BlackPart, BlackPart1, CuratorFace). Hoy negro plano; en Unreal usan fresnel + paint procedural. Recreables con un fresnel shader simple para BlackPart, y blend translucent de `Mask_Curator.png` + `T_Paint1.png` + `T_Aura.png` para `M_CuratorFace`.
+- **Importar `palette.pskx` y `palette1.pskx`** del dump si se quiere que Aline sostenga sus paletas. Texturas y materiales ya preparados; falta la geometría (Blender → FBX → child del prefab).

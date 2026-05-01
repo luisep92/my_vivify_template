@@ -26,13 +26,13 @@
                               ▼  Unity 2019.4.28f1 + VivifyTemplate
 ┌──────────────────────────────────────────────────────────────────────┐
 │ VivifyTemplate/Assets/Aline/                                         │
-│   Prefabs/aline.prefab          (Animator en SK_Curator_Aline child) │
+│   Prefabs/aline.prefab          (Animator en el PREFAB ROOT)         │
 │   Textures/                      (PNG de FModel)                     │
 │   Materials/                     (M_Aline_Body_1/2, M_Aline_Black)   │
 │   Shaders/Aline/Standard.shader  (unlit + alpha cutout + Cull Off)   │
 │   Animations/Aline_AC.controller (state machine 26 estados)          │
 │   Editor/PostBuildSyncCRCs.cs    (auto CRC sync)                     │
-│   Editor/AlineAnimsImporter.cs   (loopTime auto al importar FBX)     │
+│   Editor/AlineAnimsImporter.cs   (preserveHierarchy=true + loopTime) │
 │   Editor/BuildAlineAnimator.cs   (Tools menu: regenera AC)           │
 │   Editor/InspectAlineClips.cs    (Tools menu: dump fcurves)          │
 └──────────────────────────────────────────────────────────────────────┘
@@ -76,7 +76,7 @@
 | Asset explorer | FModel | (última) | Extracción de UE5 assets. |
 | Map editor | ChroMapper | (última) | Editor visual del mapa. |
 | Scripting | ReMapper | (master) | Generación programática de notas/eventos. **Aún sin usar.** |
-| Unity automation | unity-mcp (CoplayDev) | requiere Unity 2021.3+ | **No instalado** en este proyecto (incompat. 2019.4). Side-project: port mínimo a 2019.4 documentado en NEXT_STEPS. |
+| Unity automation | unity-mcp (fork local) | port a 2019.4 | Fork minimal en `d:\vivify_repo\unity-mcp/` enganchado vía `Packages/manifest.json`. Bridge stdio en port 6400. Ver [unity-mcp/README.md](../../unity-mcp/README.md). |
 
 ## Qué archivo vive dónde y por qué
 
@@ -140,10 +140,6 @@ Permite leer logs de IPA + Vivify desde el repo. Estructura:
 
 (Comando `cmd`, no PowerShell — `mklink` es interno de cmd.)
 
-## Setup inicial Unity (one-time)
-
-En un proyecto Vivify nuevo: `Vivify > Setup Project`. **Ya hecho** en este repo, queda apuntado por si se rehace desde cero.
-
 ## Flujo de rebuild
 
 Dos opciones equivalentes:
@@ -178,26 +174,32 @@ Sub-flujo independiente del de prefab/material. Se ejecuta una vez para generar 
 .psa de FModel
    │  scripts/blender/import_all_psa.py  (vía Blender MCP o Scripting workspace)
    ▼
-Blender actions en bpy.data.actions (372 bones matched, scale fcurves no se importan)
+Blender actions en bpy.data.actions (372 bones matched, scale fcurves stripped)
    │  scripts/blender/export_anims_fbx.py
-   │     - push actions a NLA tracks muted (force per-take baking)
-   │     - export armature only, takes via bake_anim_use_nla_strips
+   │     - push actions a NLA tracks UNMUTED, strip name = "<armature>|<action>"
+   │     - export armature only, takes via bake_anim_use_nla_strips=True
    ▼
-Aline_Anims.fbx (185 MB, gitignored, .meta sí versionado)
-   │  Unity 2019.4 FBX importer + Editor/AlineAnimsImporter (loopTime auto en idles)
+Aline_Anims.fbx (~185 MB, gitignored, .meta sí versionado)
+   │  Unity 2019.4 FBX importer + Editor/AlineAnimsImporter:
+   │     - preserveHierarchy=true (mantiene SK_Curator_Aline como GO)
+   │     - loopTime=true en idles canónicos
    ▼
-26 AnimationClips como sub-assets (path "<root>", "root", "root/pelvis", ...)
+26 AnimationClips como sub-assets, paths "SK_Curator_Aline/root/pelvis/..."
    │  Tools > Aline > Build Animator Controller (Editor/BuildAlineAnimator)
    ▼
 Aline_AC.controller con 26 estados, 26 triggers (Any State → X), auto-return a Idle1
-   │  Asignado al Animator component DEL HIJO SK_Curator_Aline (no del prefab root)
+   │  Asignado al Animator component DEL PREFAB ROOT (no del child SK_Curator_Aline)
    ▼
 Runtime: Vivify SetAnimatorProperty con id del prefab + trigger name
 ```
 
-### Por qué el Animator vive en `SK_Curator_Aline`, no en `aline` (root)
+### Por qué el Animator vive en el prefab root + `preserveHierarchy=true`
 
-El prefab root `aline` tiene `localScale: 0.01` baked (conversión Unreal cm → Unity m, ver [DECISIONES.md](DECISIONES.md)). Los AnimationClips exportados desde Blender contienen curvas `m_LocalScale` en path `<root>` (la GameObject del Animator) por cómo bakea el FBX exporter — son curvas constantes 1.0 que no animan nada pero al sample sobreescribirían el localScale del GameObject del Animator. Si el Animator está en el root, el 0.01 se pisa con 1.0 → modelo 100x grande. Ponerlo en `SK_Curator_Aline` (que ya está a scale 1) hace que el sample sea no-op.
+El export armature-only de Blender colapsa el armature object como nodo raíz del FBX. Unity, además, colapsa por defecto nodos top-level con un solo hijo. Sin contramedida, las clip paths salen como `root/pelvis/...` sin prefijo `SK_Curator_Aline`. La preview del FBX inspector usa `Aline.fbx` como modelo (vía avatar source) cuya jerarquía sí preserva `SK_Curator_Aline` → mismatch → T-pose.
+
+`preserveHierarchy=true` (set por `AlineAnimsImporter.OnPreprocessModel`) hace que Unity no colapse — `SK_Curator_Aline` sigue como GO en el FBX importado y todas las clip paths quedan prefijadas con `SK_Curator_Aline/...`. Con esas paths, el Animator puede vivir en el root del prefab y las paths matchean directamente.
+
+Las scale curves que el FBX exporter mete por defecto en el armature object (path `""` original → `"SK_Curator_Aline"` con preserveHierarchy) caen en el GO `SK_Curator_Aline` (scale 1) → no-op. El root del prefab mantiene `localScale: 0.01` baked sin que las clips lo pisen. Decisión documentada en [DECISIONES.md#2026-05-01](DECISIONES.md).
 
 ### Naming convention de triggers
 
@@ -214,7 +216,7 @@ Eso es lo que va en `properties[].id` del evento `SetAnimatorProperty` en el `.d
 
 ### Skill `vivify-animations`
 
-Documenta este pipeline incluyendo gotchas concretos (PSA addon no auto-linkea action, `bake_anim_use_all_actions` poco fiable bajo MCP context, scale curve scope, FBX rig settings, Generic vs Humanoid). Consultar antes de tocar nada del flujo.
+Guía operativa del pipeline: setup once-per-character paso a paso + tabla de tools + reglas no negociables + 6 gotchas documentados (NLA strips muted, addon PSA action linking, preserveHierarchy, no SetEditorCurves plural en 2019.4, Inspector loopTime bug, rest pose mismatch). Consultar antes de tocar nada del flujo.
 
 ---
 
@@ -262,17 +264,6 @@ Dos usos:
 Si los CRCs no matchean: error `[Vivify/AssetBundleManager] Checksum not defined` en el log de BS y el mapa no carga assets.
 
 Bypass de iteración: lanzar BS con flag `-aerolunaisthebestmodder` (desactiva validación). **Quitar antes de publicar.**
-
-## TextMeshPro caveat
-
-Unity 2019.4.28f1 trae un TextMeshPro más nuevo que el que usa Beat Saber 1.29.1. Esto rompe alineamientos de texto en BS 1.29.1. Fix:
-
-```
-Window > Package Manager → eliminar TextMeshPro
-+ → Add package from git URL → com.unity.textmeshpro@1.4.1
-```
-
-**No aplica a 1.34.2** (este proyecto). Apuntado por si en algún momento se quiere compatibilidad multi-versión.
 
 ## Mods — instalación manual
 

@@ -6413,7 +6413,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5026684097032555858}
-  - component: {fileID: 2687865543005428994}
   m_Layer: 0
   m_Name: SK_Curator_Aline
   m_TagString: Untagged
@@ -13697,6 +13696,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8335348914834376568}
+  - component: {fileID: 8092605682808356644}
   m_Layer: 0
   m_Name: aline
   m_TagString: Untagged
@@ -13720,14 +13720,14 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!95 &2687865543005428994
+--- !u!95 &8092605682808356644
 Animator:
   serializedVersion: 3
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4178986262425981256}
+  m_GameObject: {fileID: 8711873731952401858}
   m_Enabled: 1
   m_Avatar: {fileID: 9000000, guid: 08d05f6e960bc5e488985cfd6c79be07, type: 3}
   m_Controller: {fileID: 9100000, guid: bef83e2a39125fc4db23e2cd79e885d7, type: 2}

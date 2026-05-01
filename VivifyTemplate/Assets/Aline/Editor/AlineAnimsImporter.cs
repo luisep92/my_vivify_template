@@ -32,6 +32,23 @@ namespace Aline.Editor
             return pipe >= 0 ? clipName.Substring(pipe + 1) : clipName;
         }
 
+        // Unity colapsa por defecto nodos transform de un solo hijo en la raíz
+        // del FBX. Blender exporta el armature object 'SK_Curator_Aline' como
+        // Null node con 'root' (la pose root bone) como único hijo, así que
+        // el GO 'SK_Curator_Aline' desaparece en el import → clip paths salen
+        // como 'root/...' sin prefijo, y la preview del FBX rompe cuando usa
+        // Aline.fbx como modelo (que sí tiene 'SK_Curator_Aline' en jerarquía).
+        // preserveHierarchy=true le dice al importer que no colapse.
+        void OnPreprocessModel()
+        {
+            var normalized = assetPath.Replace('\\', '/');
+            if (normalized != TargetPath) return;
+
+            var importer = assetImporter as ModelImporter;
+            if (importer == null) return;
+            if (!importer.preserveHierarchy) importer.preserveHierarchy = true;
+        }
+
         void OnPreprocessAnimation()
         {
             var normalized = assetPath.Replace('\\', '/');
@@ -60,5 +77,6 @@ namespace Aline.Editor
             importer.clipAnimations = clips;
             Debug.Log("[AlineAnimsImporter] " + clips.Length + " clips procesados, " + looped + " marcados loopTime=true.");
         }
+
     }
 }

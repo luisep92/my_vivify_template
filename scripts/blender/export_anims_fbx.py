@@ -47,22 +47,35 @@ def strip_scale_fcurves():
 
 
 def push_actions_to_nla(arm):
-    """Push every action in bpy.data.actions onto its own muted NLA track on the armature.
-    Idempotent: skips if a track with the action's name already exists.
+    """Push every action in bpy.data.actions onto its own NLA track on the armature.
+    Idempotent: skips if a track with the expected name already exists.
     bake_anim_use_all_actions in Blender 4.2 doesn't cycle actions reliably from the
-    FBX exporter when run via headless/MCP context — NLA strips force per-take baking."""
+    FBX exporter when run via headless/MCP context — NLA strips force per-take baking.
+
+    Strip naming: '{ARMATURE_NAME}|{action.name}'. With bake_anim_use_nla_strips=True,
+    the FBX take name equals the strip name. Unity's ModelImporter caches clip overrides
+    by takeName under the same convention (e.g. 'SK_Curator_Aline|Paintress_Idle1');
+    matching it preserves loopTime and the trigger-naming convention used by
+    BuildAlineAnimator and the SetAnimatorProperty events.
+    """
     if arm.animation_data is None:
         arm.animation_data_create()
 
     existing_track_names = {t.name for t in arm.animation_data.nla_tracks}
     pushed = 0
     for action in bpy.data.actions:
-        if action.name in existing_track_names:
+        strip_name = f"{ARMATURE_NAME}|{action.name}"
+        if strip_name in existing_track_names:
             continue
         track = arm.animation_data.nla_tracks.new()
-        track.name = action.name
-        track.mute = True  # don't blend, just live there for the exporter to find
-        track.strips.new(name=action.name, start=int(action.frame_range[0]), action=action)
+        track.name = strip_name
+        # NOTE: strips MUST stay unmuted. The FBX exporter with
+        # bake_anim_use_nla_strips=True silently skips muted tracks (verified
+        # 2026-05-01: muted tracks → 0.4 MB FBX in 0.1s; unmuted → 185 MB in
+        # 150s). Overlap on the timeline is irrelevant — the exporter bakes
+        # each strip as its own Take based on the strip's frame range.
+        track.mute = False
+        track.strips.new(name=strip_name, start=int(action.frame_range[0]), action=action)
         pushed += 1
     return pushed
 
