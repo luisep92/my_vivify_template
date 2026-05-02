@@ -65,9 +65,89 @@ Si necesitas tunear el material muchas veces:
 | Skybox aparece distorsionado/estirado | Textura no es 2:1 equirect (probable 1:1) | Cambiar approach: backdrop quad o conseguir equirect real |
 | Skybox visible pero environment de BS por encima | Esperado mientras Timbaland está activo | Sigue al subpaso "Disable BS environment" |
 
-## Disable BS environment — TODO
+## Disable BS environment
 
-(Pendiente. Patron: comandos Chroma en `_customData.environment[]` con `active: false`. Se documenta cuando lo implementemos.)
+Aunque cambies `_environmentName` a `DefaultEnvironment` (el que menos ruido mete, ver `DECISIONES.md`), su geometría y luces siguen renderizando por encima de tu escenario custom. Para apagarla, comandos Chroma en `_customData._environment[]` del `.dat` (V2) o `customData.environment[]` (V3) — ver gotcha V2/V3 abajo.
+
+### Receta (DefaultEnvironment, V2)
+
+```json
+"_customData": {
+  "_environment": [
+    { "_id": "Environment|GameCore", "_lookupMethod": "Regex", "_position": [0, -69420, 0] },
+    { "_id": "DustPS",      "_lookupMethod": "Contains", "_active": false },
+    { "_id": "PlayersPlace", "_lookupMethod": "Contains", "_active": false }
+  ]
+}
+```
+
+Tres comandos, no uno:
+1. **Yeet `Environment|GameCore`** al -69420 — mueve toda la geometría/luces fuera del frustum.
+2. **Apagar `DustPS`** — partículas no se mueven con `_position` (sistema de partículas con coordenadas locales propias), van con `_active: false`.
+3. **Apagar `PlayersPlace`** — la baldosa bajo los pies del jugador. Si quieres que pise tu propio suelo, fuera.
+
+### Por qué yeet (-69420) en vez de `_active: false`
+
+Algunos GameObjects del environment tienen scripts del juego que los **reactivan** (`OnEnable` de managers, scene-load callbacks). Un GameObject yeeteado es invisible al juego: ningún script chequea "estoy lejos, vuelvo". Más robusto que `_active: false` para la geometría base. El trade es CPU mínimo (animators/particles tickeando en el limbo) — irrelevante para una sola canción. Para partículas usar `_active: false` es OK (no suelen reactivarse y son baratas de matar).
+
+Pattern derivado de `vivify_examples/43a24 (End Times - Chaimzy)` — DefaultEnvironment + Vivify, mapa publicado y jugable.
+
+### Gotcha V2/V3: el array name también lleva underscore en V2
+
+Heckdocs documenta SOLO V3. El array se llama `customData.environment` (sin underscore) con keys `id`/`lookupMethod`/`active` (sin underscore).
+
+En V2 **TODO lleva underscore**, incluido el nombre del array y todas las keys: `_customData._environment[]` con `_id`/`_lookupMethod`/`_active`/`_position`. Mezclar (array sin underscore, keys con underscore) hace que Chroma lo ignore **silenciosamente** — sin warning en consola, el env sigue visible y pierdes una iteración debugueando lo que no es. Confirmado 2026-05-02.
+
+Ver memoria `feedback_v2_v3_syntax` para mapeo completo.
+
+### Diagnóstico cuando el environment sigue visible
+
+| Síntoma | Causa probable | Fix |
+|---|---|---|
+| Cambios a `_environment[]` no hacen nada, sin error | Sintaxis V2/V3 mezclada | Asegurar `_environment` (no `environment`) + claves con underscore |
+| Algunos GameObjects desaparecen pero otros no | El regex no captura todos | Ampliar regex; loguear con `PrintEnvironmentEnhancementDebug: true` en `Chroma.json` |
+| Env desaparece en local pero algunos jugadores lo ven raro | Tienen un environment override global (BillieEnvironment, etc.) | Forzar con Settings Setter `_environments._overrideEnvironments: false` |
+| Geometría apagada con `_active:false` se reactiva sola | Script del juego la reactiva | Yeetear con `_position: [0,-69420,0]` en lugar de `_active: false` |
+
+## Settings Setter (HUD off, mod requirements, prompt al jugador)
+
+Heck implementa el "Settings Setter": al cargar el mapa, BS muestra un dialog al jugador con los settings que el mapa recomienda aplicar. Si acepta, los cambia para esa sesión y los restaura al salir. Vive en `Info.dat._difficultyBeatmaps[]._customData`.
+
+### Starter pack para mapa Vivify (V2, derivado de scan a 10 mapas del corpus)
+
+```json
+"_customData": {
+  "_requirements": ["Vivify", "Chroma"],
+  "_settings": {
+    "_playerOptions": {
+      "_noteJumpDurationTypeSettings": "Dynamic",
+      "_environmentEffectsFilterDefaultPreset": "AllEffects",
+      "_environmentEffectsFilterExpertPlusPreset": "AllEffects",
+      "_leftHanded": false
+    },
+    "_environments": { "_overrideEnvironments": false },
+    "_chroma": {
+      "_disableEnvironmentEnhancements": false,
+      "_disableChromaEvents": false
+    }
+  }
+}
+```
+
+Justificación por línea: ver memoria `reference_settings_setter`.
+
+**Settings adicionales por necesidad:**
+- `_playerOptions._noTextsAndHuds: true` — apaga HUD vanilla (combo, score, multiplier, energy, miss text). Para mapa cinemático tipo showcase, SÍ. Confirmado funciona.
+- `_countersPlus._mainEnabled: false` — apaga el HUD del mod Counters+ (HUD independiente del vanilla). Necesario si pones `_noTextsAndHuds: true` y quieres consistencia.
+- `_uiTweaks._{multiplier,energy,combo,position,progress}Enabled: false` — apaga el HUD del mod UITweaks. Misma razón. Heck salta silenciosamente si el mod no está instalado, así que es seguro mandar bloque aunque no estés seguro.
+
+**Requirements vs Suggestions:**
+- `_requirements`: hard — sin el mod, BS no carga el mapa.
+- `_suggestions`: soft — recomendado pero opcional.
+
+### Gotcha: la plataforma del jugador NO es HUD
+
+`PlayersPlace` (la baldosa bajo los pies) es GameObject del environment, no HUD. `_noTextsAndHuds` NO la quita — hay que apagarla con `_environment[]` (ver receta arriba).
 
 ## Ambient lighting — TODO
 
@@ -79,7 +159,9 @@ Si necesitas tunear el material muchas veces:
 
 ## HUD removal
 
-**No hay forma directa en Vivify/Chroma** de ocultar el HUD del jugador (puntuación, combo, multiplicador). Depende de mods que cada jugador tenga instalados (NoHUD, Camera2). Para showcase maps, lo estándar es documentar la recomendación al jugador (ej: "instala NoHUD para máximo impacto visual") en la descripción del mapa.
+**Sí hay forma directa via Heck Settings Setter** — ver sección arriba. `_noTextsAndHuds: true` apaga el HUD vanilla (combo, score, multiplier, energy, miss text). El jugador ve un prompt antes de cargar y acepta. Para mods que renderizan su propio HUD (Counters+, UITweaks) hay que añadir sus settings específicos al mismo bloque.
+
+Lo único que NO controlas desde el mapa son HUDs de mods de overlay completamente externos (Twitch chat overlay, performance counters, etc.) — esos son configuración del usuario.
 
 ## Referencias
 

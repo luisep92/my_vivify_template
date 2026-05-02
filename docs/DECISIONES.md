@@ -48,7 +48,15 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 **Regla:** El mapa usa `DefaultEnvironment`.
 
-**Por qué:** Las luces vanilla son irrelevantes con Vivify, así que el environment elegido es el que mete menos ruido visual que pueda competir con Aline.
+**Por qué:** Las luces vanilla son irrelevantes con Vivify, así que el environment elegido es el que mete menos ruido visual que pueda competir con Aline. Además simplifica el disable: `Environment|GameCore` regex captura todo lo relevante, no hace falta enumerar nombres específicos del environment (que cambian entre `TimbalandEnvironment`, `BillieEnvironment`, etc.). Aeroluna y nasafrasa también lo eligen para sus mapas Vivify (corpus 2026-05-02).
+
+---
+
+### Settings Setter siempre presente, con starter pack mínimo
+
+**Regla:** Cada dificultad declara `_customData._requirements` (al menos `["Vivify", "Chroma"]`) y un bloque `_customData._settings` que fuerza al menos: `_playerOptions._noteJumpDurationTypeSettings: "Dynamic"` (universal en el corpus), `_environments._overrideEnvironments: false`, `_chroma._disableEnvironmentEnhancements: false`, y `_environmentEffectsFilterDefault/ExpertPlusPreset: "AllEffects"`. Para showcase cinemático añadimos `_noTextsAndHuds: true` + `_countersPlus._mainEnabled: false` + bloque `_uiTweaks` con todo a `false`.
+
+**Por qué:** Sin el bloque, el mapa puede cargarse en condiciones que rompen Vivify silenciosamente: jugador con env override global (no se ve nuestro environment), modo Static NJS (ignora nuestro NJS), Chroma env enhancements desactivado por el jugador (no se aplica nuestro `_environment[]` disable), HUD competition entre vanilla + Counters+ + UITweaks. El prompt de Settings Setter es cancelable por el jugador, pero si lo acepta zanjamos todo el ecosistema. Starter pack y justificación por línea en memoria `reference_settings_setter`.
 
 ---
 
