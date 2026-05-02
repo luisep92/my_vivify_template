@@ -181,6 +181,34 @@ Estructura del builder:
 8. **Espejo en Y al final** (`v.co.y = -v.co.y` + `bmesh.ops.reverse_faces`). Necesario porque el combo `bake_space_transform=True + axis_forward='-Z'` mapea Blender +Y a Unity -Z (espalda del jugador). Negar Y antes de exportar garantiza que el corredor caiga en Unity +Z (hacia el boss). Ver gotcha "FBX axis flip" abajo.
 9. Export FBX: `axis_forward="-Z"`, `axis_up="Y"`, `bake_space_transform=True`, `apply_scale_options="FBX_SCALE_NONE"`.
 
+### Decoración de ground (carpet de pétalos / hojas) — preferir mesh pre-built sobre tile-shader
+
+Para cubrir el suelo con vegetación tipo "alfombra de pétalos" (ver foto E33: dense leaf coverage en el rock), evaluamos cuatro approaches en orden de discovery:
+
+1. **Scatter de N clusters discretos pequeños** (mesh `SM_DeadLeaves_Petals_new` x22 instancias). Resultado: dotty, sparse, no llega a "carpet" sino a "puntitos esparcidos". Descartado.
+2. **Mesh único merged + clusters scatter denso** (~80 clusters). Mejora densidad pero sigue leyéndose discreto en lugar de continuo. Descartado.
+3. **Duplicate del top del rock + atlas-tile vía shader** (`build_petal_carpet` + `_AtlasRegion` cropping). Continuous coverage SI, pero el tiling muestra el patrón del atlas claramente cada 25cm — "se ve el atlas entero repetido". Descartado.
+4. **Mesh pre-built de "scattered carpet" del marketplace** (Real_Ivy_Pack/SM_ivy_floor_plane_dense). 5 instancias rotadas + scale variation + Z squash agresivo (0.15) para flatten plantas a petals. **Funciona.**
+
+**Lección consolidada**: para ground decoration en VR/BS, **mesh asset choice > shader gymnastics**. Un asset pack pre-built diseñado para scatter ya tiene la organic distribution baked-in (UVs apuntan al atlas correctamente, no hay tile pattern visible). Tilear un atlas vía shader siempre muestra el patrón a cualquier tiling-rate. Antes de invertir tiempo en shader-tile complejo, scoutear FModel para `SM_*floor_plane*`, `SM_*ground_*`, `SM_*carpet*` o equivalentes.
+
+**Pipeline final del scatter de carpet (referencia técnica):**
+1. Scatter N copias rotadas (yaw aleatorio) del template mesh, posiciones explícitas asimétricas (foco frente del jugador, mínimo detrás — la cámara fija no ve atrás)
+2. **Decimate al template** (no a las copias) ANTES de duplicar — savings se multiplican por N. Ratio 0.5 indistinguible visualmente a distancia BS
+3. Scale no-uniforme `(s, s, s * HEIGHT_SCALE)` con HEIGHT_SCALE ~0.15 — aplasta verticalidad de meshes que son "plantas creciendo" a "petalos tirados". Sin esto los leaves se leen como grass blades verticales
+4. Join en una mesh con `material_index=1`, attached al rock como submesh → 1 mesh, 2 submeshes, 2 draw calls (rock opaque + ivy cutout-alpha)
+
+### Preview de materiales en Blender (iteración sin BS round-trip)
+
+Por defecto los placeholders de los slots no tienen shading → el viewport Material Preview se ve gris. Para iterar visualmente sin re-bundle + lanzar BS por cada cambio: rellenar los placeholders con texturas reales + EEVEE nodes que aproximan el shader Aline/Standard.
+
+`build_rock_platform.py:_make_preview_material()` reproduce los 3 modos del shader:
+- Plain texture (rock): texture → emission, sin tint, sin alpha
+- Multiply tint (default): texture × tint_color → emission
+- Luminance tint (ivy/petals): texture → RGB→BW (luminance) × tint_color → emission, con Mix Shader + Transparent BSDF basado en alpha del texture, `blend_method='CLIP'`
+
+Switch viewport vía `space.shading.type = 'MATERIAL'`. Result: rock con su textura + ivy azul con alpha cutout, casi indistinguible del look final BS. Sirve para iterar density/placement/size sin tocar Unity.
+
 ### Gotcha: FBX axis flip Blender → Unity 2019.4
 
 El combo de export `axis_forward='-Z' + axis_up='Y' + bake_space_transform=True + use_space_transform=True` en Blender 4.2 LTS produce dos comportamientos no-obvios al importarse en Unity 2019.4:
