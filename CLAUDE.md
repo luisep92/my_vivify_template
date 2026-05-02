@@ -36,9 +36,9 @@ Idioma de la documentación: español. **Idioma de los commits: inglés** (a par
 
 Fuera del repo (en `d:\vivify_repo\`):
 
-- `Sandfall/` — dump de assets de Expedition 33 (FModel). ~40 GB.
+- `FModel.exe` — explorador de assets de Unreal Engine. Punto de entrada para navegar el contenido de E33 (los `.pak` viven en la instalación del juego, no en este repo).
+- `Output/Exports/Sandfall/` — sólo los assets que se hayan exportado activamente desde FModel (selectivos, no es el dump completo). Lo que ya está integrado en Unity vino de aquí pero suele moverse/limpiarse después.
 - `ReMapper-master/` — tool Deno/TypeScript para scripting del mapa.
-- `FModel.exe` — explorador de assets de Unreal Engine.
 - `unity-mcp/` — fork minimal del MCP for Unity portado a Unity 2019.4 (repo `luisep92/unity_vivify_mcp`). Wireado a este proyecto via `Packages/manifest.json`. Ver [unity-mcp/README.md](../unity-mcp/README.md) para el qué/cómo del fork.
 
 ---
