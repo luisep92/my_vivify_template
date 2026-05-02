@@ -61,7 +61,7 @@ MARK_KEY = "_root_motion_synthesized"
 # backwards on DashIn), so we negate the Y-bone -> Z-object copy. The
 # other axes carry no significant motion in DashIn/DashOut, but mirror
 # the same convention for consistency.
-AXIS_MAP_MODE = "v4-bone-y-to-object-z-negated"
+AXIS_MAP_MODE = "v5-bone-y-to-object-z-negated-normalized"
 AXIS_MAP = {0: (0, 1.0), 1: (2, 1.0), 2: (1, -1.0)}  # dst: (src, sign)
 
 SOURCE_PATH = 'pose.bones["{}"].location'.format(ROOT_BONE)
@@ -81,12 +81,36 @@ def _copy_keyframes(src_fc, dst_fc, sign=1.0):
     dst_fc.update()
 
 
+def _normalize_to_origin(fc):
+    """Resta el valor de frame 0 a todas las keyframes para que la action arranque en 0.
+
+    Por qué: las curvas vienen del .psa con coordenadas absolutas en el rig de Unreal.
+    Cada action tiene su propio baseline absoluto y NO coinciden cross-clip
+    (ej. DashIn-Idle1 termina en y=600cm, DashOut-Idle2 empieza en y=604.49cm). Al
+    transitar entre clips Unity teleporta la mesh los 4.49cm de discontinuidad =
+    el saltito de ~5cm visible. Normalizando a origen, MotionT extrae deltas
+    puros y todos los clips arrancan en el mismo punto (0).
+    """
+    if not fc.keyframe_points:
+        return 0.0
+    offset = fc.keyframe_points[0].co[1]
+    if offset == 0.0:
+        return 0.0
+    for kp in fc.keyframe_points:
+        kp.co = (kp.co[0], kp.co[1] - offset)
+        kp.handle_left = (kp.handle_left[0], kp.handle_left[1] - offset)
+        kp.handle_right = (kp.handle_right[0], kp.handle_right[1] - offset)
+    fc.update()
+    return offset
+
+
 # Inverse mappings per mode: object_axis -> (bone_axis, sign).
 # The sign is what was applied during synthesis; we apply it again on the way
 # back (sign * sign == 1) so the original bone curve is restored exactly.
 INVERSE_MAPS = {
     "v3-bone-y-to-object-z": {0: (0, 1.0), 1: (2, 1.0), 2: (1, 1.0)},
     "v4-bone-y-to-object-z-negated": {0: (0, 1.0), 1: (2, 1.0), 2: (1, -1.0)},
+    "v5-bone-y-to-object-z-negated-normalized": {0: (0, 1.0), 1: (2, 1.0), 2: (1, -1.0)},
     True: {0: (0, 1.0), 1: (1, 1.0), 2: (2, 1.0)},  # legacy v1 (boolean flag)
 }
 
@@ -149,20 +173,22 @@ def synthesize(action_name):
     keys_per_axis = len(next(iter(src_curves.values())).keyframe_points)
 
     moved = 0
+    offsets = {}
     for dst_axis, (src_axis, sign) in AXIS_MAP.items():
         src = src_curves.get(src_axis)
         if src is None:
             continue
         dst = action.fcurves.new(data_path=TARGET_PATH, index=dst_axis)
         _copy_keyframes(src, dst, sign=sign)
+        offsets[dst_axis] = _normalize_to_origin(dst)
         moved += 1
 
     for src in list(src_curves.values()):
         action.fcurves.remove(src)
 
     action[MARK_KEY] = AXIS_MAP_MODE
-    print("[synth] {}: moved {} axes (mode '{}'), {} keys per axis".format(
-        action_name, moved, AXIS_MAP_MODE, keys_per_axis))
+    print("[synth] {}: moved {} axes (mode '{}'), {} keys per axis, offsets removed: {}".format(
+        action_name, moved, AXIS_MAP_MODE, keys_per_axis, offsets))
     return True
 
 

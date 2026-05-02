@@ -20,6 +20,7 @@ PSA_DIR = r"D:\vivify_repo\my_vivify_template\Sandfall\Content\Characters\Enemie
 ARMATURE_NAME = "SK_Curator_Aline"
 SKIP_EXISTING = True   # if action with the sequence's name already exists, skip the .psa
 BONE_MAPPING = "CASE_INSENSITIVE"
+GENERIC_SEQ_NAMES = {"DefaultSlot"}  # UE-default seq names; will be renamed using the .psa basename
 
 
 def _resolve_addon():
@@ -66,9 +67,25 @@ def import_all():
             print(f"[psa-batch] FAIL {fname}: {e}")
             continue
 
-        if SKIP_EXISTING and all(name in bpy.data.actions for name in seq_names):
+        # Algunos .psa de UE traen la sequence con nombre genérico
+        # "DefaultSlot" (slot del montage) en vez del nombre del montage. Si
+        # importamos varios así, todos colisionan con la misma action y SKIP_EXISTING
+        # los descarta silenciosamente — pierdes animaciones (caso real:
+        # Paintress_DashOut-Idle1_Montage.psa nunca llegó). Aplicamos un
+        # rename basado en el filename (sin _Montage) para garantizar
+        # unicidad sin tocar el .psa original.
+        rename_map = {}
+        base = os.path.splitext(fname)[0]
+        if base.endswith("_Montage"):
+            base = base[: -len("_Montage")]
+        for s in seq_names:
+            if s in GENERIC_SEQ_NAMES:
+                rename_map[s] = base
+        effective_names = [rename_map.get(s, s) for s in seq_names]
+
+        if SKIP_EXISTING and all(name in bpy.data.actions for name in effective_names):
             skipped.append(fname)
-            print(f"[psa-batch] skip {fname} (actions exist: {seq_names})")
+            print(f"[psa-batch] skip {fname} (actions exist: {effective_names})")
             continue
 
         opts = PsaImportOptions()
@@ -86,10 +103,25 @@ def import_all():
             print(f"[psa-batch] FAIL {fname}: {e}")
             continue
 
-        imported.append((fname, seq_names))
+        # El addon importa con el seq name original. Renombramos la action
+        # post-import si aplica.
+        for original, target in rename_map.items():
+            act = bpy.data.actions.get(original)
+            if act is None:
+                continue
+            if target in bpy.data.actions and bpy.data.actions[target] is not act:
+                # Conflicto: ya existe una action con el target name. Lo dejamos
+                # con el nombre original para evitar pisar nada y delegamos
+                # la resolución manual al usuario.
+                print(f"[psa-batch] WARN {fname}: target '{target}' already exists, leaving as '{original}'")
+                continue
+            act.name = target
+            print(f"[psa-batch] renamed action '{original}' -> '{target}' (from {fname})")
+
+        imported.append((fname, effective_names))
         if result.warnings:
             all_warnings.append((fname, result.warnings))
-        print(f"[psa-batch] ok   {fname} -> {seq_names} ({len(result.warnings)} warn)")
+        print(f"[psa-batch] ok   {fname} -> {effective_names} ({len(result.warnings)} warn)")
 
     print("\n[psa-batch] === SUMMARY ===")
     print(f"  imported: {len(imported)}")
