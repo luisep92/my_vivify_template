@@ -15,10 +15,12 @@ Pipeline para animar personajes que viven en un bundle Vivify, desde dump de Unr
     ▼
 Blender actions  (una por .psa, en bpy.data.actions)
     │  scripts/blender/synthesize_root_motion.py
-    │     - solo para clips con desplazamiento (DashIn-Idle1, DashOut-Idle2,
-    │       DefaultSlot/.001): mueve el motion forward de pose.bones["root"]
-    │       al armature object con axis remap correcto. Idempotente, marca
-    │       cada action procesada con custom property '_root_motion_synthesized'.
+    │     - solo para clips con desplazamiento (DashIn-Idle1, DashIn-Idle2,
+    │       DashOut-Idle1, DashOut-Idle2, DefaultSlot/.001): mueve el motion
+    │       forward de pose.bones["root"] al armature object con axis remap
+    │       correcto, y normaliza frame 0 a (0,0,0) por axis para evitar
+    │       discontinuidades cross-clip. Idempotente, marca cada action procesada
+    │       con custom property '_root_motion_synthesized'.
     │  scripts/blender/export_anims_fbx.py
     │     - strip scale fcurves (idempotente, las .psa traen scale=1 que no aporta)
     │     - push cada action a su NLA track UNMUTED, strip name = "<armature>|<action>"
@@ -31,7 +33,8 @@ Aline_Anims.fbx  (~185 MB, gitignored, .meta sí versionado)
     │       Unity lo extrae automáticamente como root motion del clip)
     │     - loopTime=true en idles canónicos (workaround del Inspector bug 2019.4)
     │     - lockRootPositionXZ=false + keepOriginalPositionXZ=false + keepOriginalPositionY=false
-    │       en clips con desplazamiento (XzRootMotionSuffixes)
+    │       en clips con desplazamiento (XzRootMotionSuffixes: DashIn-Idle1/2,
+    │       DashOut-Idle1/2, DefaultSlot/.001)
     ▼
 26 AnimationClips como sub-assets, paths "SK_Curator_Aline/root/pelvis/..."
     │  Tools > Aline > Build Animator Controller
@@ -88,7 +91,7 @@ Runtime: Vivify SetAnimatorProperty con id=prefab_id + properties[].id=trigger_n
 | File | Qué hace | Cuándo correr |
 |---|---|---|
 | `scripts/blender/import_all_psa.py` | Batch-importa `.psa` de `Sandfall/.../Animation/` como Blender actions vía la API del addon DarklightGames PSK/PSA. Idempotente. | Una vez al inicio. Si añades `.psa` nuevos. |
-| `scripts/blender/synthesize_root_motion.py` | Mueve motion del bone `root` al armature object con axis remap (Y bone → Z object negated) en clips con desplazamiento. Idempotente, marca cada action procesada con custom property y modo del axis-mapping; detecta versiones antiguas y des-aplica antes de re-aplicar. | Tras importar `.psa` nuevas que tengan motion en el bone root. Si retocas el axis remap. |
+| `scripts/blender/synthesize_root_motion.py` | Mueve motion del bone `root` al armature object con axis remap (Y bone → Z object negated) en clips con desplazamiento. Normaliza frame 0 a origen por axis para que todos los clips arranquen en `(0,0,0)` y no haya discontinuidad cross-clip. Idempotente, marca cada action procesada con custom property y modo del axis-mapping; detecta versiones antiguas y des-aplica antes de re-aplicar. | Tras importar `.psa` nuevas que tengan motion en el bone root. Si retocas el axis remap. |
 | `scripts/blender/inspect_motion.py` | Diagnóstico read-only. Reporta location y rotation_quaternion por bone (root, pelvis, spine_01) y los top movers globales por excursión max-min. Útil para ver dónde vive el motion en una action. | Cuando un clip nuevo no se traslada en BS. |
 | `scripts/blender/export_anims_fbx.py` | Exporta `SK_Curator_Aline` armature-only con todas las actions a `Aline_Anims.fbx` vía NLA strips unmuted. Idempotente (recrea NLA tracks si no existen). | Cada vez que cambien las actions en Blender (incluido tras `synthesize_root_motion.py`). |
 | `Assets/Aline/Editor/AlineAnimsImporter.cs` | AssetPostprocessor del FBX: setea `preserveHierarchy=true`, `motionNodeName="SK_Curator_Aline"`, `loopTime=true` en idles canónicos y desbakea XZ+Y en clips con motion. | Auto al reimportar el FBX. |
@@ -194,7 +197,7 @@ Sin axis remap (copia 1:1 Y bone→Y object) el motion termina en `-Y world` (Al
 
 ### Pipeline operativo
 
-1. **Blender**: con las actions importadas vía `import_all_psa.py`, correr `synthesize_root_motion.py`. Idempotente: marca cada action procesada con custom property `_root_motion_synthesized` con el modo aplicado (`v4-bone-y-to-object-z-negated`); detecta versiones anteriores y des-aplica antes de re-aplicar.
+1. **Blender**: con las actions importadas vía `import_all_psa.py`, correr `synthesize_root_motion.py`. Idempotente: marca cada action procesada con custom property `_root_motion_synthesized` con el modo aplicado (`v5-bone-y-to-object-z-negated-normalized`); detecta versiones anteriores y des-aplica antes de re-aplicar.
 2. **Blender**: re-export con `export_anims_fbx.py`.
 3. **Unity**: el reimport del FBX dispara `AlineAnimsImporter`, que setea `motionNodeName = "SK_Curator_Aline"` y, por clip en `XzRootMotionSuffixes`, `lockRootPositionXZ=false + keepOriginalPositionXZ=false + keepOriginalPositionY=false`.
 4. **Verificar**: `clip.averageSpeed` debería ser distinto de `(0,0,0)` para los 4 clips con motion. Para `DashIn-Idle1` da algo cercano a `(0, 0, ~+173)` (≈ 600 cm forward / 3.46 s). DashOut signo opuesto.
@@ -204,6 +207,40 @@ Sin axis remap (copia 1:1 Y bone→Y object) el motion termina en `-Y world` (Al
 
 - En Unity: `clip.averageSpeed` por API (preview del FBX inspector tab Animation también lo muestra como "Average Velocity").
 - Si todos los axes son `0` pese a motion visible en preview, no hay extracción. Investigar dónde vive el motion en Blender antes de tirar de configs Unity-side: `scripts/blender/inspect_motion.py` reporta motion por bone y per-axis (chequea object-level y bone-local en location y rotation_quaternion).
+
+## Pose mismatch cross-clip: blend en Animator, no editar data
+
+Si un clip A termina en pose distinta de la que el clip B inicia (típico: floating ↔ grounded entre dashes y idles), una transition con `duration = 0` muestra un teleport visible. Replicar el pattern de UE Montage "Blend Out duration" en el AnimatorController de Unity:
+
+1. **Exit transition con `duration > 0`**: blend de N segundos hacia el target. Unity interpola las poses durante ese tiempo. Para transiciones "el clip termina en floating, target es grounded", arrancar en `duration = 0.2-0.3s`.
+
+2. **`exitTime < 1.0`** si el clip tiene "tail" estático tras completar el motion: el blend arranca antes (ej. `exitTime = 0.7` → al 70% del clip), solapándose con los últimos frames del movimiento. Resultado visual: el aterrizaje ocurre DURANTE el dash, no después de que Aline llegue parada al destino. Sin esto el blend queda visible como un cambio de pose en el sitio.
+
+3. **Entry blend (AnyState transition con `duration > 0`)** para amortiguar el snap al ENTRAR al state desde una pose mismatch (ej. trigger `DashOut-Idle1` desde Idle1 grounded — el dash arranca floating). Mismo concepto, otra dirección.
+
+Validado 2026-05-02 con DashOut-Idle1 (state nuevo, exit a Idle1 grounded): `exitTime=0.7, duration=0.3` en exit + `duration=0.3` en AnyState entry disuelve un teleport de ~5cm UP/DOWN observable a ojo. La data del clip no se toca.
+
+**Cuándo NO necesitas esto:** cuando target y source de la transición tienen pose compatible. DashOut-Idle2 (floating→floating) sigue con `duration = 0` default — no hay nada que blendear.
+
+**Cuándo sí lo necesitas:** transiciones `Idle1 (grounded) → Idle1_to_idle2_transition (arranca grounded?)` también muestran snap si el clip de transition no arranca exacto donde Idle1 lo deja. Aplicado `duration=0.2` en su AnyState entry.
+
+## Gotcha: `_Montage.psa` con seq name genérica "DefaultSlot"
+
+Algunos `.psa` exportados de UE tienen como nombre interno de sequence "DefaultSlot" (el slot del montage), no el nombre del montage. Si dos `.psa` distintos comparten esa seq name, `import_all_psa.py` con `SKIP_EXISTING=True` importa el primero alfabéticamente y descarta el resto silenciosamente — pierdes animaciones sin warning visible.
+
+Caso real (2026-05-02): `Paintress_DashIn-Idle1_Montage.psa` y `Paintress_DashOut-Idle1_Montage.psa` ambos con seq "DefaultSlot". Solo se importó el primero (DashIn) → DashOut-Idle1 ausente del FBX y del AnimatorController durante meses sin que se notara.
+
+**Fix sistémico:** `import_all_psa.py` detecta seq names en `GENERIC_SEQ_NAMES` (set con "DefaultSlot") y las renombra usando el basename del `.psa` (sin `_Montage` suffix). Si el rename produciría conflicto con una action existente, deja el original con warning. Aplica antes del `SKIP_EXISTING` check, así garantiza unicidad sin tocar el `.psa` source.
+
+**Cuándo añadir un nombre a `GENERIC_SEQ_NAMES`:** si encuentras `.psa` con seq name que NO matchea su nombre de archivo y sospechas colisión silenciosa. Síntoma: `summary.imported < count(.psa)` sin warnings claros.
+
+Cuidado adicional: los `.psa` de UE Montages a veces traen bones de OTROS personajes (asset compartido multi-character). El addon avisa "missing N bones" — esperable, ignora si los nombres son de otra entidad (ej. "Aberration_*" en Aline). La animación de Aline se importa correctamente subset-matching.
+
+## Hallazgo: `.psa` Montage vs no-Montage pueden ser idénticos en skeletal data
+
+`Paintress_DashOut-Idle1_Montage.psa` y `Paintress_DashOut-Idle2.psa` aparecen como assets distintos en FModel pero contienen skeletal animation idéntica para Aline (verificado: 2604 fcurves, zero diferencia). El `.psa` solo lleva la pista skeletal; los Montage de UE wrappean además metadata (notifies, sections, blend rules, root motion mode) que NO viaja al `.psa`.
+
+Implicación: la diferenciación grounded vs floating, blend de aterrizaje, IK de pies, etc. que el juego original hace en runtime con esos clips vivían en blueprints de UE, no en la animación. Replicarlos en Unity requiere reconstruir esos behaviors (típicamente vía blends en el AnimatorController, ver sección anterior). No esperar que duplicar el rip de un Montage dé una animación visualmente distinta del clip base.
 
 ## Caminos cerrados (no perder tiempo aquí)
 
@@ -315,14 +352,15 @@ Síntoma: clips se ven bien en preview de su FBX nativo, pero al aplicar a `alin
 
 Tamaño 185 MB con 26 takes × 4480 curves × hasta 480 frames cada una. Es lo que es. Si añades un AssetPostprocessor que itere todas las curves (per-binding), multiplica por 5-10x el tiempo de import → cuelgues. Evitar manipulación per-curve en post-process; preferir fix en el FBX export desde Blender o en `ModelImporter` settings (preprocess).
 
-## Estado actual del pipeline (2026-05-01)
+## Estado actual del pipeline (2026-05-02)
 
-✅ Import .psa → Blender (26 actions, addon manual fix)
-✅ Synthesize root motion para clips con desplazamiento (Y bone → Z object negated)
-✅ Export Blender → FBX (NLA strips unmuted, named con armature prefix, ~185 MB en ~150 s)
+✅ Import .psa → Blender (27 actions tras recovery de DashOut-Idle1_Montage; rename de seq names "DefaultSlot" para evitar colisión silenciosa)
+✅ Synthesize root motion para clips con desplazamiento (Y bone → Z object negated, normalizado a frame 0 = origen)
+✅ Export Blender → FBX (NLA strips unmuted, named con armature prefix, ~190 MB en ~160 s)
 ✅ Import FBX → Unity (`preserveHierarchy=true`, `motionNodeName="SK_Curator_Aline"`, avatar copy, loopTime auto, keepOriginalPositionY=false en clips de motion)
-✅ Generación AnimatorController (26 estados + triggers + chain-overrides para destinos contextuales)
+✅ Generación AnimatorController (27 estados + triggers + chain-overrides para destinos contextuales)
 ✅ Animator en prefab root, scale curves no-op (no hay 100x bug)
 ✅ Aline visible en BS a tamaño correcto, animaciones reproduciéndose
 ✅ Preview del FBX inspector animando con la mesh de Aline.fbx
 ✅ Locomotion sandbox (`EasyStandard.dat`) validado en BS: idles, transiciones, dashes, stuns encadenan limpio. DashIn traslada el GO forward (~6m world Z), DashOut lo devuelve. Sin snap-back. Apply Root Motion = ON activo en el Animator del prefab.
+✅ Pose mismatch cross-clip absorbido vía blend en transitions (DashOut-Idle1: `exitTime=0.7, duration=0.3` exit + `duration=0.3` entry); el saltito Y de ~5cm al transitar grounded↔floating eliminado (2026-05-02).

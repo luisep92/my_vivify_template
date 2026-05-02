@@ -52,6 +52,14 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
+### Pose mismatch cross-clip se absorbe con blend en Animator, no editando data
+
+**Regla:** Cuando dos AnimationClips tienen poses de inicio/fin distintas (típico: floating vs grounded), no editar las curvas para que matcheen — usar `duration > 0` en las transitions del AnimatorController para que Unity interpole pose A → pose B durante el blend. Para mismatches grandes, combinar con `exitTime < 1.0` para que el blend se solape con el final del clip y el cambio de pose ocurra durante el movimiento.
+
+**Por qué:** Editar curvas para forzar match cross-clip es frágil (cualquier re-import del FBX las pierde) y puede romper la animación intra-clip. El blend del Animator es la herramienta nativa para esto y replica exactamente lo que UE hace por default vía "Blend Out duration" en sus AnimMontages. Validado 2026-05-02 con DashOut-Idle1: `exitTime=0.7, duration=0.3` en exit + `duration=0.3` en AnyState entry disuelve un teleport visible de ~5cm UP/DOWN al transitar entre grounded↔floating. La data del clip no se toca.
+
+---
+
 ### Custom mesh propio para "suelo" en lugar de rip directo del juego
 
 **Regla:** Para superficies donde Aline (u otros prefabs) deben "apoyarse", construir el mesh ad-hoc en Blender en lugar de usar un rip directo del juego, **siempre que el rip tenga geometría irregular**. Aplicar textura ripeada del juego encima para mantener el look auténtico.
