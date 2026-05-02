@@ -56,10 +56,16 @@ def main():
     psk_import_op(filepath=inp)
 
     # Apply the imported mesh's transforms — clean for Unity.
+    # También escalar 0.01: el addon de PSK importa los vertices con valores
+    # literales de UE (centímetros), pero Blender los trata como metros. Sin
+    # este pre-scale, el mesh exportado sale 100x demasiado grande en Unity
+    # (Renderer.bounds.extents.x = 42m en vez de 42cm).
+    UE_TO_M = 0.01
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH":
             obj.select_set(True)
             bpy.context.view_layer.objects.active = obj
+            obj.scale = (UE_TO_M, UE_TO_M, UE_TO_M)
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
     # Export as FBX with Unity conventions: Y-up, Z-forward, no animations
