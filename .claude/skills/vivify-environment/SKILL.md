@@ -166,16 +166,28 @@ Probado en sesión 2026-05-02:
 
 Trade-off: pierdes la "autenticidad" del asset E33, pero la textura sigue siendo del juego (`Albedo_2K_vlzkba1fw.png` de Megascans/Surfaces/Jagged_Rock — la usa el juego en sus rocks). Visualmente lee como "roca de E33". Para Phase 1 con deadline esto es lo correcto.
 
-### Receta del mesh custom (ejemplo aplicado)
+### Receta del mesh custom (versión consolidada)
 
-Script Blender en `scripts/blender/` (no versionado como tool reutilizable, fue ad-hoc para esto). Estructura:
-1. Cylinder primitive 64 segments, scale a las dimensiones deseadas (X=ancho, Y=profundidad, Z=grosor)
-2. **Mover vertices** para que el TOP quede exactamente en `z=0` (no scale-after, vertex-translate)
-3. Subdivide top face: `bmesh.ops.poke` (fan triangular desde center) + 2 iteraciones de `subdivide_edges`. Esto sí da vertices interiores (subdivide_edges sin poke solo tessella perímetro)
-4. Displacement: solo hacia abajo (z<0), keep rim limpio (rim_buffer 0.92), max amplitude 8cm. Mantiene el max.z=0 garantizado para el pivot promise
-5. UV unwrap (`smart_project` angle 66°). Ojo: con topología radial (poke fan), smart_project genera UV islands radiales — la textura se ve con patrón "rayos" desde el centro. Para fix: usar `cube_project` o planar projection desde top
-6. Flat shading (`use_smooth=False`)
-7. Export FBX: `axis_forward="-Z"`, `axis_up="Y"`, `bake_space_transform=True`
+Script reutilizable: `scripts/blender/build_rock_platform.py`. Idempotente (limpia cualquier `RockPlatform*` previo, construye, exporta FBX a `Assets/Aline/Scenery/Meshes/`). Para regenerar tras tunear parámetros: pegar el script en blender-mcp `execute_blender_code` o ejecutar como `__main__`.
+
+Estructura del builder:
+1. **Cylinder primitive con `end_fill_type='TRIFAN'`** (no NGON). Con NGON el top cap es un solo polígono sin vertices interiores → el corredor central queda sin geometría displaceable y la cara se vuelve no-planar tras displace. TRIFAN da center-vert + triángulos → subdivide propaga al interior.
+2. Subdivide global → luego subdivide top-only para concentrar densidad arriba.
+3. **Translate vertices `-THICKNESS/2`** para que top quede en `z=0` local (`primitive_cylinder_add(location=...)` setea object location, no mesh-local origin — el mesh siempre se construye centrado).
+4. **Silueta perimetral** vía `mathutils.noise.noise(cos(θ), sin(θ))` — la entrada en el círculo hace la función continua sin discontinuidad en θ=±π. Random per-bin produce zigzag tipo "sun spike" (probado y descartado).
+5. **Corredor plano** rectángulo con falloff radial. Verts dentro del rectángulo se saltan; verts fuera reciben `displace * blend(distance / FALLOFF)`. FALLOFF amplio (~2m) evita "baches al pie de Aline".
+6. UVs: `bpy.ops.uv.smart_project(angle_limit=66)`. NO planar projection (la planar = los rayos radiales del bug original).
+7. Smooth shading per-polygon (`p.use_smooth = True`).
+8. **Espejo en Y al final** (`v.co.y = -v.co.y` + `bmesh.ops.reverse_faces`). Necesario porque el combo `bake_space_transform=True + axis_forward='-Z'` mapea Blender +Y a Unity -Z (espalda del jugador). Negar Y antes de exportar garantiza que el corredor caiga en Unity +Z (hacia el boss). Ver gotcha "FBX axis flip" abajo.
+9. Export FBX: `axis_forward="-Z"`, `axis_up="Y"`, `bake_space_transform=True`, `apply_scale_options="FBX_SCALE_NONE"`.
+
+### Gotcha: FBX axis flip Blender → Unity 2019.4
+
+El combo de export `axis_forward='-Z' + axis_up='Y' + bake_space_transform=True + use_space_transform=True` en Blender 4.2 LTS produce dos comportamientos no-obvios al importarse en Unity 2019.4:
+- **Sin `bake_space_transform`**: la mesh aparece como pared vertical (Blender Y → Unity Y, sin axis swap). `Renderer.bounds.extents` muestra `(width, length, depth)` con length en Y (up). Bug visible: el suelo no existe.
+- **Con `bake_space_transform=True`**: la mesh queda horizontal correcta (Blender Y → Unity Z), PERO el sentido del eje se invierte (Blender +Y → Unity -Z). Bug visible: lo que querías delante del jugador queda detrás.
+
+Solución sin tocar opciones de export: negar Y de todos los verts en Blender + `reverse_faces` para mantener normales. Encapsulado en `build_rock_platform.py:build()`. Validar siempre con `Renderer.bounds.center.z` (debe ser positivo si el contenido va hacia adelante en Unity).
 
 ### Pivots — el factor clave
 
