@@ -15,7 +15,9 @@ Pipeline funcionando end-to-end:
 
 ## Próximos pasos (en orden)
 
-> Pivot: con la decisión de **showcase map** ([DECISIONES.md](DECISIONES.md)), el orden cambia. La canción y el state machine narrativo dependen de tener primero los **sistemas de ataque** definidos como contratos reutilizables. Componer fases sobre sistemas inestables es la receta del embolado.
+> **Scope (2026-05-02): Phase 1 + intro cosmética.** Recorte por deadline (1 semana). Mapa se entrega como "Phase 1", deja la puerta abierta a Phase 2/3 después. Detalle en [DECISIONES.md → "Scope cut a Phase 1"](DECISIONES.md). Las familias de ataque a prototipar quedan reducidas a las que aparecen en Phase 1.
+
+> Pivot anterior: con la decisión de **showcase map** ([DECISIONES.md](DECISIONES.md)), el orden cambia. La canción y el state machine narrativo dependen de tener primero los **sistemas de ataque** definidos como contratos reutilizables. Componer fases sobre sistemas inestables es la receta del embolado.
 
 ### 1. Catálogo de familias de ataque + contratos — **hecho**
 
@@ -36,16 +38,31 @@ Pipeline final operativo:
 
 Detalle operativo y gotchas en la skill [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md) sección "Root motion para clips con desplazamiento" + "Caminos cerrados". Decisión consolidada en [`DECISIONES.md`](DECISIONES.md).
 
-### 3. Pulido del modelo base de Aline (slots negros, pelo, vestido)
+### 3. Environment custom + materiales de Aline (bloqueador) — **en curso**
 
-Antes de meterse con prototipos de familias, dejar a Aline visualmente completa. Hoy los `BlackPart`/`BlackPart1`/`CuratorFace` son negro plano; en Unreal usan fresnel + paint procedural sobre máscaras. Recreables en Vivify:
+El environment por defecto de BS (TimbalandEnvironment) se come visualmente a Aline: los materiales `BlackPart`/`BlackPart1`/`CuratorFace` negros desaparecen sobre fondo oscuro. Cualquier trabajo de fresnel/face shader sobre Aline es no-juzgable hasta tener un contexto visual correcto. Por eso environment va antes que materiales en este paso. Capacidades Vivify validadas en `docs/heckdocs-main/docs/vivify/events.md` + `environment/environment.md`.
 
-- **BlackPart / BlackPart1** (cuerpo y vestido oscuro): fresnel shader simple sobre el material existente. La forma física del rim depende del normal map; si ahora se ve "demasiado plano", revisar si el normal está enchufado o si hace falta un fresnel basado solo en view direction.
-- **M_CuratorFace** (cara/máscara): blend translucent de `Mask_Curator.png` + `T_Paint1.png` + `T_Aura.png`. El JSON del dump (`MI_Curator_Aline_*.json` en `Sandfall/`) lista las texturas con sus tiling/offset; reusarlas literal mientras sea posible.
-- **Pelo**: actualmente bloqueado por el material `M_Aline_Body_*` que ya cubre el pelo via tex atlas; verificar si el alpha cutout del unlit deja el pelo con bordes durillos. Si sí, considerar adaptar a un alpha clip más fino o un alpha blend dedicado solo en la sub-mesh del pelo.
-- **Paletas (`palette.pskx`, `palette1.pskx`)**: las texturas y materiales de las paletas que Aline sostiene ya están preparados (en `Sandfall/.../Curator/Materials/`). Falta solo la geometría — pipeline `pskx → Blender → FBX → child del prefab`. Validar primero si las paletas son visibles desde la cámara fija de BS antes de invertir tiempo en el rip.
+Subpasos en orden:
 
-Una vez el modelo se ve "como debería", pasamos a sistemas de parry/visuales/assets externos. Con la base sólida, la iteración estética en familias se hace una sola vez, no diez.
+1. **Skybox custom** — **hecho 2026-05-02**. Material `M_Skybox_E33` con shader `Skybox/Panoramic`, textura `T_Skybox_6_HybrydNoiseVT` (4096×2048 equirect, ripeada de Sandfall via FModel), tint blanco, exposure 1.0, rotación 180°. Bundleado bajo `aline_bundle`. En `EasyStandard.dat` van DOS eventos a beat 0: `SetRenderingSettings` con `skybox` + `SetCameraProperty` con `clearFlags: "Skybox"` (este último es necesario; el primero solo no hace nada — gotcha en skill `vivify-environment`). Source canónico identificado pero no usado: `M_Flowmap_Nebula_9_Inst_2` → `T_Skybox_12_HybridNoiseVT` en `Monolith_Interior_PaintressGrandFinale`. Decidimos usar el Skybox_6 (Hybryd, blue-grey nocturno) sobre el _12 (cosmic-red gold-tinted) por mejor encaje estético al look misty/azul de la pelea original. Metodología del rip en memoria `project_sandfall_hunt_pattern`.
+
+2. **Disable Timbaland environment** — pending. El environment del mapa (`TimbalandEnvironment` en `Info.dat`) sigue renderizando por encima del skybox. Ocultar via comandos Chroma en `_customData.environment[]` con `active: false`, regex en `id`. Iterar el regex hasta limpiar todos los GameObjects relevantes sin romper ilumición de notas.
+
+3. **Ambient lighting** — pending. Una vez fondo limpio, ajustar `ambientLight`/`ambientIntensity`/`ambientMode` via `SetRenderingSettings` para que los materiales negros de Aline ganen contraste sin perder mood oscuro.
+
+4. **Mesh del escenario E33** — pending. Aline necesita "estar de pie en algo". Opciones: rip del Monolith mesh real (vimos referencias en `Sandfall/.../Paintress/Texture/monolith/new/`) + materiales `MI_Monolith_*` de `Materials/SKIES/`, o un proxy más sencillo (cilindro/anillo + decoración). Decidir según tiempo restante.
+
+5. **Pelo de Aline** — pending. Asset separado del modelo base. Hipótesis fuerte: vive en `Bun_Hairstyle/` en Sandfall (en E33 los hairstyles son intercambiables). Pendiente de scouting FModel + import (pskx → Blender → FBX → child del prefab).
+
+6. **Materiales Aline (BlackPart fresnel + CuratorFace)** — pending. Una vez con contexto visual correcto, iterar shaders sobre los slots negros planos para añadir lectura. Receta inicial:
+   - **BlackPart / BlackPart1**: fresnel shader simple sobre material existente. Normal map debe estar enchufado.
+   - **M_CuratorFace**: blend translucent de `Mask_Curator.png` + `T_Paint1.png` + `T_Aura.png`. JSONs del dump (`MI_Curator_Aline_*.json`) listan tiling/offset; reusar literal cuando se pueda.
+
+7. **Intro cosmética** — pending. Aline volando + posicionándose + fade-in de luces. Cosmético no jugable, da contexto narrativo y esconde setup técnico (instanciado, fade del skybox, etc.). Implementación: AnimateTrack sobre el track del prefab + trigger del Animator (`Hover` o equivalente del catálogo).
+
+**Diferido a post-Phase-1:**
+- **Pelo "completo"** si el alpha cutout del material atlas resulta tener bordes durillos (verificar primero si molesta).
+- **Paletas (`palette.pskx`, `palette1.pskx`)** que Aline sostiene. Validar primero si la cámara fija de BS las ve antes de invertir en el rip.
 
 Cuando esté hecho, mover este bloque y la entrada equivalente de "Diferido post-torneo" abajo.
 

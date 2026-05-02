@@ -111,3 +111,13 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 **Regla:** El `unity-mcp` que usamos es un fork minimal en `d:\vivify_repo\unity-mcp/` portado a Unity 2019.4, enganchado al proyecto vía `Packages/manifest.json` (path local). Bridge stdio en port 6400.
 
 **Por qué:** El upstream `CoplayDev/unity-mcp` declara `unity: 2021.3+` y depende de C# 8/9 + UI Toolkit + APIs 2020+. Vivify recomienda 2019.4.28f1 oficialmente para max compat con BS 1.34.2. El fork strippa lo no esencial y reescribe lo justo a C# 7.3, manteniendo commits cherry-pickables por si en algún momento se propone PR upstream. Detalle en [unity-mcp/README.md](../../unity-mcp/README.md).
+
+---
+
+### Scope cut a Phase 1 + intro cosmética (2026-05-02)
+
+**Regla:** El mapa entregado al torneo cubre **solo Phase 1 del boss fight** + una **intro cosmética corta** (Aline aparece volando y se posiciona). Se sube como "Phase 1", formato que deja la puerta abierta a Phase 2/3 después. Las familias de ataque a prototipar quedan reducidas a las que aparecen en Phase 1.
+
+**Por qué:** 1 semana hasta deadline (entrega 2026-05-09). Los 3 fases + intro completa originales eran irreales en el tiempo restante, sobre todo con environment custom + pelo + materiales + sistemas de ataque pendientes. Mejor entregar Phase 1 pulida con el sello de calidad alto que entregar 3 fases mediocres o no entregar. La intro cosmética da contexto narrativo y esconde el setup técnico (instanciado del prefab, fade del skybox, etc.); cosmética no jugable, no cuenta como "Phase 0".
+
+**Coste asumido:** decisiones grandes diferidas explícitamente — `Skill8` con Aline gigante (clímax fase 2), `Skill9`/`Skill11` ausentes, canción definitiva, wireado completo del state machine. Quedan en "Decisiones de diseño abiertas" de `NEXT_STEPS.md` para retomar en Phase 2/3.
