@@ -11,6 +11,11 @@ Sandfall/
 ReMapper-master/
 FModel.exe
 
+# === Mapas de ejemplo de Vivify (referencia, ~50MB+) ===
+# IP de los mappers + reproducibles via beatsaver IDs documentados en
+# docs/vivify-examples-index.md. NO commitear los .dat/.vivify/.egg.
+vivify_examples/
+
 # === Bundles compilados, audio, paquetes Unity (los regenera la build) ===
 *.vivify
 *.ogg
