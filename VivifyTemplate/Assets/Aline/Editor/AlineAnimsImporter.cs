@@ -36,6 +36,7 @@ namespace Aline.Editor
         {
             "Paintress_DashIn-Idle1",
             "Paintress_DashIn-Idle2",
+            "Paintress_DashOut-Idle1",
             "Paintress_DashOut-Idle2",
             "DefaultSlot",
             "DefaultSlot (1)",
