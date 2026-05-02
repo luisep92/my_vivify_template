@@ -52,6 +52,14 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
+### Custom mesh propio para "suelo" en lugar de rip directo del juego
+
+**Regla:** Para superficies donde Aline (u otros prefabs) deben "apoyarse", construir el mesh ad-hoc en Blender en lugar de usar un rip directo del juego, **siempre que el rip tenga geometría irregular**. Aplicar textura ripeada del juego encima para mantener el look auténtico.
+
+**Por qué:** Los meshes ripeados de E33 (rocas, terrenos) son geometría natural irregular. Alinear pies de personaje sobre ese terreno es función no-constante de XZ — no hay un Y único válido. Iterar a ojo desde BS para encontrar el Y aceptable cuesta 5-6 ciclos de ajuste manual y nunca queda exacto. Un mesh custom con pivot en el TOP-CENTER y superficie controlada hace el placement determinístico de UN solo evento. Trade-off: pierdes la geometría auténtica del juego (los detalles de la roca real), pero mantienes la TEXTURA auténtica encima — visualmente pasa por "asset de E33". Probado 2026-05-02 con `SM_Rock_A_CliffEdge` (rip) vs custom plate Blender — el custom encaja Aline exacto en una pasada vs 6 iteraciones del rip y nunca exacto. Tiempo de Blender: ~30-45 min con blender-mcp interactivo.
+
+---
+
 ### Settings Setter siempre presente, con starter pack mínimo
 
 **Regla:** Cada dificultad declara `_customData._requirements` (al menos `["Vivify", "Chroma"]`) y un bloque `_customData._settings` que fuerza al menos: `_playerOptions._noteJumpDurationTypeSettings: "Dynamic"` (universal en el corpus), `_environments._overrideEnvironments: false`, `_chroma._disableEnvironmentEnhancements: false`, y `_environmentEffectsFilterDefault/ExpertPlusPreset: "AllEffects"`. Para showcase cinemático añadimos `_noTextsAndHuds: true` + `_countersPlus._mainEnabled: false` + bloque `_uiTweaks` con todo a `false`.

@@ -153,9 +153,65 @@ Justificación por línea: ver memoria `reference_settings_setter`.
 
 (Pendiente. Pattern: `SetRenderingSettings` con `ambientLight` / `ambientIntensity` / `ambientMode`. Se documenta cuando lo implementemos.)
 
-## Instanciar escenario custom — TODO
+## Instanciar escenario custom
 
-(Pendiente. Pattern: `InstantiatePrefab` a beat 0 sin track, prefab con mesh + materiales propios bundleados. Se documenta cuando lo implementemos.)
+Pattern: `InstantiatePrefab` a beat 0, prefab con mesh + material propio bundleado en `aline_bundle`. Para una "plataforma" donde Aline pelea sin pelearse con la geometría natural del rip, **el approach que probó funcionar es construir el mesh ad-hoc en Blender** en lugar de ripear de E33.
+
+### Por qué mesh custom en lugar de rip directo
+
+Probado en sesión 2026-05-02:
+1. Ripear `SM_Rock_A_CliffEdge` del juego dio una piedra alargada con superficie irregular natural. Resultado: Aline flota sobre las depresiones / queda enterrada en los picos. **Imposible alinear pies con suelo a milímetro porque el "suelo" es función no-constante de XZ.**
+2. Iteramos posición/escala/rotación a ojo (~6 iteraciones), llegamos a "casi bien" pero nunca exacto.
+3. Switch a custom mesh: óvalo plano construido en Blender con bumps controlados, **pivot exactamente en el TOP-CENTER**. Placement determinístico de UNA pasada. Cero iteraciones a ciegas.
+
+Trade-off: pierdes la "autenticidad" del asset E33, pero la textura sigue siendo del juego (`Albedo_2K_vlzkba1fw.png` de Megascans/Surfaces/Jagged_Rock — la usa el juego en sus rocks). Visualmente lee como "roca de E33". Para Phase 1 con deadline esto es lo correcto.
+
+### Receta del mesh custom (ejemplo aplicado)
+
+Script Blender en `scripts/blender/` (no versionado como tool reutilizable, fue ad-hoc para esto). Estructura:
+1. Cylinder primitive 64 segments, scale a las dimensiones deseadas (X=ancho, Y=profundidad, Z=grosor)
+2. **Mover vertices** para que el TOP quede exactamente en `z=0` (no scale-after, vertex-translate)
+3. Subdivide top face: `bmesh.ops.poke` (fan triangular desde center) + 2 iteraciones de `subdivide_edges`. Esto sí da vertices interiores (subdivide_edges sin poke solo tessella perímetro)
+4. Displacement: solo hacia abajo (z<0), keep rim limpio (rim_buffer 0.92), max amplitude 8cm. Mantiene el max.z=0 garantizado para el pivot promise
+5. UV unwrap (`smart_project` angle 66°). Ojo: con topología radial (poke fan), smart_project genera UV islands radiales — la textura se ve con patrón "rayos" desde el centro. Para fix: usar `cube_project` o planar projection desde top
+6. Flat shading (`use_smooth=False`)
+7. Export FBX: `axis_forward="-Z"`, `axis_up="Y"`, `bake_space_transform=True`
+
+### Pivots — el factor clave
+
+**El truco que hace deterministico el placement:** mesh top en z=0 local + pivot en (0,0,0) → al instanciar a `position.y = Y_objetivo`, el top está exactamente en world Y = Y_objetivo.
+
+Para alinear pies de Aline sobre el plate: necesitas saber dónde están los pies de Aline. Mídelo en Unity:
+1. `GameObject.Instantiate` Aline.prefab en (0,0,0) con scale 0.01 y rotación identity
+2. Lee `SkinnedMeshRenderer.bounds.min.y` — esa es la distancia (negativa) del pivot a los pies en world
+3. La fórmula: `pies_world_Y = position.y + bounds.min.y`
+
+Para Aline (verificado): `bounds.min.y = -0.43m` con scale 0.01 → pies a `position.y - 0.43`.
+
+Si Aline está a `position.y=1`, sus pies están a `world Y = 0.57`. Plate a `position.y = 0.57` → top exactamente en `world Y = 0.57` → contacto perfecto.
+
+**Caveat:** la lectura del bbox es en T-pose (rest pose). Si la animación que Aline está corriendo desplaza su cuerpo (idle hover, pose levantada), los pies aparentes pueden estar más altos. En testing 2026-05-02 hubo que sumar +0.4m a la posición computada (de 0.57 → 0.97) para que pies apoyaran visualmente. Es ajuste fino sobre la fórmula base.
+
+### Pipeline operativo (resumen)
+
+1. Construir mesh en Blender (script ad-hoc o blender-mcp interactivo). Output FBX directamente a `VivifyTemplate/Assets/Aline/Scenery/Meshes/`
+2. Unity: refresh, crea material con shader `Aline/Standard` + textura. Bundle name `aline_bundle` en mesh + material
+3. Crear prefab que envuelva el FBX con material asignado en su renderer. `PrefabUtility.SaveAsPrefabAsset`. Bundle name en prefab también
+4. Vivify > Build > Build Working Version Uncompressed (F5)
+5. PostBuildSyncCRCs.cs sincroniza CRC a Info.dat automáticamente
+6. Add evento `InstantiatePrefab` en `.dat` con position determinística
+
+Tiempo total con script + MCP: ~30-45 min de "Blender mesh" hasta verlo en BS.
+
+## Convertir Unreal `.pskx` → `.fbx` (mesh estático)
+
+Cuando ripeas un mesh estático con FModel obtienes `.pskx` (formato Unreal). Para Unity necesitas FBX. Script: `scripts/blender/pskx_to_fbx.py`. Ejecutar:
+
+```
+"C:\Program Files\Blender Foundation\Blender 4.2\blender.exe" --background --python scripts\blender\pskx_to_fbx.py -- "<input.pskx>"
+```
+
+Genera `<input>.fbx` al lado del `.pskx`. Requiere addon `io_scene_psk_psa` (Befzz/DarklightGames) — el mismo que usamos para `.psa` de animaciones.
 
 ## HUD removal
 
