@@ -128,12 +128,15 @@ Cuando esté hecho, mover este bloque y la entrada equivalente de "Diferido post
 Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de tocar el mapa real. Criterio de éxito por prototipo: animación + VFX + parry + cleanup, instanciable dos veces sin estado residual. Snapshot por prototipo (`-Label "proto-fam-X"`).
 
 **Orden sugerido:**
-1. **A con `Skill3`** (3 piedras gigantes, fase 1) — el más cómodo: VFX claro, N pequeño, encoding de notas obvio. Sirve también para validar que las animaciones de Aline encadenan limpio en BS.
-2. **B con `DashIn-Idle1`** (mele estándar, fase 1) — valida la choreography de tres beats (DashIn + golpe + DashOut).
-3. **F con `Skill2_Start/Loop/End`** (carga + explosión, fase 1) — valida secuencia multi-stage de triggers y timing largo.
-4. **E con `Skill1`** (multi-hit chain, fase 1) — valida cadena de N parries sincronizados con N hits embebidos en el clip.
-5. **D standalone** (shrinking indicator, sin source anim) — valida que el indicador construido en Unity transmite el feel de E33.
-6. **B + modificador C con `Skill5`** — valida composición familia + modificador (Blit + SetMaterialProperty).
+1. **A con `Skill4`** (proyectiles pequeños tras giro, fase 1) — **baseline hecho 2026-05-03**, pendiente polish (decidir visual de los cubos, partículas, validación VR). Receta consolidada en memoria `feedback_skill4_projectile_pattern`. Sandbox en `NormalStandard.dat`. **Gotcha CustomNotes** (mod intercepta dissolve) documentado en `Info.dat._customData._warnings` por dificultad.
+2. **A con `Skill3`** (3 piedras gigantes, fase 1) — variante de Skill4 (mismo patrón hold-then-launch, N=3, NJS más baja, scale grande).
+3. **B con `DashIn-Idle1`** (mele estándar, fase 1) — valida la choreography de tres beats (DashIn + golpe + DashOut). Caso aparte (Aline se mueve, no hay proyectil).
+4. **F con `Skill2_Start/Loop/End`** (carga + explosión, fase 1) — valida secuencia multi-stage de triggers y timing largo.
+5. **E con `Skill1`** (multi-hit chain, fase 1) — valida cadena de N parries sincronizados con N hits embebidos en el clip.
+6. **D standalone** (shrinking indicator, sin source anim) — valida que el indicador construido en Unity transmite el feel de E33.
+7. **B + modificador C con `Skill5`** — valida composición familia + modificador (Blit + SetMaterialProperty).
+
+**Cuando 2-3 familias estén implementadas:** consolidar el patrón en una función helper que parametrice (N, posiciones, NJS, scale, prefab) — evitar copy-paste por familia.
 
 ### 5. Canción definitiva
 
