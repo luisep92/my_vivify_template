@@ -75,9 +75,15 @@ Subpasos en orden:
 
 5. **Pelo de Aline** — pending. Asset separado del modelo base. Hipótesis fuerte: vive en `Bun_Hairstyle/` en Sandfall (en E33 los hairstyles son intercambiables). Pendiente de scouting FModel + import (pskx → Blender → FBX → child del prefab).
 
-6. **Materiales Aline (BlackPart fresnel + CuratorFace)** — pending. Una vez con contexto visual correcto, iterar shaders sobre los slots negros planos para añadir lectura. Receta inicial:
-   - **BlackPart / BlackPart1**: fresnel shader simple sobre material existente. Normal map debe estar enchufado.
-   - **M_CuratorFace**: blend translucent de `Mask_Curator.png` + `T_Paint1.png` + `T_Aura.png`. JSONs del dump (`MI_Curator_Aline_*.json`) listan tiling/offset; reusar literal cuando se pueda.
+6. **Materiales Aline (BlackPart fresnel + CuratorFace)** — **hecho 2026-05-03**. Cinco slots auditados contra `SK_Curator_Aline.uasset` + override de `BP_Cine_Curator_Aline`:
+   - Slot 0 `Curator_Black_Body` → `M_Aline_BlackBody` con shader nuevo `Aline/Fresnel` (cutout fresnel; normal map `Curator_Black_Body_Normal`; params del MI BlackPart1: Alpha 0.35, Fresnel 0.5, FresnelR 2). Tuneado a `_Alpha=1.0, _FresnelExponent=3.0, _RimBoost=1.5, _AlphaCutoff=0.5` para que el rim solo aparezca en silueta (los parches de "piel quemada" se integran sin parecer overlay).
+   - Slot 1/2 `Curator_Body_001 / Curator_Body` → `M_Aline_Body_2 / M_Aline_Body_1` con shader nuevo `Aline/BodyLit` (BaseColor + Normal + AO + fake-light dirección). Tuneado a `_LightStrength=0.45, _Ambient=0.55, _BumpScale=1.5, _OcclusionStrength=0`. **Hallazgo:** la "ORM" (`OcclusionRoughnessMetallic`) que ripeó FModel **NO es una ORM packed estándar** — es una textura pseudocolor multichannel (naranja/verde/magenta) que probablemente codifica paint masks u otros effects, no AO/Roughness/Metallic. AO desactivado. Normal map sí da relief a las grietas.
+   - Slot 3 `Curator_Dress` → `M_Aline_Dress` con shader nuevo `Aline/EnergyMask` (translucent blend, sin clip — alpha gradient suave; usa `Curator_Dress_Normal` + `Curator_Dress_Opacity`). Tuneado a `_Alpha=0.85, _FresnelExponent=1.5, _RimBoost=1.0` para look "vestido de energía / wispy". `Cull Off` puede dar overdraw; valorar `Cull Back` si molesta.
+   - Slot 4 `Curator_Aline_Hole` → `M_Aline_Face` con shader nuevo `Aline/Face` (translucent + radial fade aproximando el M_CuratorFace de UE). Implementa también UV transform (`_UVScale`, `_UVOffset`, `_UVAngleDeg`) para soportar `Mask_Curator_Aline` mask-driven, pero la versión actual usa **solo radial** (`_Radius=0.40, _Hardness=0.2`) por simplicidad y control. La mask queda como opt-in para futuras iteraciones (más fiel pero menos predecible).
+
+   **Hallazgo importante:** el SK directamente referencia el padre `M_CuratorFace` (UMaterial puro), no el MI `MI_CuratorFace_Aline`. El override correcto vive en el `BP_Cine_Curator_Aline.OverrideMaterials[4]`. Receta de "trazar SK + BP que lo usa" consolidada en skill `vivify-materials`.
+
+   **Workflow nuevo confirmado:** iterar shaders/materials via `mcp__unity-mcp__manage_camera screenshot capture_source=scene_view` en lugar de Vivify Build + relaunch BS. Ahorra ~1min por iteración. Memoria `feedback_unity_preview_loop` con receta + gotcha del Toggle keyword no sincronizando via API.
 
 7. **Intro cosmética** — pending. Aline volando + posicionándose + fade-in de luces. Cosmético no jugable, da contexto narrativo y esconde setup técnico (instanciado, fade del skybox, etc.). Implementación: AnimateTrack sobre el track del prefab + trigger del Animator (`Hover` o equivalente del catálogo).
 

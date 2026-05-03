@@ -143,3 +143,36 @@ Si en algún momento se quiere PBR completo (normales, roughness, metallic, emis
 2. Construir un shader nuevo que samplee esas texturas (typical: `_NormalMap`, `_ORM`, `_Emissive`).
 3. Decidir el modelo de iluminación: lambert simple, PBR completo (BRDF), o stylized (cel-shaded, matcap).
 4. Si va a haber luces en el bundle: meterlas como child del prefab y diseñarlas para que iluminen razonablemente desde varios ángulos (no una sola directional). O activar ambient en Unity y configurarlo para que el bundle lo respete.
+
+### Receta práctica: "unlit con fake-light + normal" (lo que usamos en Aline body)
+
+Como BS no manda luces a los bundles Vivify, un shader lit "real" se ve plano. Patrón canónico (ver [`AlineBodyLit.shader`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineBodyLit.shader)):
+
+```hlsl
+// Sample base con cutout (igual que AlineStandard)
+fixed4 base = tex2D(_MainTex, uv) * _Color;
+clip(base.a - _AlphaCutoff);
+
+// Reconstruir normal en world-space desde tangente + normal map
+float3 worldN = normalize(nTan.x*T + nTan.y*B + nTan.z*N);
+
+// Fake key light fija world-space (no necesita Light en escena)
+float3 L = normalize(_LightDir.xyz);
+float ndotl = saturate(dot(worldN, L));
+float lambert = lerp(_Ambient, 1.0, ndotl);  // _Ambient evita shadow side pure black
+float shading = lerp(1.0, lambert, _LightStrength);  // _LightStrength=0 → unlit
+
+return fixed4(base.rgb * shading, base.a);
+```
+
+**Tunables (defaults razonables):** `_LightDir=(0.3, 0.7, -0.6)` (key from above-front), `_LightStrength=0.45` (visible pero no caricaturesco), `_Ambient=0.55` (shadow side ~half intensity), `_BumpScale=1.5` (matchea UE Normal/Bump Multiplier).
+
+### Gotcha: la "ORM" de Sandfall NO es una ORM standard
+
+Confirmado 2026-05-03 con `Curator_Body_OcclusionRoughnessMetallic.png`: aunque el nombre sigue la convención UE (Occlusion R, Roughness G, Metallic B packed grayscale), el contenido visual es **pseudocolor multichannel** (naranja+verde+magenta saturados, no grayscale). El R channel tiene valores ~0.5-1.0 mayoritariamente — multiplicado como AO da prácticamente identidad, no oscurece nada.
+
+Probable: Sandfall usa estos PNG para encoder paint masks / channel-packed effects de su pipeline UE específico, no para PBR estándar. **AO real está bakeada en BaseColor.**
+
+Implicación práctica: **`_OcclusionStrength=0` para los body materials de Aline** (y probablemente de cualquier personaje E33). El Normal map sí es estándar y se enchufa normalmente.
+
+Si quieres validar antes de dar por inútil un ORM, abre la PNG con el Read tool y mira los canales: si la R channel se ve grayscale-like, es ORM real; si se ve coloreado, es lo otro.
