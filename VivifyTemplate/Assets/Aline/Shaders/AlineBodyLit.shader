@@ -1,13 +1,10 @@
-// Aline/BodyLit — extensión del Aline/Standard con normal map + AO + fake
-// directional shading. Pensado para los slots Curator_Body / Curator_Body_001
-// del SK_Curator_Aline (MIs Body_1 y Body_2 en UE: BaseColor + Normal + ORM).
+// Aline/BodyLit — slots Curator_Body / Curator_Body_001 (skin/cuerpo
+// principal). BaseColor + Normal map + AO opcional + iluminación SH ambient
+// vía AlineLighting.cginc.
 //
-// Sigue siendo unlit cutout — los bundles Vivify no reciben luz de la escena
-// de BS, así que un shader lit "real" se vería plano. En su lugar fakeamos
-// un keylight fijo en world-space; el normal map perturba la normal de la
-// malla y el dot(N, L) module el color base. El canal AO del ORM oscurece
-// recesos. Roughness/Metallic del ORM se ignoran (sin lighting real no
-// significan nada).
+// La normal map perturba la normal de la malla y la SH ambient (alimentada
+// por RenderSettings.ambientLight + skybox del juego) module la luminosidad.
+// `SetRenderingSettings` cambia el shading sin tocar el material.
 //
 // Mapping desde MaterialInstanceConstant (UE) a properties (Unity):
 //   Base Color Map     → _MainTex
@@ -28,12 +25,10 @@ Shader "Aline/BodyLit"
         _OcclusionMap ("ORM (R=AO)", 2D) = "white" {}
         _OcclusionStrength ("AO Strength", Range(0, 1)) = 1.0
 
-        // Fake key light in world space + ambient floor para no apagar las
-        // zonas en sombra. Tweakable per-material para ajustar el "look"
-        // por personaje sin tocar shader.
-        _LightDir ("Fake Light Dir (world)", Vector) = (0.3, 0.7, -0.6, 0)
-        _LightStrength ("Fake Light Strength", Range(0, 1)) = 0.5
-        _Ambient ("Ambient Floor", Range(0, 1)) = 0.5
+        // Iluminación: ambientFloor evita negro absoluto cuando SH=0;
+        // ambientStrength escala la SH ambient antes del shading.
+        _AmbientFloor ("Ambient Floor", Range(0, 2)) = 0.6
+        _AmbientStrength ("Ambient Strength", Range(0, 4)) = 1.0
     }
     SubShader
     {
@@ -51,6 +46,7 @@ Shader "Aline/BodyLit"
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+            #include "AlineLighting.cginc"
 
             struct appdata
             {
@@ -77,9 +73,8 @@ Shader "Aline/BodyLit"
             float _AlphaCutoff;
             float _BumpScale;
             float _OcclusionStrength;
-            float4 _LightDir;
-            float _LightStrength;
-            float _Ambient;
+            float _AmbientFloor;
+            float _AmbientStrength;
 
             v2f vert (appdata v)
             {
@@ -101,7 +96,6 @@ Shader "Aline/BodyLit"
                 fixed4 base = tex2D(_MainTex, i.uv) * _Color;
                 clip(base.a - _AlphaCutoff);
 
-                // Reconstruir normal en world-space desde tangente + normal map.
                 float3 N = normalize(i.worldNormal);
                 float3 T = normalize(i.worldTangent.xyz);
                 float3 B = normalize(cross(N, T) * i.worldTangent.w);
@@ -109,17 +103,9 @@ Shader "Aline/BodyLit"
                 nTan.xy *= _BumpScale;
                 float3 worldN = normalize(nTan.x * T + nTan.y * B + nTan.z * N);
 
-                // Fake directional light (no real lighting in Vivify bundles).
-                // Half-Lambert para que las zonas en sombra no se apaguen del todo.
-                float3 L = normalize(_LightDir.xyz);
-                float ndotl = saturate(dot(worldN, L));
-                float lambert = lerp(_Ambient, 1.0, ndotl);
-                float shading = lerp(1.0, lambert, _LightStrength);
-
-                // AO del ORM (R channel).
                 float ao = lerp(1.0, tex2D(_OcclusionMap, i.uv).r, _OcclusionStrength);
 
-                fixed3 color = base.rgb * shading * ao;
+                fixed3 color = AlineShade(worldN, base.rgb, _AmbientFloor, _AmbientStrength) * ao;
                 return fixed4(color, base.a);
             }
             ENDCG
