@@ -192,6 +192,16 @@ Para cubrir el suelo con vegetación tipo "alfombra de pétalos" (ver foto E33: 
 
 **Lección consolidada**: para ground decoration en VR/BS, **mesh asset choice > shader gymnastics**. Un asset pack pre-built diseñado para scatter ya tiene la organic distribution baked-in (UVs apuntan al atlas correctamente, no hay tile pattern visible). Tilear un atlas vía shader siempre muestra el patrón a cualquier tiling-rate. Antes de invertir tiempo en shader-tile complejo, scoutear FModel para `SM_*floor_plane*`, `SM_*ground_*`, `SM_*carpet*` o equivalentes.
 
+**Arquitectura final consolidada (Phase 1):**
+
+`RockPlatform.fbx` con UNA mesh y TRES submeshes/material slots:
+
+1. **Capa 0 — Rock**: mesh procedural del platform (`build()`). Material `M_Rock_Cliff` con shader `Aline/Standard` (sin LUMINANCE_TINT, opaque).
+2. **Capa 1 — Ivy carpet**: scatter de N copias rotadas+scale-Z-aplastadas del mesh pre-built `SM_ivy_floor_plane_dense_spread_*` (`build_ivy_scatter()`). Material `M_BlueIvy` con `LUMINANCE_TINT` cool blue overbright. Cubre el suelo con look "petals continuous coverage" sin patrón visible.
+3. **Capa 2 — Bushes 3D scatter**: scatter aleatorio determinista de N copias del mesh pequeño `SM_ground_foliage_03_*` (`build_bush_scatter()`). Material `M_PinkBush` con `LUMINANCE_TINT` pink-magenta overbright. Aporta toques de color contrastante + pequeñas protrusiones 3D que asoman sobre el ivy. Restringido a `y >= BUSH_Y_MIN` Blender pre-mirror = solo en frente del jugador (cámara fija de BS no justifica geometría detrás).
+
+Resultado: 1 mesh upload, 3 draw calls (uno por material), ~217K tris totales para todo el escenario decorado.
+
 **Pipeline final del scatter de carpet (referencia técnica):**
 1. Scatter N copias rotadas (yaw aleatorio) del template mesh, posiciones explícitas asimétricas (foco frente del jugador, mínimo detrás — la cámara fija no ve atrás)
 2. **Decimate al template** (no a las copias) ANTES de duplicar — savings se multiplican por N. Ratio 0.5 indistinguible visualmente a distancia BS

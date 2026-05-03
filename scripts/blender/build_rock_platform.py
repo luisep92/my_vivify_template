@@ -59,6 +59,21 @@ IVY_SCATTER_SEED = 11
 # perf budget para Quest. Subir a 1.0 para skip Decimate.
 IVY_DECIMATE_RATIO = 0.5
 
+# Mesh-source para los bushes (capa de "salpicaduras de color" 3D sobre el
+# ivy carpet). 64 tris cada uno → 20 instancias = 1280 tris, negligible.
+BUSH_SOURCE_FBX = r"d:/vivify_repo/my_vivify_template/VivifyTemplate/Assets/Aline/Scenery/Meshes/BushSmall.fbx"
+BUSH_COUNT = 14
+BUSH_SCALE_MIN = 0.6
+BUSH_SCALE_MAX = 1.2
+BUSH_LIFT = 0.10  # ligeramente más alto que IVY_LIFT para asomar sobre el ivy
+BUSH_TILT_MAX_DEG = 8.0
+BUSH_MIN_SPACING = 0.7
+BUSH_SCATTER_SEED = 23
+# Solo en-frente-del-jugador (y >= BUSH_Y_MIN en Blender pre-mirror).
+# Cámara fija de BS no ve detrás del player → bushes detrás son geometry
+# desperdiciada. Mismo razonamiento que IVY_PATCHES (foco aline-side).
+BUSH_Y_MIN = 0.5  # 0.5m en frente del player (player en y=0)
+
 # Textures para preview Material Preview en Blender (placeholders se rellenan
 # con estas para que el viewport refleje el look final, no gris). No afectan
 # al export (Unity reasigna materiales reales en el prefab).
@@ -66,10 +81,12 @@ import os as _os
 _ASSETS_TEX = r"d:/vivify_repo/my_vivify_template/VivifyTemplate/Assets/Aline/Scenery/Textures"
 PREVIEW_ROCK_TEXTURE = _os.path.join(_ASSETS_TEX, "T_JaggedRock_Albedo.png")
 PREVIEW_IVY_TEXTURE = _os.path.join(_ASSETS_TEX, "T_ivy_efeu0_Alb_Opacity.png")
+PREVIEW_BUSH_TEXTURE = _os.path.join(_ASSETS_TEX, "T_ground_foliage_03_BC_M.png")
 # Tint que matchea M_BlueIvy._Color en Unity. Usado vía luminance-tint en EEVEE
 # (RGB→BW → multiply tint) para reproducir el shader Aline/Standard con
 # LUMINANCE_TINT habilitado.
 PREVIEW_IVY_TINT = (0.55, 0.75, 1.6, 1.0)
+PREVIEW_BUSH_TINT = (1.5, 0.4, 0.8, 1.0)  # overbright pink-magenta
 # Distribución asimétrica matching la propuesta visual del user. Coords en
 # Blender pre-mirror: +Y = hacia Aline (delante del jugador), -Y = detrás.
 # Cámara fija de BS solo ve frente y lados → el área detrás del jugador no
@@ -555,6 +572,109 @@ def build_ivy_scatter(rock_obj):
     return len(instances)
 
 
+def build_bush_scatter(rock_obj):
+    """Scatter de N bushes pequeños rosa como tercer submesh sobre el rock.
+    Mesh source SM_ground_foliage_03 (~64 tris, ~67cm wide × 23cm tall),
+    extremadamente ligero. Aporta toques de color y pequeñas protrusiones de
+    altura sobre el ivy carpet. Permite overlap con el ivy (los bushes se
+    asoman por encima → contraste cromático).
+
+    Posiciones aleatorias deterministas con seed BUSH_SCATTER_SEED, evita
+    amontonamiento via min spacing. Asume que rock_obj YA tiene 2 material
+    slots (Rock + Ivy) creados por build_ivy_scatter — appende el tercer
+    slot (Bush) sin tocar los anteriores."""
+    import random
+    rng = random.Random(BUSH_SCATTER_SEED)
+
+    pre_names = {o.name for o in bpy.data.objects}
+    bpy.ops.import_scene.fbx(filepath=BUSH_SOURCE_FBX)
+    new_names = [o.name for o in bpy.data.objects if o.name not in pre_names]
+    template = next((bpy.data.objects[n] for n in new_names if bpy.data.objects[n].type == 'MESH'), None)
+    if template is None:
+        for n in new_names:
+            bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
+        raise RuntimeError("Bush FBX no contenía mesh importable")
+
+    # Apply transform (mismo fix que ivy/petals — bake scale en verts)
+    bpy.ops.object.select_all(action='DESELECT')
+    template.select_set(True)
+    bpy.context.view_layer.objects.active = template
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+    # Scatter aleatorio dentro del platform (con margen al borde)
+    rim_buffer = 1.0
+    placed_xy = []
+    instances = []
+    attempts = 0
+    while len(placed_xy) < BUSH_COUNT and attempts < 500:
+        attempts += 1
+        x = rng.uniform(-(HALF_X - rim_buffer), HALF_X - rim_buffer)
+        y = rng.uniform(BUSH_Y_MIN, HALF_Y - rim_buffer)
+        too_close = False
+        for px, py in placed_xy:
+            if (px - x) ** 2 + (py - y) ** 2 < BUSH_MIN_SPACING ** 2:
+                too_close = True
+                break
+        if too_close:
+            continue
+
+        z_surface = _sample_top_z(x, y)
+
+        new_obj = template.copy()
+        new_obj.data = template.data.copy()
+        new_obj.name = f"BushScatter_{len(placed_xy):02d}"
+        bpy.context.collection.objects.link(new_obj)
+
+        new_obj.location = (x, y, z_surface + BUSH_LIFT)
+        s = rng.uniform(BUSH_SCALE_MIN, BUSH_SCALE_MAX)
+        new_obj.scale = (s, s, s)
+        yaw = rng.uniform(0, 360)
+        tx = rng.uniform(-BUSH_TILT_MAX_DEG, BUSH_TILT_MAX_DEG)
+        ty = rng.uniform(-BUSH_TILT_MAX_DEG, BUSH_TILT_MAX_DEG)
+        new_obj.rotation_euler = (math.radians(tx), math.radians(ty), math.radians(yaw))
+        instances.append(new_obj)
+        placed_xy.append((x, y))
+
+    bpy.ops.object.select_all(action='DESELECT')
+    for inst in instances:
+        inst.select_set(True)
+    bpy.context.view_layer.objects.active = instances[0]
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+    if len(instances) > 1:
+        bpy.ops.object.join()
+    bushes_merged = bpy.context.active_object
+    bushes_merged.name = "BushesMerged"
+    bpy.data.objects.remove(template, do_unlink=True)
+
+    # Append tercer slot al rock_obj (mantener slots 0/1 del ivy intactos).
+    bush_mat_name = "BushSlot_Placeholder"
+    bush_placeholder = _make_preview_material(
+        bush_mat_name,
+        texture_path=PREVIEW_BUSH_TEXTURE,
+        tint=PREVIEW_BUSH_TINT,
+        luminance_tint=True,
+        alpha_cutout=True,
+    )
+    rock_obj.data.materials.append(bush_placeholder)
+    bush_slot_idx = len(rock_obj.data.materials) - 1
+
+    # bushes_merged: copiar todos los slots de rock_obj para que el join no
+    # cree nuevos slots
+    bushes_merged.data.materials.clear()
+    for m in rock_obj.data.materials:
+        bushes_merged.data.materials.append(m)
+    for p in bushes_merged.data.polygons:
+        p.material_index = bush_slot_idx
+
+    bpy.ops.object.select_all(action='DESELECT')
+    bushes_merged.select_set(True)
+    rock_obj.select_set(True)
+    bpy.context.view_layer.objects.active = rock_obj
+    bpy.ops.object.join()
+    return len(instances)
+
+
 def build_petal_carpet(rock_obj):
     """Duplicar las caras top del rock_obj, levantarlas 1.5cm, y asignarlas
     al material slot 1 (M_BluePetals) con UVs por proyección XY-planar a
@@ -641,8 +761,9 @@ def export(obj):
             prev_hidden[ob.name] = (ob.hide_viewport, ob.hide_select)
             ob.hide_viewport = True
 
-    if os.path.exists(EXPORT_PATH):
-        shutil.copy2(EXPORT_PATH, EXPORT_PATH + ".bak")
+    # No backup .bak — el build es reproducible deterministicamente desde
+    # este script y los archivos .bak ensucian el AssetDatabase de Unity
+    # creando .meta orfans.
 
     bpy.ops.export_scene.fbx(
         filepath=EXPORT_PATH,
@@ -672,8 +793,9 @@ def export(obj):
 if __name__ == "__main__":
     o = build()
     ivy_count = build_ivy_scatter(o)
+    bush_count = build_bush_scatter(o)
     # build_petals y build_petal_carpet quedan definidos pero NO se llaman:
-    # build_petals → futuro scatter de plantas 3D con flores (Sea Thrift, etc)
+    # build_petals → futuro scatter discreto si lo necesitamos
     # build_petal_carpet → approach abandonado de duplicate-rock-top + tile-shader
     finalize(o)
     export(o)
@@ -681,6 +803,6 @@ if __name__ == "__main__":
     xs = [v.co.x for v in me.vertices]
     ys = [v.co.y for v in me.vertices]
     zs = [v.co.z for v in me.vertices]
-    print(f"[build_rock_platform] verts={len(me.vertices)} polys={len(me.polygons)} ivy_instances={ivy_count} mat_slots={len(me.materials)}")
+    print(f"[build_rock_platform] verts={len(me.vertices)} polys={len(me.polygons)} ivy={ivy_count} bushes={bush_count} mat_slots={len(me.materials)}")
     print(f"[build_rock_platform] X {min(xs):.2f}..{max(xs):.2f}  Y {min(ys):.2f}..{max(ys):.2f}  Z {min(zs):.2f}..{max(zs):.2f}")
     print(f"[build_rock_platform] exported {EXPORT_PATH}")
