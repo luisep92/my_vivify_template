@@ -73,7 +73,43 @@ Subpasos en orden:
 
    Hallazgo clave: `Paintress_DashOut-Idle1_Montage.psa` y `Paintress_DashOut-Idle2.psa` contienen skeletal animation idéntica en Aline (verificado: 2604 fcurves, zero diferencia). El "grounded vs floating" semántico del juego original vivía en blueprints/Montage metadata de UE que no viajan al `.psa`. Replicamos el aterrizaje vía blend en Animator (técnica equivalente al "Blend Out duration" del Montage de UE). Patrón consolidado en skill `vivify-animations`.
 
-5. **Pelo de Aline** — pending. Asset separado del modelo base. Hipótesis fuerte: vive en `Bun_Hairstyle/` en Sandfall (en E33 los hairstyles son intercambiables). Pendiente de scouting FModel + import (pskx → Blender → FBX → child del prefab).
+5. **Pelo de Aline** — **fase 1 hecho, fase 2 (bones) pendiente**.
+
+   **Fase 1 (hecho 2026-05-03):** Asset localizado en `Sandfall/Content/Characters/Hair/Mirror_Family/Aline/` (NO en `Bun_Hairstyle/` como hipotetizamos — esa carpeta es un hairstyle genérico distinto). Pipeline completo:
+   - PSK + 4 texturas exportadas via `mcp__fmodel__*` a `Sandfall/Content/Characters/Hair/Mirror_Family/Aline/`.
+   - PSK → FBX via `scripts/blender/pskx_to_fbx.py` (output a misma carpeta + copia a `VivifyTemplate/Assets/Aline/Hair/`).
+   - Shader nuevo `Aline/Hair` (cards-based unlit cutout: `_MainTex` Color + `_AlphaMap` mask separada + `_Brightness` + `_AlphaCutoff` muy bajo `0.08` para preservar densidad de mechones finos).
+   - Material `M_Aline_Hair` con `T_Hair_Aline_Color` + `T_Hair_Aline_Mask`, brightness 1.0.
+   - Hair instanciado como child del bone `head` del prefab via `PrefabUtility.LoadPrefabContents` + `SaveAsPrefabAsset`. Path: `SK_Curator_Aline/root/pelvis/spine_*/.../neck_02/head/Aline_curator_hair_skl`.
+   - **Scale fix crítico:** `localScale = (100, 100, 100)` para compensar el chain scale 0.01 del rig de Aline (el FBX viene en metros Unity, el head bone los chain-multiplica × 0.01 → quedaba 50× más pequeño que la cabeza).
+   - Pose tuneada manualmente por user en escena para corregir asimetrías ("calva izquierda") → aplicada al prefab asset via script.
+   - Animator dedicado en el GameObject del hair con clip `HairSway.anim` (loop 2.5s, sway `±8° Y / ±4° Z` aplicado via quaternion `m_LocalRotation.x/y/z/w` curves compuestas alrededor de la pose deseada). Independiente del Animator principal del prefab.
+
+   **Fase 2 (pendiente — articulación por bones):** la sway actual mueve la peluca entera como bloque rígido desde la base, lo que descuadra visualmente con la cabeza. Plan:
+
+   - **Por qué NO DynamicBone (gotcha gold):** los bundles Vivify hacen script stripping. Un MonoBehaviour custom como DynamicBone no se ejecuta en BS. **No es opción.** Memoria `feedback_vivify_bundle_constraints` con la regla.
+   - **Por qué SÍ usar el rig original:** el SK del hair de Sandfall ya tiene `~150 bones` strand-by-strand (`Strand_X_Y_Z`, hierarchy con `Root` → strands principales → sub-strands). Verificado via `mcp__fmodel__fmodel_export_raw` del `Aline_curator_hair_skl_Skeleton.json`. Las weights de cada hair card a su strand bone están bakeadas en el PSK por riggers de Sandfall — son mejores que cualquier "automatic weights" de Blender.
+
+   **Pasos concretos para Fase 2:**
+
+   a. **Update `scripts/blender/pskx_to_fbx.py`** para preservar armature + skin weights al exportar. Actualmente el script importa el PSK pero el FBX export sale como mesh estático. Cambios: asegurar `bake_anim=False` (no anim, no necesitamos), `add_leaf_bones=False`, `armature_nodetype='ROOT'`, y crucialmente `use_armature_deform_only=False` para incluir TODOS los strand bones aunque no tengan animación. Mirar el modifier Armature en Blender, garantizar que se exporta.
+
+   b. **Re-export el PSK del hair** con el script actualizado. Output a la misma ruta (`Aline_curator_hair_skl.fbx`).
+
+   c. **En Unity, re-import**. El renderer cambiará de `MeshRenderer` a `SkinnedMeshRenderer`. Verificar que el FBX trae los `Strand_*` bones como children del root del prefab del FBX.
+
+   d. **Re-instanciar en aline.prefab** (puede haber issues si el path interno cambió). Reasignar `M_Aline_Hair` al SkinnedMeshRenderer. Mantener `localScale=100`, pose+rotation actuales.
+
+   e. **Reescribir `HairSway.anim`** para targetear ~3-9 bones (los `Strand_1_1`, `Strand_1_2`, `Strand_1_3`, `Strand_3_1`, etc — los top-level de cada cadena, NO el `Root`). Curvas: rotación local con sway phase-shifted entre bones para que no se muevan en sync. Los sub-bones de cada strand seguirán por jerarquía → movimiento natural sin animar cada uno.
+
+   f. **Validar en Unity Scene view** primero (workflow del `feedback_unity_preview_loop`), luego en BS.
+
+   **Esfuerzo estimado: ~1.5h** end-to-end.
+
+   **Gotchas conocidos para Fase 2:**
+   - El renderer cambia de tipo (MeshRenderer → SkinnedMeshRenderer): puede invalidar referencias en el prefab. Re-instanciar limpio.
+   - Los bones internos del FBX podrían NO mapear al head bone del cuerpo de Aline; el SkinnedMeshRenderer renderiza con su propio root, no con el del cuerpo. Si la pose del hair se descuadra, ajustar el bind pose del FBX en Blender o reposicionar el GameObject manualmente como ahora.
+   - El `Aline_curator_hair_skl_Skeleton.json` tiene los nombres exactos de los bones — referencia obligada para los curve paths del AnimationClip.
 
 6. **Materiales Aline (BlackPart fresnel + CuratorFace)** — **hecho 2026-05-03**. Cinco slots auditados contra `SK_Curator_Aline.uasset` + override de `BP_Cine_Curator_Aline`:
    - Slot 0 `Curator_Black_Body` → `M_Aline_BlackBody` con shader nuevo `Aline/Fresnel` (cutout fresnel; normal map `Curator_Black_Body_Normal`; params del MI BlackPart1: Alpha 0.35, Fresnel 0.5, FresnelR 2). Tuneado a `_Alpha=1.0, _FresnelExponent=3.0, _RimBoost=1.5, _AlphaCutoff=0.5` para que el rim solo aparezca en silueta (los parches de "piel quemada" se integran sin parecer overlay).
