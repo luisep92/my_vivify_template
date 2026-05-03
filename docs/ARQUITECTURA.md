@@ -1,5 +1,72 @@
 # ARQUITECTURA — Pipeline técnico
 
+## Bootstrap desde cold clone
+
+Pasos para arrancar el proyecto en una máquina nueva, en orden estricto.
+
+1. **Instalar Beat Saber 1.34.2** + cadena de mods de Aeroluna (Vivify, Heck, CustomJSONData, Chroma, NoodleExtensions). Versiones exactas en [BS_Dependencies.txt](../BS_Dependencies.txt). **No usar Mod Assistant** — instalar a mano desde [github.com/Aeroluna/Heck/releases](https://github.com/Aeroluna/Heck/releases) y [github.com/Aeroluna/Vivify/releases](https://github.com/Aeroluna/Vivify/releases). Mod Assistant a veces sirve versiones obsoletas que rompen las dependencias entre sí.
+
+2. **Instalar Unity 2019.4.28f1** (versión exacta) desde Unity Hub. Distinta versión = bundle no compatible con BS.
+
+3. **Instalar Blender 4.2 LTS** + addon `io_scene_psk_psa` (Befzz/DarklightGames) habilitado en Preferences > Extensions. Necesario para procesar `.psa` (animaciones) y `.pskx` (meshes) de FModel.
+
+4. **Clonar el repo**:
+   ```
+   git clone <url> d:\vivify_repo\my_vivify_template
+   ```
+
+5. **Crear los junctions** (cmd, no PowerShell — `mklink` es interno de cmd):
+   ```cmd
+   cd d:\vivify_repo\my_vivify_template
+   mklink /J beatsaber-map  "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\CustomWIPLevels\Test"
+   mklink /J beatsaber-logs "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Logs"
+   ```
+   Crear el directorio `CustomWIPLevels\Test\` antes si no existe. Tras esto, los `.dat` versionados (`Info.dat`, `*Standard.dat`, `BPMInfo.dat`, `bundleinfo.json`) ya están accesibles en `beatsaber-map/` (vía junction al directorio del juego).
+
+6. **Conseguir los binarios no versionados**. Lo que falta tras el clone:
+   - **Audio del mapa** (`beatsaber-map/La-mandanga.ogg`, ~2.3 MB) — **no hay backup**. Si no lo tienes, el mapa no carga audio y BS puede rechazarlo. Pendiente decidir cómo distribuirlo (ver "Recovery" abajo).
+   - **Sandfall dump** (`d:\vivify_repo\Sandfall/`, ~40 GB) — re-rip del juego con FModel. Setup: `%APPDATA%\FModel\AppSettings.json` con game dir = `D:\SteamLibrary\steamapps\common\Expedition 33`, UE version = 5.4, mappings = `Expedition33Mappings-1.5.4.usmap` (también en `d:\vivify_repo\fmodel-mcp\mappings\`). Output dir esperado: `D:\vivify_repo\Output\Exports\`.
+   - **Aline_project.blend** (`Sandfall/Content/Characters/Enemies/HumanEnnemies/Aline/Aline_project.blend`) — **no hay backup**. Es el `.blend` de trabajo donde están las 27 actions importadas de `.psa` con el axis remap del root motion ya aplicado. Si se pierde, hay que reconstruir desde cero con `scripts/blender/import_all_psa.py` + `synthesize_root_motion.py`. Pendiente decidir si versionarlo (gitignored hoy por la regla `*.blend`).
+   - **Texturas, FBXes, PSAs** dentro de `VivifyTemplate/Assets/Aline/` — gitignored por extensión. Recuperables vía pipeline de re-rip (ver "Recovery").
+
+7. **Tools fuera del repo**. Si no están en `d:\vivify_repo/`:
+   ```
+   cd d:\vivify_repo
+   git clone https://github.com/luisep92/unity_vivify_mcp.git unity-mcp
+   git clone https://github.com/luisep92/fmodel-mcp.git fmodel-mcp
+   ```
+   Detalles de wireado y arranque en [unity-mcp/README.md](../../unity-mcp/README.md) y [fmodel-mcp/README.md](../../fmodel-mcp/README.md). El proyecto Aline ya referencia `unity-mcp` vía `VivifyTemplate/Packages/manifest.json` (path local).
+
+8. **Abrir el proyecto Unity**: `VivifyTemplate/` desde Unity Hub. Primer import tarda ~5 min (regenera `Library/`). Si falta algún binario (FBX, PSA, PNG), saldrán warnings de "missing reference" — recuperar según el procedimiento de "Recovery" abajo.
+
+9. **Primer build**: F5 (o `Vivify > Build > Build Configuration Window`). Genera `bundleWindows2021.vivify` + `bundleinfo.json` en `beatsaber-map/`. PostBuildSyncCRCs sincroniza el CRC a `Info.dat` automáticamente.
+
+10. **Lanzar BS**, ir a `Custom WIP Levels`, mapa `Test`. Las dificultades Easy/Normal/ExpertPlus deben aparecer.
+
+## Recovery — qué pasa si borras X
+
+Tabla de "si borras X, ¿es recuperable y cómo?". Versionado = en git, recuperable con `git checkout`. Regenerable = se reconstruye con un comando local. Lost = no hay backup, hay que re-conseguir desde fuera.
+
+| Si borras... | Estado | Recovery |
+|---|---|---|
+| Cualquier `.md`, `.cs`, `.shader`, `.mat`, `.prefab`, `.meta` | Versionado | `git checkout <path>` |
+| `beatsaber-map/*.dat`, `bundleinfo.json` | Versionado | `git checkout beatsaber-map/<file>` |
+| `beatsaber-map/bundleWindows2021.vivify` (~128 MB) | Regenerable | F5 en Unity (regenera bundle + bundleinfo.json + sync CRC) |
+| `beatsaber-map/La-mandanga.ogg` (~2.3 MB) | **Lost (sin backup)** | No hay procedimiento. **Pendiente:** decidir si versionar el `.ogg` (excepción a `*.ogg` en `.gitignore`) o documentar fuente externa. |
+| `VivifyTemplate/Library/`, `Temp/`, `Logs/` | Regenerable | Abrir Unity, regenera solo (~5 min primer arranque) |
+| `VivifyTemplate/Assets/Aline/Textures/*.png` | Regenerable | Re-rip de `Sandfall/` con `mcp__fmodel__fmodel_export_texture` y mover el PNG de `Output/Exports/.../*.png` a la carpeta. Receta en [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) sección "Mapping de FModel → Unity". |
+| `VivifyTemplate/Assets/Aline/Animations/Aline_Anims.fbx` (~185 MB) | Regenerable | Re-export desde Blender: `scripts/blender/export_anims_fbx.py` (requiere `Aline_project.blend` con las 27 actions importadas). |
+| `VivifyTemplate/Assets/Aline/Hair/*.fbx` | Regenerable | Re-correr `scripts/blender/pskx_to_fbx.py` sobre el `.psk` de `Sandfall/Content/Characters/Hair/Mirror_Family/Aline/`. |
+| `VivifyTemplate/Assets/Aline/Scenery/Meshes/RockPlatform.fbx` | Regenerable | Re-correr `scripts/blender/build_rock_platform.py` (idempotente, construye + exporta FBX). |
+| `Sandfall/` (~40 GB) | Regenerable | Re-rip del juego con FModel (ver paso 6 del Bootstrap). Selectivo: solo lo que `VivifyTemplate/` referencia. |
+| `Aline_project.blend` (en `Sandfall/`) | **Lost (sin backup)** | Reconstruir: `scripts/blender/import_all_psa.py` (importa los 27 `.psa` como actions) + `scripts/blender/synthesize_root_motion.py` (axis remap del root motion para clips con desplazamiento). El estado del `.blend` es determinístico desde ese pipeline, así que en teoría reproducible — **pero no validado tras pérdida real**. **Pendiente:** decidir si versionar el `.blend` (excepción a `*.blend`) o aceptar el tiempo de reconstrucción. |
+| `unity-mcp/` o `fmodel-mcp/` (fuera del repo) | Regenerable | `git clone` de los repos públicos (URLs en CLAUDE.md). |
+| `ReMapper-master/`, `FModel.exe` (fuera del repo) | Regenerable | Re-descargar de sus respectivas fuentes. Sin uso activo todavía. |
+
+**Decisiones pendientes** (flagged arriba):
+- ¿Versionar `La-mandanga.ogg`? Pro: backup garantizado. Contra: 2.3 MB en cada checkout, y técnicamente IP del autor de la canción.
+- ¿Versionar `Aline_project.blend`? Pro: backup determinístico. Contra: tamaño del `.blend` (probable 50-200 MB con todas las actions importadas), y en teoría reproducible desde scripts.
+
 ## Visión general
 
 ```

@@ -65,6 +65,7 @@ Solo reglas puras (sin versiones que puedan drift). Para hechos técnicos con ve
 2. **No commitear archivos pesados.** Lista exacta en `.gitignore` (`*.vivify`, `*.ogg`, modelos 3D, texturas binarias). Los `.meta` de Unity sí. El mapa (`beatsaber-map/*.dat`, `bundleinfo.json`) **sí se versiona** — los binarios no.
 3. **Mods de Aeroluna instalados a mano** desde GitHub. Mod Assistant a veces sirve versiones obsoletas que rompen dependencias. Versiones en [BS_Dependencies.txt](BS_Dependencies.txt).
 4. **Cualquier afirmación técnica nueva en CLAUDE.md → reescribir como pointer.** Si una regla técnica empieza a vivir aquí, en cuanto cambie habrá drift. Mover la afirmación a su doc/skill autoritativo y dejar solo el pointer.
+5. **Documentación viva: cada cambio de comportamiento actualiza el doc/skill autoritativo en el MISMO commit.** Si el commit cambia código/scripts/schema/workflow y no toca docs, falta algo. Reglas concretas + checklist + mapa "qué va dónde" en la skill [`docs-governance`](.claude/skills/docs-governance/SKILL.md).
 
 ---
 
@@ -77,6 +78,7 @@ Skills viven en `.claude/skills/<name>/SKILL.md` y son la **fuente autoritativa*
 - [`vivify-materials`](.claude/skills/vivify-materials/SKILL.md) — shaders custom para bundles Vivify, mapping FModel→Unity, ambient sin SH, troubleshooting magenta/missing.
 - [`vivify-animations`](.claude/skills/vivify-animations/SKILL.md) — pipeline `.psa` → Blender → FBX → Unity Animator → Vivify. Scripts en `scripts/blender/` + Editor scripts en `Assets/Aline/Editor/`.
 - [`vivify-environment`](.claude/skills/vivify-environment/SKILL.md) — skybox, disable BS env, escenario custom, decoración 3D, FBX axis flip.
+- [`docs-governance`](.claude/skills/docs-governance/SKILL.md) — qué hecho va a qué doc, cuándo actualizar qué, qué NO meter en CLAUDE.md ni en memory.
 - [`remapper-scripting`](.claude/skills/remapper-scripting/SKILL.md) — esqueleto. Se rellena cuando empecemos a usar ReMapper.
 
 ## Tools fuera del repo

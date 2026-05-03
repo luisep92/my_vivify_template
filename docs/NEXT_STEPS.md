@@ -2,20 +2,24 @@
 
 ## Estado actual
 
-Pipeline funcionando end-to-end:
+Pipeline operativo end-to-end:
 
-- Vivify carga el bundle de Unity e instancia `aline.prefab` en escena.
-- **Aline texturizada** con shader unlit cutout double-sided. 3 materiales: `M_Aline_Body_1`, `M_Aline_Body_2`, `M_Aline_Black`.
-- **Sync de CRCs automático**: `Editor/PostBuildSyncCRCs.cs` dispara `scripts/sync-crcs.ps1` cada vez que Vivify reescribe `bundleinfo.json`. Cero pasos manuales tras F5.
-- Mapa V2 con `_customEvents` operativo (`InstantiatePrefab` testeado).
-- **Unity MCP operativo end-to-end** (fork local en `d:\vivify_repo\unity-mcp/`, bridge stdio en port 6400). Tools `read_console`, `refresh_unity`, `execute_code`, `manage_animation`, `manage_asset`, `manage_material`, `manage_prefabs`, etc.
-- **Animaciones reproduciéndose en BS**: pipeline `.psa` → Blender → FBX → Unity Animator → Vivify funcionando, con preview del FBX inspector animando correctamente. Detalle operativo en la skill `vivify-animations`.
+- **Beatmap V3** (`*Standard.dat`, `BPMInfo.dat`); Info.dat en su schema underscore. Mapa versionado en git (commit `ef5bb7d`).
+- **Vivify** carga el bundle e instancia `aline.prefab` en escena. Sync de CRCs automático tras F5 (`Editor/PostBuildSyncCRCs.cs` → `scripts/sync-crcs.ps1`).
+- **Aline texturizada** con 5 materiales custom: `M_Aline_BlackBody` (fresnel), `M_Aline_Body_1`, `M_Aline_Body_2` (BodyLit con normal+fake-light), `M_Aline_Dress` (EnergyMask translucent), `M_Aline_Face` (radial fade). Detalle en [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md).
+- **Pelo de Aline** rigged con 163 strand bones + sway loop (`HairSway.anim`).
+- **Animaciones**: pipeline `.psa` → Blender → FBX → Unity Animator → Vivify funcionando con root motion canónico para clips con desplazamiento. Detalle en [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md).
+- **Escenario E33** custom (`RockPlatform.fbx`, 217K polys, 3 submeshes: rock + ivy carpet azul + bushes rosas). Disable del environment vanilla via Chroma `customData.environment[]`. Skybox custom `M_Skybox_E33`.
+- **Difficulties** registradas: Easy (locomotion sandbox), Normal (clon de Easy + trigger Skill4 en b=40, sin gameplay aún — playground para iterar familia A), ExpertPlus (sandbox de cube test).
+- **MCPs propios**:
+  - `unity-mcp` (fork local en `d:\vivify_repo\unity-mcp/`, bridge stdio:6400). Tools `read_console`, `refresh_unity`, `execute_code`, `manage_animation`, `manage_asset`, `manage_material`, `manage_prefabs`, etc.
+  - `fmodel-mcp` (`d:\vivify_repo\fmodel-mcp/`, repo público `luisep92/fmodel-mcp`). Tools `mcp__fmodel__fmodel_*`: `search`, `read`, `inspect_material`, `export_texture`/`mesh`/`raw`, `list_exports`, `status`. Flujo canónico para inspeccionar/exportar assets de E33.
 
 ---
 
 ## Próximos pasos (en orden)
 
-> **Scope (2026-05-02): Phase 1 + intro cosmética.** Recorte por deadline (1 semana). Mapa se entrega como "Phase 1", deja la puerta abierta a Phase 2/3 después. Detalle en [DECISIONES.md → "Scope cut a Phase 1"](DECISIONES.md). Las familias de ataque a prototipar quedan reducidas a las que aparecen en Phase 1.
+> **Scope:** Phase 1 + intro cosmética, deadline soft. Detalle en [DECISIONES.md → "Scope: Phase 1 + intro cosmética; deadline soft"](DECISIONES.md). Las familias de ataque a prototipar quedan reducidas a las que aparecen en Phase 1.
 
 > Pivot anterior: con la decisión de **showcase map** ([DECISIONES.md](DECISIONES.md)), el orden cambia. La canción y el state machine narrativo dependen de tener primero los **sistemas de ataque** definidos como contratos reutilizables. Componer fases sobre sistemas inestables es la receta del embolado.
 
@@ -38,7 +42,7 @@ Pipeline final operativo:
 
 Detalle operativo y gotchas en la skill [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md) sección "Root motion para clips con desplazamiento" + "Caminos cerrados". Decisión consolidada en [`DECISIONES.md`](DECISIONES.md).
 
-### 3. Environment custom + materiales de Aline (bloqueador) — **en curso**
+### 3. Environment custom + materiales de Aline — **hecho salvo intro cosmética**
 
 El environment por defecto de BS (TimbalandEnvironment) se come visualmente a Aline: los materiales `BlackPart`/`BlackPart1`/`CuratorFace` negros desaparecen sobre fondo oscuro. Cualquier trabajo de fresnel/face shader sobre Aline es no-juzgable hasta tener un contexto visual correcto. Por eso environment va antes que materiales en este paso. Capacidades Vivify validadas en `docs/heckdocs-main/docs/vivify/events.md` + `environment/environment.md`.
 
@@ -100,8 +104,8 @@ Subpasos en orden:
 
    **Performance:** 32K verts skinned + 163 bones + 19×4 curve evals por frame. Holgado en BS PC; ~0.3-0.5ms extra de Aline en Quest. Margen amplio.
 
-   **Gotchas resueltos en el camino (consolidados en `feedback_pskx_to_fbx_rigged`):**
-   - Si escalas armature + mesh por separado en Blender y aplicas, la deformación se compone con el bind pose y queda 100× más pequeña. Solución: **delegar el scale al FBX exporter** via `global_scale=0.01 + apply_scale_options='FBX_SCALE_ALL'` cuando hay armature. Pre-scale en Blender solo para mesh estático.
+   **Gotchas resueltos en el camino:**
+   - Si escalas armature + mesh por separado en Blender y aplicas, la deformación se compone con el bind pose y queda 100× más pequeña. Solución: **delegar el scale al FBX exporter** via `global_scale=0.01 + apply_scale_options='FBX_SCALE_ALL'` cuando hay armature. Pre-scale en Blender solo para mesh estático. Detalle en docstring de [`scripts/blender/pskx_to_fbx.py`](../scripts/blender/pskx_to_fbx.py).
    - Re-import del FBX resetea el material del SMR al default `MI_Hair_NPCs_Aline_Curator/Standard`. Reasignar `M_Aline_Hair` post-import.
    - `localScale=100` se preserva tras re-import; pose `(0,0,0)` también.
    - Bind pose del hair viene rotado +X 270° por el FBX axis flip Blender→Unity, pero está absorbido en el child intermedio `Aline_curator_hair_skl/Aline_curator_hair_skl`. No tocar.
