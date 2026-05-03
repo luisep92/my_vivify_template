@@ -7,12 +7,15 @@
 │ FUENTE: Expedition 33 (Unreal Engine 5)                              │
 └──────────────────────────────────────────────────────────────────────┘
                               │
-                              ▼  FModel.exe (UE asset explorer)
+                              ▼  fmodel-mcp (CLI .NET sobre CUE4Parse + MCP server Python)
+                                 GUI fallback: FModel.exe para browsing visual
 ┌──────────────────────────────────────────────────────────────────────┐
-│ Sandfall/Content/Characters/Enemies/HumanEnnemies/Aline/             │
-│   .uasset, .uexp, .ubulk, .psa (animaciones)                         │
-│   ~40 GB de dump, fuera del repo                                     │
+│ D:\vivify_repo\Output\Exports\Sandfall\Content\...                   │
+│   PNGs, .pskx, .psa, .json (selectivos, no dump completo)            │
+│   Scratch: lo confirmado se mueve a su destino                       │
 └──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼  Texturas: directo a Unity. Meshes: por Sandfall/ + Blender
                               │
                               ▼  Blender 4.2 LTS + Blender MCP server
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -73,7 +76,8 @@
 | Editor | Unity | **2019.4.28f1** | Versión obligada por VivifyTemplate (Single Pass Instanced para Windows 2021). |
 | 3D | Blender | **4.2 LTS** | Importar `.psa` (addon DarklightGames PSK/PSA), exportar FBX para Unity. |
 | 3D — automation | Blender MCP | `uvx blender-mcp` (ahujasid/blender-mcp) | Permite a Claude Code ejecutar Python en Blender (inspección de rig, batch imports, export FBX). |
-| Asset explorer | FModel | (última) | Extracción de UE5 assets. |
+| Asset explorer (GUI) | FModel | (última) | Browsing visual de UE5 assets. Para automation no-GUI usamos fmodel-mcp. |
+| Asset explorer (programático) | fmodel-mcp | propio (CUE4Parse 1.2.2 + .NET 9) | CLI + MCP server. Repo en `d:\vivify_repo\fmodel-mcp/`. Tools `mcp__fmodel__*` en Claude. |
 | Map editor | ChroMapper | (última) | Editor visual del mapa. |
 | Scripting | ReMapper | (master) | Generación programática de notas/eventos. **Aún sin usar.** |
 | Unity automation | unity-mcp (fork local) | port a 2019.4 | Fork minimal en `d:\vivify_repo\unity-mcp/` enganchado vía `Packages/manifest.json`. Bridge stdio en port 6400. Ver [unity-mcp/README.md](../../unity-mcp/README.md). |
@@ -104,7 +108,9 @@
 |---|---|---|
 | `Sandfall/` | Dump de UE5 de Expedition 33 | ~40 GB. Tool de extracción, no parte del producto. |
 | `ReMapper-master/` | Tool de scripting Deno/TS | Tiene su propio `.git`. Mejor accesible al lado del repo. |
-| `FModel.exe` | Tool .exe ~47 MB | Binario, mejor fuera. |
+| `FModel.exe` | Tool .exe ~47 MB | Binario, mejor fuera. GUI fallback. |
+| `fmodel-mcp/` | Wrapper canónico programático sobre CUE4Parse (CLI .NET 9 + MCP server Python) | Repo propio (`luisep92/fmodel-mcp`). Bridge stdio MCP. Ver [fmodel-mcp/README.md](../../fmodel-mcp/README.md). |
+| `Output/Exports/` | Scratch dir donde escriben FModel GUI y `mcp__fmodel__fmodel_export_*` | Tamaño variable. Lo confirmado se mueve a `my_vivify_template/Sandfall/` (meshes) o `VivifyTemplate/Assets/<area>/Textures/` (PNGs). |
 
 ### Junctions a la instalación de Beat Saber
 

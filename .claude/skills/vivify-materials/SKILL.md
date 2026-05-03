@@ -54,48 +54,39 @@ Es también opaque y single-side por defecto — al duplicar añadir cutout + Cu
 
 ## Mapping de FModel → Unity (texturas a material slots del FBX)
 
-Cuando importas un FBX exportado vía FModel→Blender→FBX, el FBX trae **N material slots con nombres tipo `MI_<algo>` o `M_<algo>`**. Los `MI_*.json` y `M_*.json` que FModel volcó al lado de las texturas son la **fuente de verdad** para saber qué textura va con qué slot.
+Cuando importas un FBX exportado vía FModel→Blender→FBX, el FBX trae **N material slots con nombres tipo `MI_<algo>` o `M_<algo>`**. La fuente de verdad de qué textura va con qué slot vive en los `MaterialInstanceConstant` originales del juego — y a partir de 2026-05-03 los inspeccionamos vía **fmodel-mcp** en lugar de exportar JSONs y leerlos a mano.
 
-Pasos:
+### Flujo canónico (con fmodel-mcp)
 
-1. **Inventariar slots del FBX**. Dos opciones:
-   - **Inspector de Unity**: SkinnedMeshRenderer → Materials → ver Element 0..N con sus nombres originales.
-   - **Grep al binario** (sin Unity abierto):
-     ```bash
-     grep -aboE "(MI_|M_)[A-Za-z0-9_]+" path/to/Model.fbx | sort -u
-     ```
-     El byte offset (col 1) da el orden de los slots en `m_Materials`.
-
-2. **Leer cada `MI_*.json` / `M_*.json`** del dump de FModel. Estructura típica:
-   ```json
-   {
-     "Textures": {
-       "Base Color Map": "/Game/.../<TextureName>.<TextureName>",
-       "Normal Map": "...",
-       "ORM Map": "..."
-     },
-     "Parameters": {
-       "BlendMode": 1,
-       "Properties": {
-         "BasePropertyOverrides": {
-           "TwoSided": true,
-           "BlendMode": "EBlendMode::BLEND_Masked",
-           "OpacityMaskClipValue": 0.3333
-         }
-       }
-     }
-   }
+1. **Inventariar slots del FBX** — igual que antes: Inspector de Unity → SkinnedMeshRenderer → Materials, o leer el `.prefab` (`m_Materials` con guids → mapear a `.mat.meta`). Para mallas sin importar todavía: el `.json` del `SkeletalMesh` da el orden en `SkeletalMaterials`. Ejemplo para Aline:
    ```
-   - `Base Color Map` → la textura que va al `_MainTex` del material Unity.
-   - `BlendMode: BLEND_Masked` + `OpacityMaskClipValue` → confirma que necesitas cutout (`_AlphaCutoff` = ese valor).
-   - `TwoSided: true` → confirma `Cull Off` en el shader.
-
-3. **Algunos slots no tienen Base Color**. Materiales tipo "fresnel edge effect", "translucent paint", "glow" no exportan diffuse — son procedurales en Unreal. Para v1 = aproximar con material sólido (e.g., negro plano). Apuntar como pendiente de polish a v2 si visualmente queda raro.
-
-4. **Los `.json` pueden estar en folders distintos** del que contiene las texturas. Búscalos con find:
-   ```bash
-   find /path/to/Sandfall -name "MI_<Personaje>*.json" -o -name "M_<Personaje>*.json"
+   mcp__fmodel__fmodel_search ("**/SK_Curator_Aline*")
+   mcp__fmodel__fmodel_read   ("Sandfall/Content/.../SK_Curator_Aline")
    ```
+   `SkeletalMaterials[i].MaterialSlotName` te da el orden + el path del MI por defecto.
+
+2. **Inspeccionar cada MaterialInstance** con `mcp__fmodel__fmodel_inspect_material(path)` — devuelve **solo lo accionable**: Textures, Scalars, Vectors, parent material, BlendMode, TwoSided, OpacityMaskClipValue. Mucho más liviano que el JSON crudo.
+
+   **Mejor en paralelo** (un mensaje, N tool calls): los inspects son independientes y de <1s cada uno. Para Aline (5 slots) era una sola tanda.
+
+3. **Exportar las texturas referenciadas** con `mcp__fmodel__fmodel_export_texture(path)`. También paralelizable. Salen como PNG a `D:\vivify_repo\Output\Exports\<package_path>.png`.
+
+4. **Mover las PNGs** desde `Output/Exports/...` directamente a `VivifyTemplate/Assets/Aline/Textures/` (o donde toque). Las texturas no necesitan paso por Blender ni espejo en `Sandfall/`. Lo que sí pasa por `Sandfall/` son los **meshes** (`.pskx` → Blender → `.fbx`).
+
+5. **Mapping decisions** — convertir lo del MI al material Unity:
+   - `BlendMode: BLEND_Masked` + `OpacityMaskClipValue` → cutout, `_AlphaCutoff` = ese valor.
+   - `TwoSided: true` → `Cull Off`.
+   - `BlendMode: BLEND_Translucent` → blending alpha real (más caro), no cutout.
+   - Texturas sueltas tipo `Normal`, `ORM`, `Opacity_Mask`, `Mask_Face` → enchufar a properties del shader. Si el shader actual no las soporta, extender (ver sección "Upgrade path").
+
+### Cuándo NO usar fmodel-mcp
+
+- **Material padre / UMaterial puro** (no MI): el inspect devuelve casi vacío porque la lógica vive en el graph de nodos del shader, no en parámetros. Ahí usar `fmodel_export_raw` o aceptar que el padre define un shader que vamos a aproximar a mano.
+- **Buscar referencias inversas** ("¿qué materiales usan esta textura?"): no soportado en Tier 1. Workaround: `fmodel_search` por nombre + `fmodel_inspect_material` en cada candidato.
+
+### Discrepancias entre dumps viejos y MCP en vivo
+
+Si un JSON exportado a mano hace tiempo dice una cosa y el MCP en vivo dice otra, **confiar en el MCP** — los exports manuales pueden venir de un parent material o de una versión vieja del juego. Caso real (2026-05-03): el dump de `M_CuratorFace_Aline` mostraba `Mask_Curator` (sin sufijo, en `Curator/Textures/`); el inspect vivo mostraba `Mask_Curator_Aline` (con sufijo, en `Aline/Textures/`). Las dos texturas existen y son distintas — la vivienda en el MI override es la del MCP.
 
 ## Material creation flow
 
@@ -106,7 +97,7 @@ Pasos:
 
 2. **Crear shader**: duplicar `Hidden/Vivify/Templates/Standard.shader`, renombrar el shader path, añadir cutout + Cull Off + properties extra que necesites.
 
-3. **Importar texturas**: copiar PNGs de FModel a `Assets/<Project>/Textures/`. Unity los importa automáticamente al volver al Editor.
+3. **Importar texturas**: usar `mcp__fmodel__fmodel_export_texture` y mover los PNGs desde `Output/Exports/.../*.png` a `Assets/<Project>/Textures/`. Unity los importa al volver al Editor.
 
 4. **Crear .mat**: Right-click → Create → Material en `Materials/`. Inspector → Shader dropdown → tu shader nuevo. Asignar `_MainTex`, `_Color`, `_AlphaCutoff`.
 

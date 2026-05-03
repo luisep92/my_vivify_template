@@ -36,8 +36,9 @@ Idioma de la documentación: español. **Idioma de los commits: inglés** (a par
 
 Fuera del repo (en `d:\vivify_repo\`):
 
-- `FModel.exe` — explorador de assets de Unreal Engine. Punto de entrada para navegar el contenido de E33 (los `.pak` viven en la instalación del juego, no en este repo).
-- `Output/Exports/Sandfall/` — sólo los assets que se hayan exportado activamente desde FModel (selectivos, no es el dump completo). Lo que ya está integrado en Unity vino de aquí pero suele moverse/limpiarse después.
+- `FModel.exe` — explorador GUI de assets UE. Útil para browsing visual, pero a partir de 2026-05-03 el flujo programático (search/read/inspect/export) va por el MCP de abajo, no por la GUI.
+- `fmodel-mcp/` — wrapper canónico para inspeccionar/exportar assets de E33. CLI .NET sobre CUE4Parse + MCP server Python. Tools `mcp__fmodel__fmodel_*` disponibles en Claude Code (search, read, inspect_material, export_texture/mesh/raw, list_exports, status). Repo en [github.com/luisep92/fmodel-mcp](https://github.com/luisep92/fmodel-mcp).
+- `Output/Exports/Sandfall/` — destino de exports tanto de la GUI como del MCP. Es **scratch**: lo que se confirma se mueve a `my_vivify_template/Sandfall/` (meshes) o directo a `VivifyTemplate/Assets/<area>/Textures/` (PNGs).
 - `ReMapper-master/` — tool Deno/TypeScript para scripting del mapa.
 - `unity-mcp/` — fork minimal del MCP for Unity portado a Unity 2019.4 (repo `luisep92/unity_vivify_mcp`). Wireado a este proyecto via `Packages/manifest.json`. Ver [unity-mcp/README.md](../unity-mcp/README.md) para el qué/cómo del fork.
 
