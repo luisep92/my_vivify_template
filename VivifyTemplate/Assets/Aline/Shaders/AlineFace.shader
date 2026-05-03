@@ -26,6 +26,10 @@ Shader "Aline/Face"
         [Toggle(USE_RADIAL_FADE)] _UseRadialFade ("Use Radial Fade", Float) = 0
         _Radius ("Radial Radius (UE: Radius)", Range(0.05, 1)) = 0.42
         _Hardness ("Radial Hardness", Range(0.01, 1)) = 0.25
+        // Modula el alpha de salida con la luma del ambient para que el void
+        // se desvanezca con el resto del modelo en fade-outs. 0 = comportamiento
+        // antiguo (alpha independiente del entorno).
+        _AmbientReact ("Ambient React (alpha gate)", Range(0, 1)) = 1.0
     }
     SubShader
     {
@@ -46,6 +50,7 @@ Shader "Aline/Face"
             #pragma multi_compile_local _ USE_RADIAL_FADE
 
             #include "UnityCG.cginc"
+            #include "AlineLighting.cginc"
 
             struct appdata
             {
@@ -69,6 +74,7 @@ Shader "Aline/Face"
             float _UVAngleDeg;
             float _Radius;
             float _Hardness;
+            float _AmbientReact;
 
             v2f vert (appdata v)
             {
@@ -108,6 +114,12 @@ Shader "Aline/Face"
                     float radial = 1.0 - smoothstep(_Radius - _Hardness, _Radius, dist);
                     alpha *= radial;
                 #endif
+
+                // Gate por luma del ambient: cuando el ambient se apaga, el
+                // void desaparece con el resto del modelo. _AmbientReact=0
+                // restaura el comportamiento independiente del entorno.
+                float luma = AlineAmbientLuma();
+                alpha *= lerp(1.0, saturate(luma), _AmbientReact);
 
                 return fixed4(_Color.rgb, alpha);
             }

@@ -25,6 +25,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Floats:
     - _Alpha: 1
+    - _AmbientReact: 1
     - _Hardness: 0.2
     - _Radius: 0.4
     - _UVAngleDeg: 0
