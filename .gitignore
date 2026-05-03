@@ -1,9 +1,16 @@
-# === Junctions a la instalación de Beat Saber (no versionables entre máquinas) ===
-beatsaber-map/
+# === Mapa de Beat Saber ===
+# `beatsaber-map/` es un junction al juego. Versionamos los .dat (fuente de verdad
+# del contenido del mapa) y bundleinfo.json. Los binarios pesados (bundles
+# regenerables, audio) y backups manuales caen por las reglas globales de abajo.
+# El junction en sí (link) no es versionable; cada máquina lo crea con junction.ps1.
+
+# === Logs del juego (no aportan historial) ===
 beatsaber-logs/
 
-# === Backups manuales (.bak) — los hacemos puntuales antes de operaciones de riesgo ===
+# === Backups manuales — *.bak (puntuales antes de operaciones de riesgo) ===
+# *.v2bak: backups creados durante la migración V2→V3 del 2026-05-03.
 *.bak
+*.v2bak
 
 # === Screenshots scratch del unity-mcp (capturas de Scene/Game view para iterar) ===
 # Los genera mcp__unity-mcp__manage_camera screenshot. No los queremos en git.

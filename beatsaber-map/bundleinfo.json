@@ -1,0 +1,388 @@
+{
+  "materials": {
+    "m_skybox_e33": {
+      "path": "assets/aline/materials/m_skybox_e33.mat",
+      "properties": {
+        "_Tint": {
+          "value": [
+            0.5,
+            0.5,
+            0.5,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_Exposure": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_Rotation": {
+          "value": 180.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_MainTex": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_Mapping": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_ImageType": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_MirrorOnBack": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_Layout": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        }
+      }
+    },
+    "m_telegraphsphere": {
+      "path": "assets/aline/prefabs/projectiles/m_telegraphsphere.mat",
+      "properties": {
+        "_Color": {
+          "value": [
+            1.0,
+            1.0,
+            1.0,
+            0.4
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_MainTex": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_Cutoff": {
+          "value": 0.5,
+          "type": {
+            "Float": null
+          }
+        },
+        "_Glossiness": {
+          "value": 0.5,
+          "type": {
+            "Float": null
+          }
+        },
+        "_GlossMapScale": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_SmoothnessTextureChannel": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_Metallic": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_MetallicGlossMap": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_SpecularHighlights": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_GlossyReflections": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_BumpScale": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_BumpMap": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_Parallax": {
+          "value": 0.02,
+          "type": {
+            "Float": null
+          }
+        },
+        "_ParallaxMap": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_OcclusionStrength": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_OcclusionMap": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_EmissionColor": {
+          "value": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_EmissionMap": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_DetailMask": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_DetailAlbedoMap": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_DetailNormalMapScale": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_DetailNormalMap": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_UVSec": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_Mode": {
+          "value": 3.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_SrcBlend": {
+          "value": 5.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_DstBlend": {
+          "value": 10.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_ZWrite": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        }
+      }
+    },
+    "m_blueivy": {
+      "path": "assets/aline/scenery/materials/m_blueivy.mat",
+      "properties": {
+        "_MainTex": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_Color": {
+          "value": [
+            0.549999952,
+            0.75,
+            1.6,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_AlphaCutoff": {
+          "value": 0.5,
+          "type": {
+            "Float": null
+          }
+        },
+        "_UseLumTint": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_AtlasRegion": {
+          "value": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "type": {
+            "Vector": null
+          }
+        }
+      }
+    },
+    "m_pinkbush": {
+      "path": "assets/aline/scenery/materials/m_pinkbush.mat",
+      "properties": {
+        "_MainTex": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_Color": {
+          "value": [
+            1.5,
+            0.399999976,
+            0.8,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_AlphaCutoff": {
+          "value": 0.5,
+          "type": {
+            "Float": null
+          }
+        },
+        "_UseLumTint": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_AtlasRegion": {
+          "value": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "type": {
+            "Vector": null
+          }
+        }
+      }
+    },
+    "m_rock_cliff": {
+      "path": "assets/aline/scenery/materials/m_rock_cliff.mat",
+      "properties": {
+        "_MainTex": {
+          "value": "",
+          "type": {
+            "Texture": null
+          }
+        },
+        "_Color": {
+          "value": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_AlphaCutoff": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_UseLumTint": {
+          "value": 0.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_AtlasRegion": {
+          "value": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "type": {
+            "Vector": null
+          }
+        }
+      }
+    }
+  },
+  "prefabs": {
+    "aline": "assets/aline/prefabs/aline.prefab",
+    "telegraphsphere": "assets/aline/prefabs/projectiles/telegraphsphere.prefab",
+    "rock_cliff": "assets/aline/scenery/prefabs/rock_cliff.prefab",
+    "rockplatform": "assets/aline/scenery/prefabs/rockplatform.prefab",
+    "cube": "assets/test/prefabs/cube.prefab"
+  },
+  "bundleFiles": [
+    "C:/Program Files (x86)/Steam/steamapps/common/Beat Saber/Beat Saber_Data/CustomWIPLevels/Test/bundleWindows2021.vivify"
+  ],
+  "bundleCRCs": {
+    "_windows2021": 1065031097
+  },
+  "isCompressed": false
+}
