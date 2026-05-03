@@ -1,10 +1,15 @@
 """
-Convert a single .pskx (UE static mesh) to .fbx for Unity import.
+Convert a single .pskx/.psk (UE mesh, optionally rigged) to .fbx for Unity import.
 
 Run from Blender CLI:
   blender --background --python scripts\blender\pskx_to_fbx.py -- <input.pskx> [output.fbx]
 
 If output.fbx is omitted, writes alongside input with .fbx extension.
+
+Si el archivo trae armature + skin weights (típico .psk de skeletal mesh, ej. hair
+con strand bones), el script lo preserva y exporta el FBX con MESH + ARMATURE
+para que Unity instancie SkinnedMeshRenderer. Si solo trae mesh estático, exporta
+mesh sin más.
 
 Requires the io_scene_psk_psa addon (Befzz / DarklightGames). Same one used
 by import_all_psa.py for animations.
@@ -55,32 +60,56 @@ def main():
     psk_import_op = bpy.ops.import_scene.psk
     psk_import_op(filepath=inp)
 
-    # Apply the imported mesh's transforms — clean for Unity.
-    # También escalar 0.01: el addon de PSK importa los vertices con valores
-    # literales de UE (centímetros), pero Blender los trata como metros. Sin
-    # este pre-scale, el mesh exportado sale 100x demasiado grande en Unity
-    # (Renderer.bounds.extents.x = 42m en vez de 42cm).
+    # UE → m: el addon de PSK importa vertices/bones con valores literales de UE
+    # (centímetros) pero Blender los trata como metros. Sin scale-down, el FBX
+    # sale 100x demasiado grande en Unity.
+    #
+    # - Static (sólo MESH): set scale 0.01 en el mesh, apply transform.
+    # - Rigged (MESH + ARMATURE): NO pre-aplicamos en Blender. Pre-aplicar
+    #   doble-bakea (mesh y armature compondrían la deformación). En su lugar,
+    #   delegamos el scale al FBX exporter via global_scale=0.01 +
+    #   apply_scale_options='FBX_SCALE_ALL' que baja uniformemente bones +
+    #   vertices en una sola pasada coherente.
     UE_TO_M = 0.01
-    for obj in bpy.context.scene.objects:
-        if obj.type == "MESH":
+    armatures = [o for o in bpy.context.scene.objects if o.type == "ARMATURE"]
+    meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+    has_armature = len(armatures) > 0
+
+    if not has_armature:
+        for obj in meshes:
+            bpy.ops.object.select_all(action="DESELECT")
             obj.select_set(True)
             bpy.context.view_layer.objects.active = obj
             obj.scale = (UE_TO_M, UE_TO_M, UE_TO_M)
             bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 
-    # Export as FBX with Unity conventions: Y-up, Z-forward, no animations
+    object_types = {"MESH", "ARMATURE"} if has_armature else {"MESH"}
+
+    # Export as FBX with Unity conventions: Y-up, Z-forward, no animations.
+    # Static: pre-scale ya hecho, global_scale=1.0.
+    # Rigged: global_scale=0.01 + apply_scale_options='FBX_SCALE_ALL' baja
+    #   bones+mesh juntos uniformemente en el export.
+    # use_armature_deform_only=False incluye TODOS los strand bones aunque
+    # alguno no tenga weights. armature_nodetype='ROOT' evita el "Armature"
+    # dummy node intermedio que añade Blender por defecto.
+    global_scale = UE_TO_M if has_armature else 1.0
+    apply_scale_options = "FBX_SCALE_ALL" if has_armature else "FBX_SCALE_NONE"
+
     bpy.ops.export_scene.fbx(
         filepath=out,
         use_selection=False,
-        global_scale=1.0,
+        global_scale=global_scale,
         apply_unit_scale=True,
+        apply_scale_options=apply_scale_options,
         bake_space_transform=True,
         axis_forward="-Z",
         axis_up="Y",
-        object_types={"MESH"},
+        object_types=object_types,
         use_mesh_modifiers=True,
         mesh_smooth_type="FACE",
         add_leaf_bones=False,
+        armature_nodetype="ROOT",
+        use_armature_deform_only=False,
         bake_anim=False,
     )
 
