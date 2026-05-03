@@ -9,10 +9,6 @@
 // elementos donde el opacity mask del original es gradual y queremos
 // preservar esa graduación sin clipearla.
 //
-// El RGB del rim recibe un tinte aditivo de la SH ambient vía
-// AlineLighting.cginc — el vestido oscuro recoge color del entorno
-// en su silueta sin perder la translucencia.
-//
 // Mismos params que Aline/Fresnel (Alpha, FresnelExponent, RimBoost,
 // BumpMap, OpacityMask) — sin _AlphaCutoff porque no aplica.
 Shader "Aline/EnergyMask"
@@ -26,7 +22,6 @@ Shader "Aline/EnergyMask"
         _Alpha ("Alpha (UE: Alpha)", Range(0,2)) = 0.85
         _FresnelExponent ("Fresnel Exponent (UE: Fresnel)", Range(0.05, 8)) = 1.5
         _RimBoost ("Rim Boost (UE: |FresnelR|)", Range(0.1, 8)) = 1.0
-        _AmbientFill ("Ambient Tint Strength", Range(0, 2)) = 0.4
     }
     SubShader
     {
@@ -47,7 +42,6 @@ Shader "Aline/EnergyMask"
             #pragma multi_compile_local _ USE_OPACITY_MASK
 
             #include "UnityCG.cginc"
-            #include "AlineLighting.cginc"
 
             struct appdata
             {
@@ -74,7 +68,6 @@ Shader "Aline/EnergyMask"
             float _Alpha;
             float _FresnelExponent;
             float _RimBoost;
-            float _AmbientFill;
 
             v2f vert (appdata v)
             {
@@ -114,8 +107,7 @@ Shader "Aline/EnergyMask"
                     alpha *= mask;
                 #endif
 
-                fixed3 rgb = AlineRimTint(worldN, _Color.rgb, _AmbientFill);
-                return fixed4(rgb, saturate(alpha));
+                return fixed4(_Color.rgb, saturate(alpha));
             }
             ENDCG
         }

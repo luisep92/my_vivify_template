@@ -2,11 +2,11 @@
 // silueta, transparente al frente). Aproxima el M_Curator_BlackPart de UE
 // usado por MI_Curator_Aline_BlackPart (vestido) y _BlackPart1 (cuerpo negro).
 //
-// El fresnel define alpha (silueta visible vs front transparente). El RGB
-// del rim viene del `_Color` del material (típicamente negro) + un tinte
-// aditivo de la SH ambient vía AlineLighting.cginc — el rim del BlackBody
-// se levanta sutilmente con el color del skybox para que no desaparezca
-// sobre fondo oscuro.
+// El shader es unlit — BS no manda luces a los bundles de Vivify, así que
+// la "iluminación" del rim viene 100% del fresnel angular (NdotV).
+// `_BumpMap` se sample para perturbar la normal y dar variación al rim
+// (de otra forma sería un anillo perfectamente liso). `_OpacityMask` es
+// opcional: el slot Curator_Dress lo usa, el Curator_Black_Body no.
 //
 // Mapping desde MaterialInstanceConstant (UE) a properties (Unity):
 //   Alpha              → _Alpha
@@ -26,7 +26,6 @@ Shader "Aline/Fresnel"
         _FresnelExponent ("Fresnel Exponent (UE: Fresnel)", Range(0.05, 8)) = 0.5
         _RimBoost ("Rim Boost (UE: |FresnelR|)", Range(0.1, 8)) = 2.0
         _AlphaCutoff ("Alpha Cutoff", Range(0,1)) = 0.333
-        _AmbientFill ("Ambient Tint Strength", Range(0, 2)) = 0.4
     }
     SubShader
     {
@@ -45,7 +44,6 @@ Shader "Aline/Fresnel"
             #pragma multi_compile_local _ USE_OPACITY_MASK
 
             #include "UnityCG.cginc"
-            #include "AlineLighting.cginc"
 
             struct appdata
             {
@@ -73,7 +71,6 @@ Shader "Aline/Fresnel"
             float _FresnelExponent;
             float _RimBoost;
             float _AlphaCutoff;
-            float _AmbientFill;
 
             v2f vert (appdata v)
             {
@@ -93,6 +90,7 @@ Shader "Aline/Fresnel"
 
             fixed4 frag (v2f i) : SV_Target
             {
+                // Reconstruir normal en world space desde tangent + normal map.
                 float3 N = normalize(i.worldNormal);
                 float3 T = normalize(i.worldTangent.xyz);
                 float3 B = normalize(cross(N, T) * i.worldTangent.w);
@@ -102,7 +100,13 @@ Shader "Aline/Fresnel"
                 float3 V = normalize(_WorldSpaceCameraPos - i.worldPos);
                 float NdotV = saturate(dot(worldN, V));
 
+                // Edge-fresnel: 1 en silueta, 0 en frente. Exponente bajo (<1)
+                // ensancha el rim hacia el centro; exponente alto (>1) lo
+                // estrecha contra el contorno.
                 float fresnel = pow(1.0 - NdotV, _FresnelExponent);
+
+                // RimBoost actúa como ganancia: amplifica el rim para que pase
+                // el AlphaCutoff incluso con _Alpha bajo.
                 float alpha = saturate(fresnel * _RimBoost * _Alpha);
 
                 #ifdef USE_OPACITY_MASK
@@ -111,12 +115,7 @@ Shader "Aline/Fresnel"
                 #endif
 
                 clip(alpha - _AlphaCutoff);
-
-                // Rim color: tint base (típicamente negro) + ambient tint
-                // de la SH para que el BlackBody no desaparezca sobre
-                // skybox oscuro. _AmbientFill 0 = comportamiento clásico.
-                fixed3 rgb = AlineRimTint(worldN, _Color.rgb, _AmbientFill);
-                return fixed4(rgb, alpha);
+                return fixed4(_Color.rgb, alpha);
             }
             ENDCG
         }
