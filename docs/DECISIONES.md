@@ -20,11 +20,21 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
-### Map format V2
+### Beatmap format V3 (los `.dat` de dificultad)
 
-**Regla:** El mapa usa V2 (claves `_time`, `_type`, `_data`, `_customData`, etc. con underscore en root; sin underscore dentro de `_data`).
+**Regla:** Las dificultades (`EasyStandard.dat`, `NormalStandard.dat`, `ExpertPlusStandard.dat`) y `BPMInfo.dat` usan V3 (`"version": "3.x.x"`, claves cortas `b/x/y/c/d/t`, `customData` sin underscore). El cheatsheet V2→V3 (útil al copiar snippets de ejemplos antiguos) vive en la skill [`vivify-mapping`](../.claude/skills/vivify-mapping/SKILL.md).
 
-**Por qué:** Compatibilidad probada con Vivify 1.0.7+1.34.2 + cadena de mods de Aeroluna sobre BS 1.34.2. La docs de Heck es más extensa para V2.
+`Info.dat` no entra en esta decisión — es el manifest del mapa (registra dificultades, declara requirements, settings setter), no un beatmap, y BS 1.34.2 espera su único schema (`_version: "2.x.x"`, claves con underscore: `_difficultyBeatmapSets`, etc.).
+
+**Por qué V3:** NoodleExtensions y los ejemplos modernos del corpus (`vivify_examples/`) son todos V3. Las docs de Heck también. Mantenerse alineado con el corpus actual y la docs evita drift y fricción de traducción.
+
+---
+
+### Mapa de Beat Saber versionado en git (`beatsaber-map/*.dat`)
+
+**Regla:** Los `.dat` del mapa (`Info.dat`, `*Standard.dat`, `BPMInfo.dat`) y `bundleinfo.json` se versionan en git como cualquier otro archivo. Los binarios pesados (`*.vivify`, `*.ogg`) y backups manuales (`*.bak`, `*.v2bak`) están ignorados. El junction sigue siendo el deploy target del juego.
+
+**Por qué:** El contenido textual JSON es el contenido más importante del proyecto y la fuente de verdad de cada ataque. Versionarlo da `git diff`, `git blame`, PR review y rollback granular. Junction y git son ortogonales — git ve archivos, no junctions, así que no hay conflicto.
 
 ---
 
@@ -70,9 +80,9 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ### Settings Setter siempre presente, con starter pack mínimo
 
-**Regla:** Cada dificultad declara `_customData._requirements` (al menos `["Vivify", "Chroma"]`) y un bloque `_customData._settings` que fuerza al menos: `_playerOptions._noteJumpDurationTypeSettings: "Dynamic"` (universal en el corpus), `_environments._overrideEnvironments: false`, `_chroma._disableEnvironmentEnhancements: false`, y `_environmentEffectsFilterDefault/ExpertPlusPreset: "AllEffects"`. Para showcase cinemático añadimos `_noTextsAndHuds: true` + `_countersPlus._mainEnabled: false` + bloque `_uiTweaks` con todo a `false`.
+**Regla:** Cada dificultad declara `_customData._requirements` en `Info.dat` (al menos `["Vivify", "Chroma"]`, añadir `"Noodle Extensions"` si el .dat usa `coordinates`/`definitePosition`/etc.) y un bloque `_customData._settings` que fuerza al menos: `_playerOptions._noteJumpDurationTypeSettings: "Dynamic"` (universal en el corpus), `_environments._overrideEnvironments: false`, `_chroma._disableEnvironmentEnhancements: false`, y `_environmentEffectsFilterDefault/ExpertPlusPreset: "AllEffects"`. Para showcase cinemático añadimos `_noTextsAndHuds: true` + `_countersPlus._mainEnabled: false` + bloque `_uiTweaks` con todo a `false`.
 
-**Por qué:** Sin el bloque, el mapa puede cargarse en condiciones que rompen Vivify silenciosamente: jugador con env override global (no se ve nuestro environment), modo Static NJS (ignora nuestro NJS), Chroma env enhancements desactivado por el jugador (no se aplica nuestro `_environment[]` disable), HUD competition entre vanilla + Counters+ + UITweaks. El prompt de Settings Setter es cancelable por el jugador, pero si lo acepta zanjamos todo el ecosistema. Starter pack y justificación por línea en memoria `reference_settings_setter`.
+**Por qué:** Sin el bloque, el mapa puede cargarse en condiciones que rompen Vivify silenciosamente: jugador con env override global (no se ve nuestro environment), modo Static NJS (ignora nuestro NJS), Chroma env enhancements desactivado por el jugador (no se aplica nuestro `environment[]` disable), HUD competition entre vanilla + Counters+ + UITweaks. El prompt de Settings Setter es cancelable por el jugador, pero si lo acepta zanjamos todo el ecosistema. Starter pack completo + justificación por línea + cobertura del corpus en la skill [`vivify-mapping`](../.claude/skills/vivify-mapping/SKILL.md) sección "Settings Setter".
 
 ---
 
@@ -86,9 +96,9 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ### Junction (`mklink /J`) para `beatsaber-map/` y `beatsaber-logs/`
 
-**Regla:** Acceso al mapa real (`CustomWIPLevels/Test/`) y a los logs de BS desde el repo via Windows junctions. No se versionan.
+**Regla:** Acceso al mapa real (`CustomWIPLevels/Test/`) y a los logs de BS desde el repo via Windows junctions. El junction en sí (link a nivel filesystem) NO se versiona — cada máquina lo recrea con `mklink /J`. Lo que SÍ se versiona es el contenido textual de `beatsaber-map/` (`.dat`, `bundleinfo.json`); ver entrada "Mapa de Beat Saber versionado en git" arriba.
 
-**Por qué:** Junction = link real a nivel de filesystem (cualquier programa lo trata como carpeta normal), no requiere privilegios elevados como `mklink /D`, y un `.lnk` no funciona programáticamente.
+**Por qué junction (vs `.lnk` o `mklink /D`):** Junction = link real a nivel de filesystem (cualquier programa lo trata como carpeta normal), no requiere privilegios elevados como `mklink /D`, y un `.lnk` no funciona programáticamente.
 
 ---
 
@@ -122,11 +132,13 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
-### Snapshots del mapa con `scripts/snapshot-map.ps1` (manual + auto)
+### Snapshots del mapa con `scripts/snapshot-map.ps1` (complemento a git)
 
 **Regla:** Manual con label (`-Label X`, sin rotación) para momentos intencionales. Auto vía git pre-commit hook (`scripts/hooks/pre-commit`, ring buffer de 5, dedup por hash) para iteración. `core.hooksPath = scripts/hooks` activa el hook en clones nuevos.
 
-**Por qué:** El mapa vive fuera del repo (junction) y no se versiona. Necesitamos puntos de retorno: los etiquetados son intencionales y no rotan; el ring buffer cubre "iteré durante horas y se rompió algo". Tolerante a junction missing (no rompe el commit).
+**Por qué:** Etiquetar puntos jugables sin contaminar la historia de commits. Working backup del estado entre commits cuando se itera rápido. Tolerante a junction missing.
+
+**Pendiente revisar:** ahora que el mapa está versionado en git, posible que el sistema sea redundante. Decidir en próxima auditoría.
 
 ---
 
@@ -138,10 +150,28 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
-### Scope cut a Phase 1 + intro cosmética (2026-05-02)
+### Scope: Phase 1 + intro cosmética; deadline soft
 
-**Regla:** El mapa entregado al torneo cubre **solo Phase 1 del boss fight** + una **intro cosmética corta** (Aline aparece volando y se posiciona). Se sube como "Phase 1", formato que deja la puerta abierta a Phase 2/3 después. Las familias de ataque a prototipar quedan reducidas a las que aparecen en Phase 1.
+**Regla:** El mapa cubre Phase 1 del boss fight + una intro cosmética corta (Aline aparece volando y se posiciona). Se sube como "Phase 1", deja la puerta abierta a Phase 2/3 después. Las familias de ataque a prototipar quedan reducidas a las que aparecen en Phase 1. La fecha del torneo (2026-05-09) **es soft**: calidad > speed. La gestión "skip torneo o entregar parcial" la lleva el usuario aparte.
 
-**Por qué:** 1 semana hasta deadline (entrega 2026-05-09). Los 3 fases + intro completa originales eran irreales en el tiempo restante, sobre todo con environment custom + pelo + materiales + sistemas de ataque pendientes. Mejor entregar Phase 1 pulida con el sello de calidad alto que entregar 3 fases mediocres o no entregar. La intro cosmética da contexto narrativo y esconde el setup técnico (instanciado del prefab, fade del skybox, etc.); cosmética no jugable, no cuenta como "Phase 0".
+**Por qué:** Phase 1 pulida tiene más valor demostrativo que 3 fases mediocres. La intro cosmética da contexto narrativo y esconde el setup técnico (instanciado, fade); no jugable, no cuenta como "Phase 0".
 
 **Coste asumido:** decisiones grandes diferidas explícitamente — `Skill8` con Aline gigante (clímax fase 2), `Skill9`/`Skill11` ausentes, canción definitiva, wireado completo del state machine. Quedan en "Decisiones de diseño abiertas" de `NEXT_STEPS.md` para retomar en Phase 2/3.
+
+---
+
+### Construir sistemas de capa baja cuando hay caso de uso, no en abstracto
+
+**Regla:** Antes de meter un sistema arquitectural nuevo (sobre todo de capa baja: lighting, post-process, shader pipeline, etc.), verificar que **existe un caso de uso ACTIVO** que lo necesita. "Va a venir bien a futuro" no cuenta. Preservar el conocimiento (doc, commit reversible) pero no meter el sistema sin demanda concreta.
+
+**Excepción:** sistemas cuyo coste de retrofit es ALTO (formato de assets, estructura de bundle, shader pipeline entero) — ahí adelantarse paga porque migrar después es desproporcionado. Caso canónico en este proyecto: auto-sync de CRCs (`PostBuildSyncCRCs.cs`).
+
+**Por qué:** "Lowest layer" sigue siendo el principio correcto, pero "lowest layer" se aplica AL momento de resolver el problema, no antes de que el problema exista. Construir capacidad sin demanda = inventario muerto + tuning ongoing constante. Caso documentado: ambient lighting para Aline llegó a end-to-end funcional pero se revirtió porque sin un FX narrativo concreto cada combinación skybox+ambientMode+colores requería iterar visualmente sin payoff. Conocimiento técnico (cómo evitar el `ShadeSH9=0` de bundles Vivify) preservado en [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md).
+
+---
+
+### Idioma: docs en español, commits en inglés
+
+**Regla:** Los archivos del proyecto (código, docs, skills, comments) en **español**. Los mensajes de git **en inglés** desde 2026-04-26 inclusive. Los commits iniciales en español (`Initial commit`, `Configurar repo: ...`) se quedan como están — no traducir retroactivamente.
+
+**Por qué:** El audience de los commits es más amplia (potencialmente la comunidad internacional de Vivify cuando el repo se publique) que el de los docs in-project (notas personales del mapper). El historial de commits debe leerse como narrativa técnica coherente. Traducción de docs a inglés diferida a post-torneo.

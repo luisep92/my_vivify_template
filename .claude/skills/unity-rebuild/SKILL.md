@@ -82,3 +82,54 @@ Para iteración rápida sin resyncar CRCs cada vez, lanzar Beat Saber con flag `
 - Añadir luces con ChroMapper. Igual.
 
 Qué SÍ necesita rebuild: cualquier cambio en `VivifyTemplate/Assets/`. Prefabs, materiales, shaders, texturas, scripts.
+
+## Iterar materiales/shaders sin round-trip a BS
+
+Para iterar shaders y propiedades de material en `aline.prefab`, **NO ir directo a "Vivify > Build → relaunch BS → screenshot"**. Capturar el resultado en Unity Scene view via `mcp__unity-mcp__manage_camera screenshot capture_source=scene_view`. ~5s vs ~1min por iteración.
+
+**Receta:**
+
+1. Confirmar que la prefab está en escena: `mcp__unity-mcp__manage_scene get_hierarchy max_depth=2`. Si no está, instanciar.
+2. Posicionar Scene View con `mcp__unity-mcp__execute_code`:
+   ```csharp
+   var sv = UnityEditor.SceneView.lastActiveSceneView;
+   sv.Focus();
+   sv.pivot = new Vector3(0, 1.6f, 0);                       // y = head height
+   sv.rotation = Quaternion.LookRotation(new Vector3(0, 0, -1)); // mirar cara desde +Z
+   sv.size = 0.15f;                                           // close-up
+   sv.Repaint();
+   ```
+   `size`: ~0.15 portrait, ~0.6 body. Si el prefab tiene `transform.forward = +Z` puede mostrarse "al revés" — probar `LookRotation((0,0,1))` y `((0,0,-1))`.
+3. Screenshot: `mcp__unity-mcp__manage_camera screenshot capture_source=scene_view include_image=true max_resolution=600`. PNG inline.
+4. Iterar shader/props sin tocar BS hasta que el resultado sea bueno.
+5. Solo entonces F5 + screenshot BS para confirmar que el bundle stripping/keyword rewriting de Vivify no rompió nada.
+
+**Cuándo SÍ hace falta el round-trip BS:** validar el render final con environment + cámara fija + skybox + post-procesado. Esos son detalles de phase final, no de iteración rápida.
+
+**Caveat:** Scene view usa el render path del Editor. Pueden divergir del bundle: iluminación de escena (hay sun/sky por defecto en editor; en bundle solo lo que Vivify mande), shader keyword stripping del bundle build, post-procesado del editor.
+
+### Gotcha crítico: `manage_material set_material_shader_property` no sincroniza keywords
+
+`set_material_shader_property` setea el FLOAT del Toggle property pero **NO enable/disable el shader keyword asociado**. La sincronización float ↔ keyword del `[Toggle(NAME)]` attribute solo ocurre cuando el toggle se cambia desde el inspector de Unity, no via API. Workaround:
+
+```csharp
+mat.EnableKeyword("USE_RADIAL_FADE");
+// o
+mat.DisableKeyword("USE_RADIAL_FADE");
+UnityEditor.EditorUtility.SetDirty(mat);
+UnityEditor.AssetDatabase.SaveAssets();
+```
+
+Vía `mcp__unity-mcp__execute_code`. Si el shader tiene `#ifdef USE_RADIAL_FADE`, sin EnableKeyword el código ifdef nunca se ejecuta aunque el float esté a 1 — bug muy difícil de detectar porque el material parece configurado correcto en Inspector.
+
+## Diagnóstico: menu item missing + Console limpia = compile silenciosa rota
+
+Si un menu item de Unity (`Window > X`) no aparece tras instalar un package y la Console está completamente limpia (0 errors, 0 warnings relevantes), NO confíes en que la asamblea compiló. Comprobar: existe `<proyecto>/Library/ScriptAssemblies/` y contiene los DLLs esperados (`<package-name>.Editor.dll`, `Assembly-CSharp.dll`)? Si la carpeta no existe o está vacía, **la compilación falló silenciosamente** y los `[MenuItem]` no se registraron porque la asamblea entera no se cargó.
+
+**Causas típicas en orden de probabilidad:**
+1. **Duplicate DLL** solapando plataformas (caso canónico: package vendoriza `Newtonsoft.Json.dll` y el proyecto ya trae uno). Fix: dejar solo uno (preferir el que viva en `Plugins/` del proyecto host, no vendorizado en el package). El asmdef del package con `precompiledReferences: ["Newtonsoft.Json.dll"]` y `overrideReferences: false` recoge el que esté disponible.
+2. asmdef con `precompiledReferences` apuntando a un DLL inexistente.
+3. asmdef con `references` a otro asmdef que no existe.
+4. Paquete con APIs no soportadas en 2019.4 (puede silenciar el error a Editor.log también).
+
+`Editor.log` a veces sí tiene los `error CS`, pero a veces solo dice `[ScriptCompilation] Recompiling all scripts ... CompileScripts: 2130ms` sin más detalle. Es señal débil — usar la presencia/ausencia de DLLs en `Library/ScriptAssemblies/` como autoritativa.

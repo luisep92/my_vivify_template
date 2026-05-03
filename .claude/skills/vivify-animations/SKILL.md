@@ -116,13 +116,13 @@ Runtime: Vivify SetAnimatorProperty con id=prefab_id + properties[].id=trigger_n
 
 8. **`Aline_Anims.fbx` está gitignored**. Solo se versiona el `.meta`. Re-export desde Blender es la forma de regenerarlo — no esperes recuperarlo desde git.
 
-## Evento Vivify para disparar animaciones
+## Evento Vivify para disparar animaciones (V3)
 
 ```json
 {
-  "_time": 16,
-  "_type": "SetAnimatorProperty",
-  "_data": {
+  "b": 16,
+  "t": "SetAnimatorProperty",
+  "d": {
     "id": "alineMain",
     "properties": [
       { "id": "Skill1", "type": "Trigger", "value": true }

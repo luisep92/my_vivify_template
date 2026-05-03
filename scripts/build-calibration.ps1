@@ -1,10 +1,17 @@
-# build-calibration.ps1 — test empírico de coordenadas
-# Spawnea 5 marcadores Vivify en posiciones conocidas + 5 notas con
-# definitePosition apuntando a las mismas coords (con la conversión actual).
-# Si las notas overlap perfecto con los marcadores → conversión correcta.
-# Si descuadran → reporta delta y calibrar las constantes del helper.
+# build-calibration.ps1 — test empírico de coordenadas lane-units ↔ world-meters.
 #
-# Sobreescribe NormalStandard.dat con el test. Backup automático a NormalStandard.dat.bak
+# Spawnea 5 marcadores Vivify (esferas en world meters conocidos) + 5 notas con
+# `definitePosition` apuntando a las mismas coords (convertidas a lane units).
+# Si overlap perfecto en BS → conversión correcta. Si descuadran → ajustar las
+# constantes LANE_*_ZERO_WORLD/LANE_UNIT_M.
+#
+# Constantes calibradas (resultado validado del test, también en
+# `.claude/skills/vivify-mapping/SKILL.md` sección "Conversión lane units ↔ world meters"):
+#   LANE_UNIT_M       = 0.6
+#   LANE_X_ZERO_WORLD = -0.9
+#   LANE_Y_ZERO_WORLD =  1.0
+#
+# Sobreescribe NormalStandard.dat con el test. Backup automático a NormalStandard.dat.bak.
 
 $root = Split-Path -Parent $PSScriptRoot
 $datPath = Join-Path $root 'beatsaber-map\NormalStandard.dat'
@@ -12,8 +19,17 @@ $easyPath = Join-Path $root 'beatsaber-map\EasyStandard.dat'
 $bakPath = "${datPath}.bak"
 if (Test-Path $datPath) { Copy-Item $datPath $bakPath -Force; "Backed up current NormalStandard.dat to $bakPath" }
 
-$helperContent = Get-Content (Join-Path $PSScriptRoot 'familyA-builder.ps1') -Raw
-Invoke-Expression $helperContent
+$LANE_UNIT_M = 0.6
+$LANE_X_ZERO_WORLD = -0.9
+$LANE_Y_ZERO_WORLD = 1.0
+
+function Convert-MetersToLanes {
+    param([double]$WorldX, [double]$WorldY, [double]$WorldZ)
+    $lx = ($WorldX - $LANE_X_ZERO_WORLD) / $LANE_UNIT_M
+    $ly = ($WorldY - $LANE_Y_ZERO_WORLD) / $LANE_UNIT_M
+    $lz = $WorldZ / $LANE_UNIT_M
+    return @([Math]::Round($lx, 3), [Math]::Round($ly, 3), [Math]::Round($lz, 3))
+}
 
 function Empty-Array { return ,@() }
 
@@ -57,7 +73,7 @@ for ($i=0; $i -lt $TestPositions_m.Length; $i++) {
     # Marker stays visible after launch beat too (no destroy) so we can compare overlap
 
     # Note path: starts and stays at marker position the entire lifetime
-    $laneStart = ConvertTo-LaneUnits $pos[0] $pos[1] $pos[2]
+    $laneStart = Convert-MetersToLanes $pos[0] $pos[1] $pos[2]
     $pointDefs["calib_path_$i"] = @(
         @($laneStart[0], $laneStart[1], $laneStart[2], 0.0),
         @($laneStart[0], $laneStart[1], $laneStart[2], 1.0)
@@ -101,4 +117,4 @@ $json = $normal | ConvertTo-Json -Depth 32 -Compress
 "5 marcadores en (x={-2,-1,0,1,2}, y=1, z=4)m world."
 "Notas con definitePosition apuntando a las MISMAS coords."
 "En BS Normal: si las notas overlap perfecto con las esferas → conversion ok. Si descuadran → reporta delta y ajustamos LANE_X_ZERO_WORLD/LANE_Y_ZERO_WORLD."
-"Para restaurar Skill4 attack: copia ${bakPath} a ${datPath}, o re-run build-skill4.ps1"
+"Para restaurar el NormalStandard.dat anterior: copia ${bakPath} a ${datPath}."

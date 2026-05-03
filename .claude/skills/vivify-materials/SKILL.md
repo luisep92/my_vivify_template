@@ -167,6 +167,53 @@ return fixed4(base.rgb * shading, base.a);
 
 **Tunables (defaults razonables):** `_LightDir=(0.3, 0.7, -0.6)` (key from above-front), `_LightStrength=0.45` (visible pero no caricaturesco), `_Ambient=0.55` (shadow side ~half intensity), `_BumpScale=1.5` (matchea UE Normal/Bump Multiplier).
 
+### Ambient en bundles Vivify — usar `unity_AmbientSky/Equator/Ground`, NO `ShadeSH9`
+
+Cuando un shader custom dentro de un Vivify bundle quiere reaccionar al ambient state que setea `SetRenderingSettings.ambient*`, **NO usar `ShadeSH9(unity_SHAr/g/b)`**. Los coeficientes SH están a 0 en bundles Vivify standalone porque requieren un environment probe precomputado (`Lighting → Generate Lighting` en Unity Editor) y los bundles no llevan ese precompute.
+
+**Vía válida — uniforms directos:**
+```hlsl
+float3 sky     = unity_AmbientSky.rgb;       // Sky color (siempre poblado)
+float3 equator = unity_AmbientEquator.rgb;   // Sólo Trilight; en Flat = 0
+float3 ground  = unity_AmbientGround.rgb;    // Sólo Trilight; en Flat = 0
+```
+
+Unity los puebla per-frame desde `RenderSettings.ambientMode/ambientLight/ambientSkyColor/ambientEquatorColor/ambientGroundColor` automáticamente, sin GI baking.
+
+**Pattern para los tres modos (Skybox, Trilight, Flat) en una sola función:**
+```hlsl
+float3 SampleAmbient(float3 worldN) {
+    float upWeight    = saturate(worldN.y);
+    float downWeight  = saturate(-worldN.y);
+    float horizWeight = 1.0 - upWeight - downWeight;
+
+    float3 sky     = unity_AmbientSky.rgb;
+    float3 equator = unity_AmbientEquator.rgb;
+    float3 ground  = unity_AmbientGround.rgb;
+
+    // Flat mode: Equator + Ground vienen a 0; reusar Sky para no oscurecer
+    // lados/abajo del modelo a negro.
+    float trilightActive = step(0.001, dot(equator + ground, float3(1,1,1)));
+    equator = lerp(sky, equator, trilightActive);
+    ground  = lerp(sky, ground,  trilightActive);
+
+    return sky*upWeight + equator*horizWeight + ground*downWeight;
+}
+```
+
+`RenderSettings.ambientIntensity` también afecta — multiplica los uniforms automáticamente. No hay que multiplicarlo en shader.
+
+**Lo que NO hay en bundles Vivify** (no perder tiempo):
+- `ShadeSH9` / `unity_SHAr/g/b` (env probe SH, requiere GI baking).
+- `_LightColor0` / `_WorldSpaceLightPos0` (forward base directional light, requiere `LightMode="ForwardBase"` y una luz real en escena que BS no manda).
+- `unity_SpecCube0` (skybox reflection probe — quizás funcione, no probado).
+
+### MonoBehaviour custom NO sobrevive al stripping del bundle
+
+DynamicBone, FinalIK, Magica Cloth, JiggleBones, SpringBones — cualquier asset paid/free que dependa de **scripts en runtime** queda inerte en bundle Vivify. Vivify hace whitelist agresivo: **sí sobreviven** Materials, Shaders (con keyword rewriter), AnimationClips, AnimatorControllers, Meshes, Textures, Prefab hierarchies, Transform animations, MeshRenderer/SkinnedMeshRenderer; **no sobreviven** scripts custom (MonoBehaviour), assets paid con runtime code, shaders con compute/tessellation, plugins nativos, scripts editor.
+
+Para efectos tipo physics-on-bones (sway, jiggle, secondary motion), la única ruta viable es **AnimationClip pre-baked** que mueve los bones via `m_LocalRotation`/`m_LocalPosition` curves, looped via Animator. Sí funciona en bundle. Para deformaciones que requieran reaccionar a inputs en tiempo real (collision, wind direction): no factible en Vivify, diferir a "post-Phase-2" o aceptar como limitación.
+
 ### Gotcha: la "ORM" de Sandfall NO es una ORM standard
 
 Confirmado 2026-05-03 con `Curator_Body_OcclusionRoughnessMetallic.png`: aunque el nombre sigue la convención UE (Occlusion R, Roughness G, Metallic B packed grayscale), el contenido visual es **pseudocolor multichannel** (naranja+verde+magenta saturados, no grayscale). El R channel tiene valores ~0.5-1.0 mayoritariamente — multiplicado como AO da prácticamente identidad, no oscurece nada.

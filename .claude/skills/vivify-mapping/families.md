@@ -87,11 +87,7 @@ Las notas del parry se colocan en el `_notes` array del `.dat` con su `_time` ca
 
 **Mecánica:** Aline lanza N proyectiles que aparecen sobre/junto a ella y caen secuencialmente sobre el jugador. Cada proyectil = un parry.
 
-**Patrón implementado en Skill4 (validado 2026-05-03):** telegraph Vivify (`InstantiatePrefab` decoración) + nota BS (`colorNotes` con `track`, `definitePosition`, `dissolve`). La nota es invisible hasta el launch beat, momento en que aparece en la posición del telegraph y desciende al jugador. Receta detallada en memoria `feedback_skill4_projectile_pattern`.
-
-**Helper para construir ataques de esta familia:** `scripts/familyA-builder.ps1` expone `New-FamilyAAttack` que toma posiciones en METROS (mismas coords que Vivify) y genera todo el fragmento `.dat` (events + notes + pointDefinitions). Ejemplo runneable: `scripts/build-skill4.ps1`. Resuelve la conversión metros↔lane-units con offset del lane grid Y=0 (~1m world) que confunde la primera vez. Para Skill3, copiar `build-skill4.ps1`, cambiar el trigger del animator, N=3, radius/scale grande, NJS más baja.
-
-**Ejecutar el script:** `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-skill4.ps1`. Si execution policy bloquea, usar `& 'path/to/script'` o pedir al user `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+**Patrón pendiente de validar.** Approach que se baraja: telegraph estático (`InstantiatePrefab` de decoración + `DestroyObject` al launch) + cubo BS como proyectil real (visible desde launch via `dissolve`, trayectoria del telegraph al jugador via `definitePosition`). La conversión world meters ↔ lane units (1 lane = 0.6m, offsets calibrados) está en [`vivify-mapping`](SKILL.md). Antes de tirar código nuevo: leer Heckdocs sobre `definitePosition`/`dissolve`/`noteJumpStartBeatOffset`/`_noteJumpDurationTypeSettings: "Dynamic"` para no operar sobre suposiciones.
 
 ### Inputs requeridos
 

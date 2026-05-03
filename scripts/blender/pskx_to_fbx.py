@@ -11,6 +11,21 @@ con strand bones), el script lo preserva y exporta el FBX con MESH + ARMATURE
 para que Unity instancie SkinnedMeshRenderer. Si solo trae mesh estático, exporta
 mesh sin más.
 
+Scale UE→m:
+  - Mesh estático: pre-scale en Blender (`obj.scale = 0.01` + transform_apply) +
+    `global_scale=1.0` en el FBX exporter. `bake_space_transform=True` compensa
+    el axis flip Blender→Unity sin romper.
+  - Mesh con armature + skin weights: NO pre-scale en Blender. El scale debe
+    aplicarse a través del exporter (`global_scale=0.01` + `apply_scale_options=
+    "FBX_SCALE_ALL"`). Pre-scaling el mesh y/o el armature por separado y aplicando
+    transform doble-bakea la deformación: el mesh termina 100× pequeño en Unity
+    (vert range mm) o 100× grande (vert range decenas de m) según se aplique a
+    qué. El exporter compone bones+vertices uniformemente durante el embed, sin
+    componer scales encadenados.
+
+Tras re-import del FBX rigged en Unity, el material del SMR se resetea al default
+del FBX. Reasignar el material custom (vía execute_code o manualmente).
+
 Requires the io_scene_psk_psa addon (Befzz / DarklightGames). Same one used
 by import_all_psa.py for animations.
 """

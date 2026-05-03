@@ -97,6 +97,8 @@
 | `scripts/blender/export_anims_fbx.py` | Export armature + actions a FBX para Unity | Sí |
 | `docs/map-snapshots/.gitkeep` | Marcador de carpeta | Sí |
 | `docs/map-snapshots/*/` | Snapshots de los `.dat` antes de cambios grandes | **No** (ignorado por carpeta) |
+| `beatsaber-map/*.dat`, `bundleinfo.json` | Mapa: dificultades V3, manifest V2, BPM, info de bundle | **Sí** (desde 2026-05-04, commit `ef5bb7d`) |
+| `beatsaber-map/*.vivify`, `*.ogg`, `*.bak`, `*.v2bak` | Bundles compilados, audio, backups manuales | **No** |
 | `VivifyTemplate/Assets/**` (sin binarios) | Prefabs, scripts, materiales (`.mat`), shaders, `.meta` | Sí |
 | `VivifyTemplate/Assets/**/*.png/.fbx/.psa/...` | Texturas, modelos 3D, animaciones binarias | **No** |
 | `VivifyTemplate/Library/`, `Temp/`, `Logs/`, `UserSettings/` | Cache de Unity | **No** (cubierto por `VivifyTemplate/.gitignore`) |
@@ -114,7 +116,7 @@
 
 ### Junctions a la instalación de Beat Saber
 
-Dos junctions de Windows (`mklink /J`) — ninguno versionado, hay que recrearlos a mano por máquina.
+Dos junctions de Windows (`mklink /J`) — el **link en sí** no se versiona (cada máquina lo crea), pero el **contenido del mapa** sí (los `.dat` y `bundleinfo.json` son fuente de verdad versionada en git desde commit `ef5bb7d`, 2026-05-04). Logs no se versionan.
 
 #### `beatsaber-map/` → `CustomWIPLevels\Test\`
 
@@ -122,7 +124,7 @@ Dos junctions de Windows (`mklink /J`) — ninguno versionado, hay que recrearlo
 mklink /J beatsaber-map "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\CustomWIPLevels\Test"
 ```
 
-Permite leer `Info.dat`, `ExpertPlusStandard.dat`, `BPMInfo.dat`, `bundleinfo.json` y `bundle*.vivify` con un path relativo desde el repo.
+Permite leer `Info.dat`, `*Standard.dat`, `BPMInfo.dat`, `bundleinfo.json` y `bundle*.vivify` con un path relativo desde el repo. Tras crear el junction en una máquina nueva, los `.dat` versionados ya están en git — solo faltan los binarios pesados (`*.vivify` se generan con F5/Build, `*.ogg` se copia manual una vez).
 
 #### `beatsaber-logs/` → `Beat Saber\Logs\`
 

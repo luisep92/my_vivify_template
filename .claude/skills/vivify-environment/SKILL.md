@@ -22,25 +22,23 @@ Setup visual del entorno donde Aline pelea: skybox, environment del mapa, ilumin
    - `_Exposure` = 1.0 inicial
    - `_Rotation` = 0 inicial; iterar para encarar el "punto interesante" del sky al jugador (player mira +Z)
 4. **Bundlear el material** asignando `assetBundleName` igual al del prefab principal (ej: `aline_bundle`). La textura se arrastra como dependencia automáticamente — NO etiquetarla aparte. Verificar tras F5 que el bundle contiene tanto el `.mat` como la textura (`AssetBundle.LoadFromFile(...).GetAllAssetNames()` desde Editor).
-5. **Eventos en `.dat`** — DOS, no uno (ver gotcha abajo):
+5. **Eventos en `.dat` (V3)** — DOS, no uno (ver gotcha abajo):
 
 ```json
 {
-  "_time": 0,
-  "_type": "SetRenderingSettings",
-  "_data": {
+  "b": 0,
+  "t": "SetRenderingSettings",
+  "d": {
     "renderSettings": {
       "skybox": "assets/aline/materials/m_skybox_e33.mat"
     }
   }
 },
 {
-  "_time": 0,
-  "_type": "SetCameraProperty",
-  "_data": {
-    "properties": {
-      "clearFlags": "Skybox"
-    }
+  "b": 0,
+  "t": "SetCameraProperty",
+  "d": {
+    "properties": { "clearFlags": "Skybox" }
   }
 }
 ```
@@ -67,91 +65,47 @@ Si necesitas tunear el material muchas veces:
 
 ## Disable BS environment
 
-Aunque cambies `_environmentName` a `DefaultEnvironment` (el que menos ruido mete, ver `DECISIONES.md`), su geometría y luces siguen renderizando por encima de tu escenario custom. Para apagarla, comandos Chroma en `_customData._environment[]` del `.dat` (V2) o `customData.environment[]` (V3) — ver gotcha V2/V3 abajo.
+Aunque cambies `_environmentName` a `DefaultEnvironment` (el que menos ruido mete, ver `DECISIONES.md`), su geometría y luces siguen renderizando por encima de tu escenario custom. Para apagarla, comandos Chroma en `customData.environment[]` del `.dat`.
 
-### Receta (DefaultEnvironment, V2)
+### Receta (DefaultEnvironment, V3)
 
 ```json
-"_customData": {
-  "_environment": [
-    { "_id": "Environment|GameCore", "_lookupMethod": "Regex", "_position": [0, -69420, 0] },
-    { "_id": "DustPS",      "_lookupMethod": "Contains", "_active": false },
-    { "_id": "PlayersPlace", "_lookupMethod": "Contains", "_active": false }
+"customData": {
+  "environment": [
+    { "id": "Environment|GameCore", "lookupMethod": "Regex", "position": [0, -69420, 0] },
+    { "id": "DustPS",      "lookupMethod": "Contains", "active": false },
+    { "id": "PlayersPlace", "lookupMethod": "Contains", "active": false }
   ]
 }
 ```
 
 Tres comandos, no uno:
 1. **Yeet `Environment|GameCore`** al -69420 — mueve toda la geometría/luces fuera del frustum.
-2. **Apagar `DustPS`** — partículas no se mueven con `_position` (sistema de partículas con coordenadas locales propias), van con `_active: false`.
+2. **Apagar `DustPS`** — partículas no se mueven con `position` (sistema de partículas con coordenadas locales propias), van con `active: false`.
 3. **Apagar `PlayersPlace`** — la baldosa bajo los pies del jugador. Si quieres que pise tu propio suelo, fuera.
 
-### Por qué yeet (-69420) en vez de `_active: false`
+### Por qué yeet (-69420) en vez de `active: false`
 
-Algunos GameObjects del environment tienen scripts del juego que los **reactivan** (`OnEnable` de managers, scene-load callbacks). Un GameObject yeeteado es invisible al juego: ningún script chequea "estoy lejos, vuelvo". Más robusto que `_active: false` para la geometría base. El trade es CPU mínimo (animators/particles tickeando en el limbo) — irrelevante para una sola canción. Para partículas usar `_active: false` es OK (no suelen reactivarse y son baratas de matar).
+Algunos GameObjects del environment tienen scripts del juego que los **reactivan** (`OnEnable` de managers, scene-load callbacks). Un GameObject yeeteado es invisible al juego: ningún script chequea "estoy lejos, vuelvo". Más robusto que `active: false` para la geometría base. El trade es CPU mínimo (animators/particles tickeando en el limbo) — irrelevante para una sola canción. Para partículas usar `active: false` es OK (no suelen reactivarse y son baratas de matar).
 
 Pattern derivado de `vivify_examples/43a24 (End Times - Chaimzy)` — DefaultEnvironment + Vivify, mapa publicado y jugable.
-
-### Gotcha V2/V3: el array name también lleva underscore en V2
-
-Heckdocs documenta SOLO V3. El array se llama `customData.environment` (sin underscore) con keys `id`/`lookupMethod`/`active` (sin underscore).
-
-En V2 **TODO lleva underscore**, incluido el nombre del array y todas las keys: `_customData._environment[]` con `_id`/`_lookupMethod`/`_active`/`_position`. Mezclar (array sin underscore, keys con underscore) hace que Chroma lo ignore **silenciosamente** — sin warning en consola, el env sigue visible y pierdes una iteración debugueando lo que no es. Confirmado 2026-05-02.
-
-Ver memoria `feedback_v2_v3_syntax` para mapeo completo.
 
 ### Diagnóstico cuando el environment sigue visible
 
 | Síntoma | Causa probable | Fix |
 |---|---|---|
-| Cambios a `_environment[]` no hacen nada, sin error | Sintaxis V2/V3 mezclada | Asegurar `_environment` (no `environment`) + claves con underscore |
+| Cambios a `environment[]` no hacen nada, sin error | El array está fuera de `customData` o claves mal escritas | Asegurar path `customData.environment[]` con `id`/`lookupMethod`/`active` |
 | Algunos GameObjects desaparecen pero otros no | El regex no captura todos | Ampliar regex; loguear con `PrintEnvironmentEnhancementDebug: true` en `Chroma.json` |
 | Env desaparece en local pero algunos jugadores lo ven raro | Tienen un environment override global (BillieEnvironment, etc.) | Forzar con Settings Setter `_environments._overrideEnvironments: false` |
-| Geometría apagada con `_active:false` se reactiva sola | Script del juego la reactiva | Yeetear con `_position: [0,-69420,0]` en lugar de `_active: false` |
+| Geometría apagada con `active:false` se reactiva sola | Script del juego la reactiva | Yeetear con `position: [0,-69420,0]` en lugar de `active: false` |
 
-## Settings Setter (HUD off, mod requirements, prompt al jugador)
+## Settings Setter
 
-Heck implementa el "Settings Setter": al cargar el mapa, BS muestra un dialog al jugador con los settings que el mapa recomienda aplicar. Si acepta, los cambia para esa sesión y los restaura al salir. Vive en `Info.dat._difficultyBeatmaps[]._customData`.
+Cubierto en la skill [`vivify-mapping`](../vivify-mapping/SKILL.md) sección "Settings Setter". Vive en `Info.dat._difficultyBeatmaps[]._customData` (V2 schema porque es Info.dat). Apaga HUD vanilla, fuerza Dynamic NJS, etc.
 
-### Starter pack para mapa Vivify (V2, derivado de scan a 10 mapas del corpus)
+## Ambient lighting
 
-```json
-"_customData": {
-  "_requirements": ["Vivify", "Chroma"],
-  "_settings": {
-    "_playerOptions": {
-      "_noteJumpDurationTypeSettings": "Dynamic",
-      "_environmentEffectsFilterDefaultPreset": "AllEffects",
-      "_environmentEffectsFilterExpertPlusPreset": "AllEffects",
-      "_leftHanded": false
-    },
-    "_environments": { "_overrideEnvironments": false },
-    "_chroma": {
-      "_disableEnvironmentEnhancements": false,
-      "_disableChromaEvents": false
-    }
-  }
-}
-```
-
-Justificación por línea: ver memoria `reference_settings_setter`.
-
-**Settings adicionales por necesidad:**
-- `_playerOptions._noTextsAndHuds: true` — apaga HUD vanilla (combo, score, multiplier, energy, miss text). Para mapa cinemático tipo showcase, SÍ. Confirmado funciona.
-- `_countersPlus._mainEnabled: false` — apaga el HUD del mod Counters+ (HUD independiente del vanilla). Necesario si pones `_noTextsAndHuds: true` y quieres consistencia.
-- `_uiTweaks._{multiplier,energy,combo,position,progress}Enabled: false` — apaga el HUD del mod UITweaks. Misma razón. Heck salta silenciosamente si el mod no está instalado, así que es seguro mandar bloque aunque no estés seguro.
-
-**Requirements vs Suggestions:**
-- `_requirements`: hard — sin el mod, BS no carga el mapa.
-- `_suggestions`: soft — recomendado pero opcional.
-
-### Gotcha: la plataforma del jugador NO es HUD
-
-`PlayersPlace` (la baldosa bajo los pies) es GameObject del environment, no HUD. `_noTextsAndHuds` NO la quita — hay que apagarla con `_environment[]` (ver receta arriba).
-
-## Ambient lighting — TODO
-
-(Pendiente. Pattern: `SetRenderingSettings` con `ambientLight` / `ambientIntensity` / `ambientMode`. Se documenta cuando lo implementemos.)
+Cuando se necesite (Phase 2+), evento `SetRenderingSettings` con `ambientMode` / `ambientLight` / `ambientSkyColor` / `ambientEquatorColor` / `ambientGroundColor`. Para que un shader custom dentro del bundle Vivify reaccione al ambient, usar `unity_AmbientSky/Equator/Ground` directamente, NO `ShadeSH9` — detalle en [`vivify-materials`](../vivify-materials/SKILL.md) sección "Ambient en bundles Vivify".
 
 ## Instanciar escenario custom
 
@@ -273,6 +227,27 @@ Lo único que NO controlas desde el mapa son HUDs de mods de overlay completamen
 
 - Eventos Vivify: [`docs/heckdocs-main/docs/vivify/events.md`](../../../docs/heckdocs-main/docs/vivify/events.md) — secciones `SetRenderingSettings`, `SetCameraProperty`, `Blit`, `CreateCamera`, `InstantiatePrefab`.
 - Comandos Chroma del environment: [`docs/heckdocs-main/docs/environment/environment.md`](../../../docs/heckdocs-main/docs/environment/environment.md).
-- Skill `vivify-mapping` para edición general de `.dat` y validación de paths.
-- Memory `feedback_skybox_clearflags` para el gotcha cross-proyecto.
-- Memory `project_sandfall_hunt_pattern` para metodología de localizar el asset E33 correcto.
+- Skill [`vivify-mapping`](../vivify-mapping/SKILL.md) para edición general de `.dat` y validación de paths.
+
+## Metodología: localizar el asset E33 real (vs marketplace pack)
+
+Sandfall agrupa muchos Unreal Marketplace asset packs (`SkyboxPack`, `Real_Ivy_Pack`, `AdvancedLocomotionV4`, `FabricCollection`, etc.) en su build. Encontrar "una textura que se vea bien" no significa que sea la real usada por la escena objetivo — los devs los compraron como librerías. Para fidelidad, rastrear desde el LEVEL hacia atrás, no desde los assets hacia adelante.
+
+**Cadena de lookups con `mcp__fmodel__*`:**
+
+1. **Identificar el level objetivo** — `Sandfall/Content/Levels/<Zone>/<SubLevel>/Level_*.json`. Nombres a veces crípticos (`Monolith_Interior_PaintressGrandFinale_Main` = pelea jugable, `*_PaintressIntro` = cinemática previa). Si dudas, grep por nombres de personaje/skill en `GameActions/`.
+2. **Grep en el level** por el tipo de objeto buscado: skybox → `BP_SkyBox`, `SM_Skybox`, `[Ss]kybox`. Environment mesh → `BP_Monolith`, `SM_Floor`, etc.
+3. **Encontrar el actor blueprint y el StaticMeshComponent**. El actor (`BP_*_C`) referencia el componente. El componente tiene `OverrideMaterials` con la `MI_*` real.
+4. **Leer el `MI_*.json`** con `fmodel_inspect_material` — vive en `Content/Materials/<Folder>/`. Lista `Parent`, `TextureParameterValues` (textura concreta), `ScalarParameterValues`, `VectorParameterValues`.
+5. **La textura** vive en `<Folder>/Textures/...`; export con `fmodel_export_texture`.
+
+**Levels vs marketplace packs:**
+- Marketplace: `SkyboxPack*`, `*Collection*`, `Advanced*`, `Procedural*` — librerías compradas. Las texturas pueden ser referenciadas desde MIs reales del juego, pero el MI propio y el shader compuesto siempre viven en `Content/Materials/`.
+- Sandfall-internas: `Content/Materials/`, `Content/Characters/Enemies/<Boss>/`, `Content/Levels/`, `Content/Effect/`. Aquí están los MIs y las decisiones reales.
+
+**Filesystem gotcha:** FModel a veces muestra carpetas con casing distinto (`Skies` y `SKIES` en el mismo nivel). Windows colapsa case y al exportar las dos a `Output/` una sobreescribe la otra. Si el resultado parece corto, comprobar hermanas case-distinta no exportadas.
+
+**Workflow eficiente (reduce ping-pong con FModel):**
+1. `fmodel_export_raw` sobre carpetas top-level relevantes — kilobytes, contienen metadata sin texturas pesadas.
+2. Grep + Read los JSON exportados para encontrar el asset objetivo.
+3. Solo entonces `fmodel_export_texture`/`fmodel_export_mesh` de los binarios específicos.

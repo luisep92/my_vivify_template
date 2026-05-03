@@ -1,10 +1,21 @@
 # Aline Boss Fight — instrucciones para Claude Code
 
+Este archivo es **router**: pointers a la fuente de verdad de cada cosa, no contenido técnico. Si añades una regla técnica aquí, terminará contradiciendo la doc autoritativa cuando esa cambie. Cualquier hecho técnico vive en EXACTAMENTE un sitio (skill o doc dedicado), CLAUDE.md solo enlaza.
+
 ## Producto
 
 Mapa de Beat Saber con [Vivify](https://github.com/Aeroluna/Vivify): boss fight contra **Aline (Curatress)** del juego *Expedition 33*. Custom prefab 3D animado en escena, narrativa por fases, mapa jugable con mods de Aeroluna sobre Beat Saber 1.34.2.
 
-Los detalles creativos viven en [docs/PRODUCTO.md](docs/PRODUCTO.md). El stack técnico y el pipeline en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
+| Tema | Doc |
+|---|---|
+| Concepto, narrativa, criterios de éxito | [docs/PRODUCTO.md](docs/PRODUCTO.md) |
+| Pipeline técnico, stack, paths, junctions | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) |
+| Estado actual y próximos pasos | [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) |
+| Decisiones grandes con su porqué | [docs/DECISIONES.md](docs/DECISIONES.md) |
+| Versiones exactas de mods | [BS_Dependencies.txt](BS_Dependencies.txt) |
+| Notas vivas / scratchpad | [docs/my-notes.md](docs/my-notes.md) |
+
+**Empezar cada sesión leyendo `docs/NEXT_STEPS.md`.**
 
 ---
 
@@ -12,70 +23,66 @@ Los detalles creativos viven en [docs/PRODUCTO.md](docs/PRODUCTO.md). El stack t
 
 Mapper de Beat Saber con experiencia técnica. Primer proyecto serio con Vivify.
 
-Trato de **colega senior**, no de tutorial. Propuestas directas, justificación breve de las decisiones, esperar a que pregunte si algo no le cuadra. No explicar conceptos básicos salvo que sean específicos de Vivify/Heck/CustomJSONData.
-
-Idioma de la documentación: español. **Idioma de los commits: inglés** (a partir de 2026-04-26 — los iniciales en español se quedan como están). Cuando se abra el repo, los commits cuentan la historia técnica y debe leerse en inglés.
+Trato de **colega senior**, no de tutorial. Propuestas directas, justificación breve, esperar a que pregunte si algo no le cuadra. No explicar conceptos básicos salvo que sean específicos de Vivify/Heck/CustomJSONData. El usuario verifica fuera de la conversación (Unity, Beat Saber) y reporta — confiar en su validación.
 
 ---
 
-## Dónde vive cada cosa
+## Estilo de colaboración
 
-| Qué | Dónde | Notas |
-|---|---|---|
-| Concepto creativo, narrativa, criterios de éxito | [docs/PRODUCTO.md](docs/PRODUCTO.md) | El "qué" |
-| Pipeline técnico, stack, paths | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | El "cómo" |
-| Estado actual, changelog, próximos pasos | [docs/NEXT_STEPS.md](docs/NEXT_STEPS.md) | Empezar a leer aquí cada sesión |
-| Decisiones grandes con su porqué | [docs/DECISIONES.md](docs/DECISIONES.md) | ADR ligero |
-| Notas vivas, scratchpad | [docs/my-notes.md](docs/my-notes.md) | Lo que aún no encaja en otro sitio |
-| Snapshots manuales del mapa | [docs/map-snapshots/](docs/map-snapshots/) | Generados con `scripts/snapshot-map.ps1` |
-| Mapa Beat Saber (junction al juego) | `beatsaber-map/` | NO se versiona. Junction local. |
-| Logs de Beat Saber (junction) | `beatsaber-logs/` | NO se versiona. `_latest.log` para la sesión actual; `*.log.gz` para sesiones anteriores. |
-| Proyecto Unity (prefabs, materiales, shaders) | `VivifyTemplate/` | Su propio `.gitignore` cubre Library/Temp/etc |
-| Skills de Claude Code | `.claude/skills/` | vivify-mapping, unity-rebuild, vivify-materials, vivify-animations, remapper-scripting |
-| Dependencias del juego | [BS_Dependencies.txt](BS_Dependencies.txt) | Versiones de mods exactas |
+Reglas de comportamiento que el usuario ha pedido explícitamente. Mantener entre sesiones.
 
-Fuera del repo (en `d:\vivify_repo\`):
+### Aprender de los obstáculos pequeños — no sanitizar el debugging
 
-- `FModel.exe` — explorador GUI de assets UE. Útil para browsing visual, pero a partir de 2026-05-03 el flujo programático (search/read/inspect/export) va por el MCP de abajo, no por la GUI.
-- `fmodel-mcp/` — wrapper canónico para inspeccionar/exportar assets de E33. CLI .NET sobre CUE4Parse + MCP server Python. Tools `mcp__fmodel__fmodel_*` disponibles en Claude Code (search, read, inspect_material, export_texture/mesh/raw, list_exports, status). Repo en [github.com/luisep92/fmodel-mcp](https://github.com/luisep92/fmodel-mcp).
-- `Output/Exports/Sandfall/` — destino de exports tanto de la GUI como del MCP. Es **scratch**: lo que se confirma se mueve a `my_vivify_template/Sandfall/` (meshes) o directo a `VivifyTemplate/Assets/<area>/Textures/` (PNGs).
-- `ReMapper-master/` — tool Deno/TypeScript para scripting del mapa.
-- `unity-mcp/` — fork minimal del MCP for Unity portado a Unity 2019.4 (repo `luisep92/unity_vivify_mcp`). Wireado a este proyecto via `Packages/manifest.json`. Ver [unity-mcp/README.md](../unity-mcp/README.md) para el qué/cómo del fork.
+El usuario valora pasar por "piedras pequeñas" (dead ends, fallos puntuales, por qué algo no funciona y qué revela del stack) por encima de un camino limpio que esconde el journey. Lo usa para construir conocimiento intrínseco. *Sí* aplica a piedras pequeñas; NO aplica a riesgo real de pérdida de trabajo o yak-shaves de horas que probablemente no rindan.
 
----
+- Cuando un tool/script falla: walk through el diagnóstico explícitamente, no retry silente ni "sweep under the rug".
+- Framing: "Encontrado: X falla porque Y". No disculparse por encontrarse un obstáculo.
+- Para movimientos arriesgados (Library/, caches, manifest.json): declarar blast radius arriba y confirmar — pero no evitar la diagnosis solo porque puede fallar.
 
-## Reglas no negociables
+### Aislar validaciones — un sistema nuevo a la vez
 
-1. **Asset paths siempre en lowercase** dentro de eventos del mapa. `assets/aline/prefabs/aline.prefab`, no `Assets/Aline/...`. Match exacto con `bundleinfo.json`.
-2. **Map format V2.** Todas las claves del root con underscore (`_time`, `_type`, `_data`, `_customEvents`). Dentro de `_data` SIN underscore (`asset`, `id`, `track`, `position`).
-3. **Sync de CRCs automático tras F5** vía Editor watcher (`Assets/Aline/Editor/PostBuildSyncCRCs.cs` → `scripts/sync-crcs.ps1`). Sin pasos manuales si Unity está abierto. Manual fallback: `.\scripts\sync-crcs.ps1`. La skill `unity-rebuild` cubre el flujo.
-4. **No commitear** archivos pesados. Lista en `.gitignore`: `*.vivify`, `*.ogg`, modelos 3D (`.fbx`, `.blend`, `.psa`...), texturas binarias (`.png`, `.tga`, `.exr`...). Los `.meta` de Unity sí se versionan.
-5. **Snapshots del mapa**:
-   - Manual con label antes de cambios grandes: `.\scripts\snapshot-map.ps1 -Label "antes-de-X"`. Persiste hasta que se borre.
-   - Automático: el git pre-commit hook llama a `snapshot-map.ps1 -Auto`. Ring buffer de 5, dedup por hash (no duplica si los `.dat` no cambiaron). Configurado vía `core.hooksPath = scripts/hooks`.
-6. **Mods de Aeroluna instalados a mano desde GitHub.** Mod Assistant trae versiones obsoletas que rompen dependencias.
+Cuando un prototipo introduce N sistemas nuevos (animaciones + VFX + event timing + parry + ...), partir en pasos discretos antes de combinarlos. Frases como "validamos X durante Y" son la failure pattern — eso compone X y Y, y un fallo no se puede pinpointar. Si un paso ejercita más de una cosa nueva, proponer sub-pasos explícitos.
+
+### Bias hacia construir tooling — los estimates manuales son optimistas
+
+Mis estimates de fricción manual son sistemáticamente bajos. Casos pasados (unity-mcp, fmodel-mcp): "5 minutos por consulta no merece la pena" → 2 días reales perdidos antes de construir el wrapper.
+
+- Si vamos a hacer >3 consultas a una herramienta externa que no controlamos (FModel GUI, Blender GUI, etc.) en el horizonte cercano, proponer construir el wrapper antes de la 4ª consulta.
+- No usar el deadline como argumento universal contra tooling — preguntar al usuario; el tiempo del usuario importa más que mi estimate de fricción.
+
+### Idioma
+
+- Conversación y archivos del proyecto (docs, código, comments): **español**.
+- Mensajes de git desde 2026-04-26: **inglés**. Los iniciales en español se quedan como están. Detalle en [docs/DECISIONES.md → "Idioma"](docs/DECISIONES.md).
 
 ---
 
-## Pipeline de un cambio típico
+## Reglas no negociables del repo
 
-```
-Editar prefab/material/shader en Unity
-  → F5 (build uncompressed) o Vivify > Build > Build Configuration Window
-  → Unity escribe bundles + bundleinfo.json en beatsaber-map/
-  → Leer bundleinfo.json y copiar bundleCRCs._windows2021 a Info.dat._customData._assetBundle._windows2021
-  → Probar en Beat Saber (relanzar mapa)
-  → Si va a producción: snapshot-map.ps1 + commit
-```
+Solo reglas puras (sin versiones que puedan drift). Para hechos técnicos con versión (formato del mapa, schema, conversión de unidades, etc.) ver el doc o skill autoritativos enlazados desde aquí.
 
-Los `.dat` del mapa (notas, eventos, custom events) se editan directamente, sin rebuild de Unity. Solo necesitan rebuild los assets de `VivifyTemplate/Assets/`.
+1. **Asset paths en lowercase** dentro de eventos del mapa. `assets/aline/prefabs/aline.prefab`, no `Assets/Aline/...`. Match exacto con `bundleinfo.json`.
+2. **No commitear archivos pesados.** Lista exacta en `.gitignore` (`*.vivify`, `*.ogg`, modelos 3D, texturas binarias). Los `.meta` de Unity sí. El mapa (`beatsaber-map/*.dat`, `bundleinfo.json`) **sí se versiona** — los binarios no.
+3. **Mods de Aeroluna instalados a mano** desde GitHub. Mod Assistant a veces sirve versiones obsoletas que rompen dependencias. Versiones en [BS_Dependencies.txt](BS_Dependencies.txt).
+4. **Cualquier afirmación técnica nueva en CLAUDE.md → reescribir como pointer.** Si una regla técnica empieza a vivir aquí, en cuanto cambie habrá drift. Mover la afirmación a su doc/skill autoritativo y dejar solo el pointer.
 
 ---
 
 ## Skills disponibles
 
-- **vivify-mapping** — editar `.dat`, V2 syntax, eventos Vivify, CRC sync, debugging de prefabs que no cargan.
-- **unity-rebuild** — flujo F5 / Build Configuration Window, sync de CRCs, errores de build.
-- **vivify-materials** — receta unlit-cutout-double-sided, mapping FModel→Unity de materiales, troubleshooting magenta/missing/missing-shader.
-- **vivify-animations** — pipeline `.psa` → Blender → FBX → Unity Animator → Vivify `SetAnimatorProperty`. Scripts de import/export en `scripts/blender/`, Editor scripts en `Assets/Aline/Editor/`. Gotchas conocidos del export Blender→FBX.
-- **remapper-scripting** — `TO BE DONE`. Se rellena cuando empecemos a usar ReMapper.
+Skills viven en `.claude/skills/<name>/SKILL.md` y son la **fuente autoritativa** de los flujos operativos. Si una skill se contradice con esta lista, prevalece la skill (esta lista es solo índice).
+
+- [`vivify-mapping`](.claude/skills/vivify-mapping/SKILL.md) — editar `.dat` (V3 beatmap + V2 Info), eventos Vivify, CRC sync, families.md (catálogo de ataques), settings setter, debugging de prefabs.
+- [`unity-rebuild`](.claude/skills/unity-rebuild/SKILL.md) — F5 / Build Configuration Window, sync de CRCs, errores de build, gotchas de Unity 2019.4.
+- [`vivify-materials`](.claude/skills/vivify-materials/SKILL.md) — shaders custom para bundles Vivify, mapping FModel→Unity, ambient sin SH, troubleshooting magenta/missing.
+- [`vivify-animations`](.claude/skills/vivify-animations/SKILL.md) — pipeline `.psa` → Blender → FBX → Unity Animator → Vivify. Scripts en `scripts/blender/` + Editor scripts en `Assets/Aline/Editor/`.
+- [`vivify-environment`](.claude/skills/vivify-environment/SKILL.md) — skybox, disable BS env, escenario custom, decoración 3D, FBX axis flip.
+- [`remapper-scripting`](.claude/skills/remapper-scripting/SKILL.md) — esqueleto. Se rellena cuando empecemos a usar ReMapper.
+
+## Tools fuera del repo
+
+Viven en `d:\vivify_repo\` (carpeta contenedora). Detalle en [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) sección "Fuera del repo".
+
+- `fmodel-mcp/` — wrapper canónico para inspeccionar/exportar assets de E33. CLI .NET sobre CUE4Parse + MCP server Python. Tools `mcp__fmodel__fmodel_*` en Claude Code. Repo público en [github.com/luisep92/fmodel-mcp](https://github.com/luisep92/fmodel-mcp).
+- `unity-mcp/` — fork minimal del MCP for Unity portado a Unity 2019.4. Tools `mcp__unity-mcp__*` en Claude. Wireado vía `Packages/manifest.json`. Detalle en [unity-mcp/README.md](../unity-mcp/README.md).
+- `FModel.exe`, `ReMapper-master/` — fallback GUI / scripting Deno (este último aún sin usar).
