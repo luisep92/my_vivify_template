@@ -61,14 +61,4 @@ float3 AlineRimTint(float3 worldN, float3 base, float fillStrength)
     return base + sh;
 }
 
-// Luminance flat del ambient — útil para shaders sin normal (Face, etc) que
-// quieren modular alpha/intensity con la "cantidad de luz" del entorno sin
-// el blend Trilight direccional. Devuelve [0..varias unidades].
-float AlineAmbientLuma()
-{
-    // unity_AmbientSky es el componente "principal" del ambient (poblado en
-    // los tres modos: Skybox, Trilight, Flat). Luma BT.601.
-    return dot(unity_AmbientSky.rgb, float3(0.299, 0.587, 0.114));
-}
-
 #endif // ALINE_LIGHTING_INCLUDED

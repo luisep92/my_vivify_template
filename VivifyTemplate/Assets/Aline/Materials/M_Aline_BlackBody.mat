@@ -30,7 +30,6 @@ Material:
     m_Floats:
     - _Alpha: 1
     - _AlphaCutoff: 0.5
-    - _AmbientFill: 0.4
     - _FresnelExponent: 3
     - _RimBoost: 1.5
     - _UseOpacityMask: 0

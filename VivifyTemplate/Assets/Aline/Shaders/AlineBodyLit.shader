@@ -25,10 +25,9 @@ Shader "Aline/BodyLit"
         _OcclusionMap ("ORM (R=AO)", 2D) = "white" {}
         _OcclusionStrength ("AO Strength", Range(0, 1)) = 1.0
 
-        // Iluminación: ambientFloor pone el suelo (0 = lights-out es lights-out
-        // de verdad, sin red de seguridad). ambientStrength escala el ambient
-        // antes del shading.
-        _AmbientFloor ("Ambient Floor", Range(0, 2)) = 0.0
+        // Iluminación: ambientFloor evita negro absoluto cuando SH=0;
+        // ambientStrength escala la SH ambient antes del shading.
+        _AmbientFloor ("Ambient Floor", Range(0, 2)) = 0.6
         _AmbientStrength ("Ambient Strength", Range(0, 4)) = 1.0
     }
     SubShader

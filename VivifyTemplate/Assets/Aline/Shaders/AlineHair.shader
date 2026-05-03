@@ -5,14 +5,9 @@
 // para el alpha test. La mask es separada del color (no es el alpha del PNG)
 // porque el ripeo de FModel da la mask como textura R/G/B grayscale aparte.
 //
-// Usa Cull Off porque las cards son planos sin volumen — la otra cara debe
-// verse o se nota el "hueco". Sin keywords (Toggle no sincroniza por API).
-//
-// Ambient: las cards no tienen normales útiles para el trilight gradient,
-// así que sampleamos `unity_AmbientSky.rgb` flat. Mismos parámetros
-// `_AmbientFloor`/`_AmbientStrength` que el resto de shaders Aline para
-// mantener alineación de comportamiento — un fade out global apaga el
-// pelo igual que apaga la skin.
+// Se usa Cull Off porque las cards son planos sin volumen — la otra cara
+// debe verse o se nota el "hueco". Sin keywords (para evitar el lío del
+// Toggle no-sync via API que sufrimos con AlineFace).
 //
 // Mapping desde MaterialInstanceConstant (UE → MI_Hair_Aline → padre
 // MI_Hair_HighlightsVariation):
@@ -27,8 +22,7 @@ Shader "Aline/Hair"
         _AlphaMap ("Alpha Mask", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
         _AlphaCutoff ("Alpha Cutoff", Range(0,1)) = 0.333
-        _AmbientFloor ("Ambient Floor", Range(0, 2)) = 0.0
-        _AmbientStrength ("Ambient Strength", Range(0, 4)) = 1.0
+        _Brightness ("Brightness (UE: Brightness)", Range(0, 2)) = 0.6
     }
     SubShader
     {
@@ -46,7 +40,6 @@ Shader "Aline/Hair"
             #pragma fragment frag
 
             #include "UnityCG.cginc"
-            #include "AlineLighting.cginc"
 
             struct appdata
             {
@@ -66,8 +59,7 @@ Shader "Aline/Hair"
             sampler2D _AlphaMap;
             fixed4 _Color;
             float _AlphaCutoff;
-            float _AmbientFloor;
-            float _AmbientStrength;
+            float _Brightness;
 
             v2f vert (appdata v)
             {
@@ -82,16 +74,14 @@ Shader "Aline/Hair"
 
             fixed4 frag (v2f i) : SV_Target
             {
+                // Mask separada del color — sample y clip por R.
                 fixed alpha = tex2D(_AlphaMap, i.uv).r;
                 clip(alpha - _AlphaCutoff);
 
-                fixed3 base = tex2D(_MainTex, i.uv).rgb * _Color.rgb;
-                // Ambient flat (sin normal — cards no tienen orientación útil).
-                float3 ambient = unity_AmbientSky.rgb * _AmbientStrength;
-                fixed3 color = base * (_AmbientFloor + ambient);
+                fixed3 color = tex2D(_MainTex, i.uv).rgb * _Color.rgb * _Brightness;
                 return fixed4(color, alpha);
             }
-        ENDCG
+            ENDCG
         }
     }
 }
