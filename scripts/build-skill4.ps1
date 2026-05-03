@@ -19,7 +19,7 @@ function Empty-Array { return ,@() }
 
 # ---- Configuración del ataque Skill4 ----
 $AttackName = 'skill4'
-$TelegraphAsset = 'assets/aline/prefabs/projectiles/telegraphsphere.prefab'
+$ProjectileAsset = 'assets/aline/prefabs/projectiles/telegraphsphere.prefab'
 $TriggerBeat = 8.0           # Skill4 animator trigger
 $ProjectileCount = 7
 $ArcCenter_m = @(0, 3, 8)    # Aline approx position
@@ -28,7 +28,9 @@ $SpawnFirstBeat = 14.67      # ≈4s tras trigger (matchea anim)
 $SpawnStepBeats = 1.333      # 0.8s entre spawns
 $LaunchFirstBeat = 24.67     # ≈10s tras trigger (matchea anim)
 $LaunchStepBeats = 1.667     # 1s entre launches
-$TravelBeats = 1.0           # tiempo desde launch al cut
+$TravelBeats = 2.0           # tiempo desde launch al cut. Mayor = descenso más lento, más legible
+$PlayerEnd_m = @(0, 1, 0.5)  # donde llega el proyectil al jugador (~hand reach 50cm en frente)
+$ProjectileScale = 1.5        # tamaño del visual
 
 # ---- Build ----
 $positions = Get-SemicircleArc -Count $ProjectileCount -Center $ArcCenter_m -Radius $ArcRadius_m -StartAngleDeg 180 -EndAngleDeg 0
@@ -41,7 +43,7 @@ for ($i=0; $i -lt $ProjectileCount; $i++) {
         cut_beat = [Math]::Round($LaunchFirstBeat + $i * $LaunchStepBeats + $TravelBeats, 3)
     }
 }
-$attack = New-FamilyAAttack -Name $AttackName -TelegraphAsset $TelegraphAsset -Projectiles $projectiles
+$attack = New-FamilyAAttack -Name $AttackName -PrefabAsset $ProjectileAsset -Projectiles $projectiles -PlayerEndMeters $PlayerEnd_m -PrefabScale $ProjectileScale
 
 # ---- Compose .dat (boilerplate from Easy + animator trigger + attack fragments) ----
 $easy = Get-Content $easyPath -Raw | ConvertFrom-Json
@@ -67,7 +69,6 @@ $normal = [ordered]@{
     customData=[ordered]@{
         customEvents = $customEvents.ToArray()
         environment = $easy.customData.environment
-        pointDefinitions = $attack.PointDefinitions
     }
 }
 

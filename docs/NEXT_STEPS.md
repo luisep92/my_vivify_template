@@ -128,7 +128,7 @@ Cuando esté hecho, mover este bloque y la entrada equivalente de "Diferido post
 Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de tocar el mapa real. Criterio de éxito por prototipo: animación + VFX + parry + cleanup, instanciable dos veces sin estado residual. Snapshot por prototipo (`-Label "proto-fam-X"`).
 
 **Orden sugerido:**
-1. **A con `Skill4`** (proyectiles pequeños tras giro, fase 1) — **baseline hecho 2026-05-03**, pendiente polish (decidir visual de los cubos, partículas, validación VR). Receta consolidada en memoria `feedback_skill4_projectile_pattern`. Sandbox en `NormalStandard.dat`. **Gotcha CustomNotes** (mod intercepta dissolve) documentado en `Info.dat._customData._warnings` por dificultad.
+1. **A con `Skill4`** (proyectiles pequeños tras giro, fase 1) — **en progreso 2026-05-04**, ver [checkpoint-skill4.md](checkpoint-skill4.md) para el estado exacto, decisión arquitectural pendiente (Plan A vs Plan F), bugs corregidos pero pendientes de validación, y next steps concretos. **Leer ese doc primero al retomar.**
 2. **A con `Skill3`** (3 piedras gigantes, fase 1) — variante de Skill4 (mismo patrón hold-then-launch, N=3, NJS más baja, scale grande).
 3. **B con `DashIn-Idle1`** (mele estándar, fase 1) — valida la choreography de tres beats (DashIn + golpe + DashOut). Caso aparte (Aline se mueve, no hay proyectil).
 4. **F con `Skill2_Start/Loop/End`** (carga + explosión, fase 1) — valida secuencia multi-stage de triggers y timing largo.

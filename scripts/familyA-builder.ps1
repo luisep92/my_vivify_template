@@ -1,181 +1,148 @@
-# familyA-builder.ps1 — helper para construir ataques de familia A
-# (proyectiles "hold-then-launch": telegraph Vivify + nota BS con definitePosition).
+# familyA-builder.ps1 — helper para ataques de familia A (proyectiles secuenciales).
 #
-# Resuelve dos pegas que aparecieron iterando con Skill4:
-#   1) Vivify InstantiatePrefab usa world meters; NoodleExtensions definitePosition
-#      usa lane units (1 = 0.6m) ANCLADAS al lane grid (Y=0 ≈ 1m world).
-#   2) Cálculo de launch_norm / cut_norm normalizado a la lifetime de la nota
-#      (depende de NJS y noteJumpStartBeatOffset).
+# Patrón v2 (2026-05-04): el VISUAL es un prefab Vivify (full control); la NOTA
+# es solo hitbox invisible (dissolve permanente). NO comparten track:
+#   - AnimateTrack position en Vivify tracks = world meters absolute.
+#   - AnimateTrack position en NE notes = offset relativo al lane default.
+#   No son equivalentes. Coordinamos por TIMING en lugar de por track:
+#   ambos "llegan al jugador" en el mismo beat (cut_beat).
 #
-# El helper toma posiciones en METROS (consistencia con Vivify) y convierte
-# internamente a lane units. Devuelve los fragments a mergear en el .dat:
-#   .customEvents: telegraph spawn/destroy + AssignPathAnimation per proyectil
-#   .colorNotes: notas con track + spawnEffect off
-#   .pointDefinitions: paths nombrados + dissolve compartido
+# Lifecycle por proyectil:
+#   spawn_beat:    InstantiatePrefab del visual en world position semicircle.
+#                  Visual stays static hasta launch_beat (sin animación).
+#   launch_beat:   AnimateTrack mueve el visual de semicircle → player (durante
+#                  travel_beats = cut_beat - launch_beat). Nota BS spawn standard
+#                  con _time = cut_beat, invisible vía dissolve=0 throughout.
+#   cut_beat:      visual prefab Y nota llegan al player simultáneamente.
+#                  Player ve solo el prefab; cut detection sobre la nota invisible.
+#   cut_beat+δ:    DestroyPrefab del visual.
 #
-# Uso típico (ver scripts/build-skill4.ps1 para ejemplo completo):
-#   # Si tienes execution policy restrictiva, dot-source via Invoke-Expression:
+# Beneficios vs versión previa:
+#   - Cero fight con conversiones lane units / lineIndex offsets.
+#   - Visual = cualquier prefab Unity (sphere, spike, paint stroke, etc).
+#   - Nota standard, sin definitePosition; cualquier mod respeta dissolve.
+#   - Patrón reusable para mele (sólo cambia la trayectoria de AnimateTrack).
+#
+# Uso típico:
 #   $helper = Get-Content '.\scripts\familyA-builder.ps1' -Raw; iex $helper
-#   # O bien permitir scripts: Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-#   $proj = @(
-#       @{ position_m=@(-3,3,8); spawn_beat=14.67; launch_beat=24.67; cut_beat=25.67; color=0 },
-#       ... 7 proyectiles ...
-#   )
-#   $frag = New-FamilyAAttack -Name "skill4" -TelegraphAsset "assets/aline/prefabs/projectiles/telegraphsphere.prefab" -Projectiles $proj
-#   # Mergear $frag.customEvents, $frag.colorNotes, $frag.pointDefinitions en el .dat de la dificultad.
+#   $proj = @(@{position_m=@(-3,3,8); spawn_beat=14.67; launch_beat=24.67; cut_beat=26.67}, ...)
+#   $frag = New-FamilyAAttack -Name "skill4" -PrefabAsset "assets/.../sphere.prefab" -Projectiles $proj
+#   # Mergear $frag.CustomEvents y $frag.ColorNotes en el .dat de la dificultad.
 
-# ---- Constantes BS / NoodleExtensions ----
-$script:LU = 0.6                    # 1 lane unit = 0.6m
-$script:LANE_Y_ZERO_WORLD = 1.0     # lane Y=0 ≈ 1m world (hand-reach height)
 $script:DEFAULT_NJS = 10.0
-$script:DEFAULT_HJD_BEATS = 4.0     # half-jump duration default a NJS=10
 
-# ---- Conversión de coords ----
-function ConvertTo-LaneUnits {
-    param([double]$x_m, [double]$y_m, [double]$z_m)
-    return @(
-        [Math]::Round($x_m / $script:LU, 3),
-        [Math]::Round(($y_m - $script:LANE_Y_ZERO_WORLD) / $script:LU, 3),
-        [Math]::Round($z_m / $script:LU, 3)
-    )
-}
-
-# ---- Builder de un solo proyectil ----
+# Construye los eventos + nota para un único proyectil.
 function New-FamilyAProjectile {
     param(
         [string]$AttackName,
         [int]$Index,
-        [string]$TelegraphAsset,
-        [double[]]$PositionMeters,
+        [string]$PrefabAsset,
+        [double[]]$PositionMeters,        # spawn world position (matches Vivify)
+        [double[]]$PlayerEndMeters = @(0, 1, 0),  # donde llega al jugador (default: hand-reach center)
         [double]$SpawnBeat,
         [double]$LaunchBeat,
         [double]$CutBeat,
         [int]$Color = 0,
         [double]$NJS = $script:DEFAULT_NJS,
-        [double]$NoteJumpStartBeatOffset = 0.0
+        [double]$PrefabScale = 1.0,
+        [double]$PrefabDespawnDelayBeats = 0.1   # cuánto tras cut_beat se destroy
     )
-
-    # Path en lane units. cut_norm/launch_norm calculadas según NJS/HJD para
-    # alinear el "hold ends" del path con el launch beat.
-    $laneStart = ConvertTo-LaneUnits $PositionMeters[0] $PositionMeters[1] $PositionMeters[2]
-    $playerEnd = ConvertTo-LaneUnits 0.0 1.0 0.0      # cut moment a hand-reach
-    $pastPlayer = ConvertTo-LaneUnits 0.0 1.0 -3.0    # past player at despawn
-
-    # Lifetime (beats): HJD adjustado + cola de despawn. Aproximación que ha
-    # funcionado en Skill4: lifetime ≈ HJD + 1 beat.
-    $hjd = $script:DEFAULT_HJD_BEATS + $NoteJumpStartBeatOffset
-    $spawnBeatOfNote = $CutBeat - $hjd
-    $lifetime = $hjd + 1.0
-    $launchNorm = [Math]::Round(($LaunchBeat - $spawnBeatOfNote) / $lifetime, 3)
-    $cutNorm = [Math]::Round(($CutBeat - $spawnBeatOfNote) / $lifetime, 3)
 
     $trackId = "${AttackName}_proj_$Index"
-    $pathName = "${AttackName}_path_$Index"
-    $prefabId = "${AttackName}_telegraph_$Index"
-
-    $pathPoints = @(
-        @($laneStart[0], $laneStart[1], $laneStart[2], 0.0),
-        @($laneStart[0], $laneStart[1], $laneStart[2], $launchNorm),
-        @($playerEnd[0], $playerEnd[1], $playerEnd[2], $cutNorm),
-        @($pastPlayer[0], $pastPlayer[1], $pastPlayer[2], 1.0)
-    )
+    $prefabId = "${AttackName}_visual_$Index"
+    $travelBeats = $CutBeat - $LaunchBeat
 
     $events = @(
-        # Telegraph spawn (Vivify, world meters)
+        # Spawn del visual en posición semicircle
         [ordered]@{
             b = $SpawnBeat; t = 'InstantiatePrefab'
             d = [ordered]@{
-                asset = $TelegraphAsset; id = $prefabId; track = "${AttackName}_telegraph_track_$Index"
-                position = $PositionMeters; rotation = @(0,0,0); scale = @(1,1,1)
+                asset = $PrefabAsset; id = $prefabId; track = $trackId
+                position = $PositionMeters; rotation = @(0,0,0); scale = @($PrefabScale, $PrefabScale, $PrefabScale)
             }
         },
-        # Telegraph destroy en el launch beat
+        # AnimateTrack en launch_beat: mueve semicircle → jugador en travel_beats.
+        # Tanto prefab como nota están en este track; ambos siguen el position.
         [ordered]@{
-            b = $LaunchBeat; t = 'DestroyPrefab'; d = [ordered]@{ id = $prefabId }
-        },
-        # Bind del path al track de la nota
-        [ordered]@{
-            b = 0; t = 'AssignPathAnimation'
+            b = $LaunchBeat; t = 'AnimateTrack'
             d = [ordered]@{
-                track = $trackId; duration = 0
-                definitePosition = $pathName
-                dissolve = "${AttackName}_dissolve"
-                dissolveArrow = "${AttackName}_dissolve"
+                track = $trackId; duration = $travelBeats
+                position = @(
+                    @($PositionMeters[0], $PositionMeters[1], $PositionMeters[2], 0.0),
+                    @($PlayerEndMeters[0], $PlayerEndMeters[1], $PlayerEndMeters[2], 1.0)
+                )
             }
+        },
+        # Destroy del prefab tras el cut
+        [ordered]@{
+            b = $CutBeat + $PrefabDespawnDelayBeats; t = 'DestroyObject'; d = [ordered]@{ id = $prefabId }
         }
     )
 
+    # Nota: invisible (dissolve=0 throughout) pero cuttable. Standard BS jump-in,
+    # _time = cut_beat → llega a player default position a cut_beat. Coincide
+    # temporalmente con la llegada del prefab visual al jugador (vía AnimateTrack).
+    # Player ve solo el prefab; cut detection se registra sobre la nota invisible.
+    # NO comparte track con el prefab: AnimateTrack position tiene semánticas
+    # distintas (absolute en Vivify, offset-from-lane en NE).
     $note = [ordered]@{
-        b = $CutBeat; x = 0; y = 0; c = $Color; d = 8
+        b = $CutBeat; x = 1; y = 1; c = $Color; d = 8
         customData = [ordered]@{
-            track = $trackId; spawnEffect = $false
+            spawnEffect = $false
+            animation = [ordered]@{
+                dissolve = @(@(0.0, 0.0), @(0.0, 1.0))
+                dissolveArrow = @(@(0.0, 0.0), @(0.0, 1.0))
+            }
         }
     }
     if ($NJS -ne $script:DEFAULT_NJS) {
         $note.customData.noteJumpMovementSpeed = $NJS
     }
-    if ($NoteJumpStartBeatOffset -ne 0.0) {
-        $note.customData.noteJumpStartBeatOffset = $NoteJumpStartBeatOffset
-    }
 
-    return [PSCustomObject]@{
-        Events = $events
-        Note = $note
-        PathName = $pathName
-        PathPoints = $pathPoints
-    }
+    return [PSCustomObject]@{ Events = $events; Note = $note }
 }
 
-# ---- Builder del ataque completo (N proyectiles) ----
+# Construye el ataque completo (N proyectiles).
 function New-FamilyAAttack {
     param(
         [string]$Name,
-        [string]$TelegraphAsset,
-        [object[]]$Projectiles,        # array de hashtables con position_m, spawn_beat, launch_beat, cut_beat, color, etc
-        [double[]]$DissolveCurve = @(0.0, 0.0, 0.0, 0.59, 1.0, 0.6, 1.0, 1.0)  # 4 keyframes [v,t,v,t,...]
+        [string]$PrefabAsset,
+        [object[]]$Projectiles,
+        [double[]]$PlayerEndMeters = @(0, 1, 0),
+        [double]$PrefabScale = 1.0
     )
-
     $allEvents = New-Object System.Collections.ArrayList
     $allNotes = New-Object System.Collections.ArrayList
-    $pathDefs = [ordered]@{}
-
-    # Dissolve compartido (curve flat por design del patrón)
-    $dissolvePoints = @()
-    for ($i = 0; $i -lt $DissolveCurve.Length; $i += 2) {
-        $dissolvePoints += ,@($DissolveCurve[$i], $DissolveCurve[$i+1])
-    }
-    $pathDefs["${Name}_dissolve"] = $dissolvePoints
 
     for ($i = 0; $i -lt $Projectiles.Length; $i++) {
         $p = $Projectiles[$i]
         $proj = New-FamilyAProjectile `
-            -AttackName $Name -Index $i -TelegraphAsset $TelegraphAsset `
+            -AttackName $Name -Index $i -PrefabAsset $PrefabAsset `
             -PositionMeters $p.position_m `
+            -PlayerEndMeters $PlayerEndMeters `
             -SpawnBeat $p.spawn_beat -LaunchBeat $p.launch_beat -CutBeat $p.cut_beat `
             -Color $(if ($p.PSObject.Properties.Name -contains 'color') { $p.color } else { ($i % 2) }) `
             -NJS $(if ($p.PSObject.Properties.Name -contains 'njs') { $p.njs } else { $script:DEFAULT_NJS }) `
-            -NoteJumpStartBeatOffset $(if ($p.PSObject.Properties.Name -contains 'offset') { $p.offset } else { 0.0 })
+            -PrefabScale $PrefabScale
 
         foreach ($ev in $proj.Events) { [void]$allEvents.Add($ev) }
         [void]$allNotes.Add($proj.Note)
-        $pathDefs[$proj.PathName] = $proj.PathPoints
     }
 
     return [PSCustomObject]@{
         CustomEvents = $allEvents.ToArray()
         ColorNotes = $allNotes.ToArray()
-        PointDefinitions = $pathDefs
     }
 }
 
-# ---- Helper para generar posiciones en semicírculo (atajo común) ----
+# Helper: posiciones en arc semicircular (vertical o horizontal) sobre un centro.
 function Get-SemicircleArc {
     param(
         [int]$Count,
-        [double[]]$Center,        # @(x_m, y_m, z_m)
+        [double[]]$Center,
         [double]$Radius,
-        [double]$StartAngleDeg = 180,   # left
-        [double]$EndAngleDeg = 0        # right
+        [double]$StartAngleDeg = 180,
+        [double]$EndAngleDeg = 0
     )
     $positions = @()
     for ($i = 0; $i -lt $Count; $i++) {
