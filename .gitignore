@@ -5,6 +5,11 @@ beatsaber-logs/
 # === Backups manuales (.bak) — los hacemos puntuales antes de operaciones de riesgo ===
 *.bak
 
+# === Screenshots scratch del unity-mcp (capturas de Scene/Game view para iterar) ===
+# Los genera mcp__unity-mcp__manage_camera screenshot. No los queremos en git.
+VivifyTemplate/Assets/Screenshots/
+VivifyTemplate/Assets/Screenshots.meta
+
 # === Asset dumps y herramientas que viven fuera del repo ===
 # Si en algún momento reaparecen dentro por error, no se versionan.
 Sandfall/

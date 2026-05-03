@@ -84,9 +84,25 @@ Cuando importas un FBX exportado vía FModel→Blender→FBX, el FBX trae **N ma
 - **Material padre / UMaterial puro** (no MI): el inspect devuelve casi vacío porque la lógica vive en el graph de nodos del shader, no en parámetros. Ahí usar `fmodel_export_raw` o aceptar que el padre define un shader que vamos a aproximar a mano.
 - **Buscar referencias inversas** ("¿qué materiales usan esta textura?"): no soportado en Tier 1. Workaround: `fmodel_search` por nombre + `fmodel_inspect_material` en cada candidato.
 
-### Discrepancias entre dumps viejos y MCP en vivo
+### Lo que el SK pide ≠ lo que el juego renderiza
 
-Si un JSON exportado a mano hace tiempo dice una cosa y el MCP en vivo dice otra, **confiar en el MCP** — los exports manuales pueden venir de un parent material o de una versión vieja del juego. Caso real (2026-05-03): el dump de `M_CuratorFace_Aline` mostraba `Mask_Curator` (sin sufijo, en `Curator/Textures/`); el inspect vivo mostraba `Mask_Curator_Aline` (con sufijo, en `Aline/Textures/`). Las dos texturas existen y son distintas — la vivienda en el MI override es la del MCP.
+El `SkeletalMaterials[]` del SK es el material "por defecto" del asset, pero los Blueprints que spawnan ese SK pueden override slots concretos via `OverrideMaterials[]`. Para portar el look correcto del juego no basta con leer el SK — hay que trazar **al BP que efectivamente lo usa** (cinemático, gameplay, etc.) y mirar sus overrides.
+
+Caso canónico Aline (2026-05-03):
+- `SK_Curator_Aline` slot 4 (`Curator_Aline_Hole`) → padre `M_CuratorFace` (UMaterial puro, sin params accesibles).
+- `BP_Cine_Curator_Aline` → `OverrideMaterials[4] = MI_CuratorFace_Aline` (con `Mask_Curator_Aline` específica de Aline).
+
+Si solo lees el SK, asumes el padre. Si lees también el BP cinemático, descubres que en el render real va el MI con su mask propia. Receta:
+
+1. `fmodel_search "**/BP_*<Personaje>*"` para listar los BPs que pueden spawn al personaje.
+2. `fmodel_export_raw` del BP candidato y grep `"OverrideMaterials"` — los nulls heredan del SK, los objects son override.
+3. Decidir basándote en qué BP corresponde a tu uso (cinemático para reference visual, gameplay BP para spawn dinámico, etc.).
+
+### Limitación: UMaterial puro vs MaterialInstanceConstant
+
+`fmodel_inspect_material` extrae `TextureParameterValues / ScalarParameterValues / VectorParameterValues / Parent / BlendMode`. Eso vive en MIs (`MaterialInstanceConstant`), no en el padre `UMaterial`. Para el padre el inspect devuelve casi vacío (la lógica vive en el graph de nodos del shader y en `CachedExpressionData`, que el tool actual no extrae).
+
+Workaround: `fmodel_export_raw` del padre te da `RuntimeEntries[].ParameterInfoSet` (nombres de los params) + `ScalarValues / VectorValues / TextureValues` (defaults). Suficiente para inferir qué knobs hay y arrancar la portabilidad. Una mejora futura del MCP (Tier 1.5) sería extraer eso directamente desde `inspect`.
 
 ## Material creation flow
 
