@@ -195,7 +195,7 @@ Derivado de scan a 10 mapas Vivify del corpus. Los settings con mayor cobertura.
 Para añadir un ataque al mapa, **no escribir eventos desde cero**. Cada habilidad de Aline está modelada como una **familia reutilizable** con su contrato (inputs, secuencia de eventos, encoding del parry, parámetros tunables, reglas de no-conflicto). Ver [`families.md`](families.md).
 
 Familias actuales:
-- **A — Ranged Sequence** (proyectiles secuenciales)
+- **A — Ranged Sequence** (proyectiles secuenciales) — receta validada e instanciable en [`family-a-recipe.md`](family-a-recipe.md)
 - **B — Melee Directional Slash**
 - **C — Distortion Window** (post-process grayscale, modificador apilable)
 - **D — Shrinking Indicator** (parry de precisión, estilo E33)

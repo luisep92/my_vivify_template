@@ -87,32 +87,30 @@ Las notas del parry se colocan en el `_notes` array del `.dat` con su `_time` ca
 
 **Mecánica:** Aline lanza N proyectiles que aparecen sobre/junto a ella y caen secuencialmente sobre el jugador. Cada proyectil = un parry.
 
-**Patrón pendiente de validar.** Approach que se baraja: telegraph estático (`InstantiatePrefab` de decoración + `DestroyObject` al launch) + cubo BS como proyectil real (visible desde launch via `dissolve`, trayectoria del telegraph al jugador via `definitePosition`). La conversión world meters ↔ lane units (1 lane = 0.6m, offsets calibrados) está en [`vivify-mapping`](SKILL.md). Antes de tirar código nuevo: leer Heckdocs sobre `definitePosition`/`dissolve`/`noteJumpStartBeatOffset`/`_noteJumpDurationTypeSettings: "Dynamic"` para no operar sobre suposiciones.
+**Patrón validado en Skill4 (2026-05-04).** Sphere semi-transparente (Vivify `InstantiatePrefab` del telegraph) + cubo BS nativo con `definitePosition` que lo mantiene anclado a la posición de la sphere durante el aviso, y al `launch_beat` lo barre al jugador. Sphere despawn en mismo `launch_beat`. **Receta completa parameterizable** en [`family-a-recipe.md`](family-a-recipe.md) (constantes calibradas, conversión world↔lane, cálculo de rotación static-face-player, dissolve trick, templates JSON, algoritmo paso a paso). Para un nuevo ataque familia A solo hace falta el bloque "Inputs" del recipe.
 
 ### Inputs requeridos
 
 | Input | Valor | Notas |
 |---|---|---|
 | Animator trigger | `Skill3` (3 piedras gigantes, fase 1) o `Skill4` (N proyectiles pequeños tras giro, fase 1) | Las dos variantes encajan en A; cambia VFX y N |
-| Prefab proyectil | `assets/aline/prefabs/projectile_*.prefab` (TBD — pendiente crear/extraer) | Skill3: piedras grandes; Skill4: proyectiles pequeños tipo pincelada/tinta |
-| Prefab spawner (opcional) | indicador visual del origen (encima de Aline) | El propio movimiento de "tocar harpa" lo telegraph; spawner separado puede no ser necesario |
+| Prefab indicador (sphere) | `assets/aline/prefabs/projectiles/telegraphsphere.prefab` | Esfera semi-transparente reutilizable. Será reemplazado por un mesh propio en polish (ver recipe sección "Limitación dissolveArrow") |
+| Prefab proyectil | Cubo BS nativo (no hace falta prefab Vivify) | El cubo es la nota — `c=0/1, d=0..8`, con `definitePosition` apuntando al sphere |
 
 ### Secuencia de eventos `.dat`
 
-Tiempos relativos al instante de impacto del **primer** proyectil (`T_impact_0`). Asume `delta` = separación entre proyectiles consecutivos.
+Validada con Skill4. La estructura completa con templates está en [`family-a-recipe.md`](family-a-recipe.md). Resumen tiempos relativos al `launch_beat` (= cuando el cubo se dispara, sphere despawnea):
 
 ```
-T_impact_0 - 2.5s : SetAnimatorProperty (Skill3 ó Skill4) → alineTrack
-T_impact_0 - 1.5s : InstantiatePrefab × N (projectile_i0..iN-1) sobre Aline → atk_a_NNN_i0..iN-1
-T_impact_0 - 1.0s : AnimateTrack (orbit/hold sobre Aline) en cada atk_a_NNN_iX por 0.5s
-T_impact_0 - 0.5s : AnimateTrack (descenso a posición de impacto) sobre atk_a_NNN_i0 por 0.5s
-T_impact_0 + 0.0s : nota de parry #0 llega al jugador
-T_impact_0 + 0.0s : DestroyPrefab atk_a_NNN_i0
-T_impact_0 + delta : (repetir descenso/nota/destroy para i1)
-...
+trigger_beat       : SetAnimatorProperty (trigger animator) → alineMain  (== empieza animación Aline)
+launch_beat - 10b  : InstantiatePrefab sphere_i + AssignPathAnimation cubo_i (b=0)
+                     ColorNote del cubo i con b=spawn_beat (== sphere appears)
+launch_beat        : DestroyObject sphere_i
+                     Cubo i empieza a moverse al jugador (path keyframe fire_time)
+launch_beat + 2b   : Cubo llega al jugador (path keyframe arrival_time)
 ```
 
-> Los offsets exactos hay que afinarlos con la duración real del clip (`Skill3` y `Skill4` tienen duración distinta — el descenso de los proyectiles debe sincronizar con el "lanzamiento" visible en la animación).
+> Los offsets concretos por instancia salen del recipe (`fire_time`, `arrival_time` se calculan a partir de `spawn_beat`/`launch_beat`/`travel_beats`).
 
 ### Encoding del parry
 
