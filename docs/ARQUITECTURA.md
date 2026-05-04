@@ -34,8 +34,12 @@ Pasos para arrancar el proyecto en una máquina nueva, en orden estricto.
    cd d:\vivify_repo
    git clone https://github.com/luisep92/unity_vivify_mcp.git unity-mcp
    git clone https://github.com/luisep92/fmodel-mcp.git fmodel-mcp
+   git clone --depth 1 https://github.com/legoandmars/CustomNotesUnityProject.git
+   mkdir _outline-shader-ref
+   curl -L -o _outline-shader-ref/UnlitOutlines.shader https://raw.githubusercontent.com/ronja-tutorials/ShaderTutorials/master/Assets/020_Inverted_Hull/UnlitOutlines.shader
+   curl -L -o _outline-shader-ref/SurfaceOutlines.shader https://raw.githubusercontent.com/ronja-tutorials/ShaderTutorials/master/Assets/020_Inverted_Hull/SurfaceOutlines.shader
    ```
-   Detalles de wireado y arranque en [unity-mcp/README.md](../../unity-mcp/README.md) y [fmodel-mcp/README.md](../../fmodel-mcp/README.md). El proyecto Aline ya referencia `unity-mcp` vía `VivifyTemplate/Packages/manifest.json` (path local).
+   Detalles de wireado y arranque en [unity-mcp/README.md](../../unity-mcp/README.md) y [fmodel-mcp/README.md](../../fmodel-mcp/README.md). El proyecto Aline ya referencia `unity-mcp` vía `VivifyTemplate/Packages/manifest.json` (path local). `CustomNotesUnityProject` y `_outline-shader-ref` son **reference material** para el polish del cube visual (ver NEXT_STEPS sub-paso 4.1) — no se modifican, se copian fragmentos al proyecto Aline.
 
 8. **Abrir el proyecto Unity**: `VivifyTemplate/` desde Unity Hub. Primer import tarda ~5 min (regenera `Library/`). Si falta algún binario (FBX, PSA, PNG), saldrán warnings de "missing reference" — recuperar según el procedimiento de "Recovery" abajo.
 
@@ -176,6 +180,8 @@ Tabla de "si borras X, ¿es recuperable y cómo?". Versionado = en git, recupera
 | `FModel.exe` | Tool .exe ~47 MB | Binario, mejor fuera. GUI fallback. |
 | `fmodel-mcp/` | Wrapper canónico programático sobre CUE4Parse (CLI .NET 9 + MCP server Python) | Repo propio (`luisep92/fmodel-mcp`). Bridge stdio MCP. Ver [fmodel-mcp/README.md](../../fmodel-mcp/README.md). |
 | `Output/Exports/` | Scratch dir donde escriben FModel GUI y `mcp__fmodel__fmodel_export_*` | Tamaño variable. Lo confirmado se mueve a `my_vivify_template/Sandfall/` (meshes) o `VivifyTemplate/Assets/<area>/Textures/` (PNGs). |
+| `CustomNotesUnityProject/` | Repo canónico de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) — Unity project de referencia para custom notes (meshes, materials, shaders, prefab structure) | Reference para construir nuestros prefabs de proyectil via `AssignObjectPrefab`. **No usamos `NoteDescriptor`** (componente del mod CustomNotes); copiamos solo geometría/material. Unity 2018.x, abrir en 2019.4.28f1. |
+| `_outline-shader-ref/` | Carpeta ad-hoc con [Ronja's UnlitOutlines.shader / SurfaceOutlines.shader](https://github.com/ronja-tutorials/ShaderTutorials/tree/master/Assets/020_Inverted_Hull) descargados directos | Shader inverted-hull base para el outline de los cubos custom. CC-BY 4.0 — atribuir a Ronja en el header del shader cuando se adapte al proyecto Vivify. |
 
 ### Junctions a la instalación de Beat Saber
 

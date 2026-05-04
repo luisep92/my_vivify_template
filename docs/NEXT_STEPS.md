@@ -132,7 +132,34 @@ Cuando esté hecho, mover este bloque y la entrada equivalente de "Diferido post
 Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de tocar el mapa real. Criterio de éxito por prototipo: animación + VFX + parry + cleanup, instanciable dos veces sin estado residual. Snapshot por prototipo (`-Label "proto-fam-X"`).
 
 **Orden sugerido:**
-1. **A con `Skill4`** (proyectiles pequeños tras giro, fase 1) — **mecánica core validada 2026-05-04, polish pendiente**. `NormalStandard.dat` tiene la implementación: trigger `Skill4` en b=4, 7 spheres en semicírculo `(0, 3, 8)` radio 3m con spawns escalonados (b=10.67→18.67), 7 cubos BS nativos con `definitePosition` (sphere → player), spawn animation con scale-pop + 1 vuelta CW shape easeOutQuad, dissolve trick para ocultar el "primer viaje". Receta parameterizable en [`.claude/skills/vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md): la implementación de cada nuevo ataque familia A es solo "rellenar inputs" (trigger, beats, posiciones) y aplicar templates. Polish pendiente: partículas en sphere despawn, `AssignObjectPrefab` con mesh propio para resolver el `dissolveArrow` desync (causa identificada en source de Heck — `DisappearingArrowControllerBase` vanilla machaca el valor cada frame), quitar `uninteractable` y configurar `c`/`d` para parry real, tunear `travel_beats` (actual 2 = 1.2s).
+1. **A con `Skill4`** (proyectiles pequeños tras giro, fase 1) — **mecánica core validada 2026-05-04, en fase polish**. `NormalStandard.dat` tiene la implementación: trigger `Skill4` en b=4, 7 spheres en semicírculo `(0, 3, 8)` radio 3m con spawns escalonados (b=10.67→18.67), 7 cubos BS nativos con `definitePosition` (sphere → player), spawn animation con scale-pop + 1 vuelta CW shape easeOutQuad, dissolve trick para ocultar el "primer viaje". Receta parameterizable en [`.claude/skills/vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md): la implementación de cada nuevo ataque familia A es solo "rellenar inputs" (trigger, beats, posiciones) y aplicar templates.
+
+   **Polish — orden y plan concreto:**
+
+   **a) Cube visual swap via `AssignObjectPrefab`** — siguiente paso. **Resources ya en sitio** (clonados/descargados a `d:/vivify_repo/`):
+   - `CustomNotesUnityProject/` (clone de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject)) — reference del Unity project. Solo nos llevamos la mesh del cubo + estructura de prefab. **NO** copiamos `NoteDescriptor` (componente del mod CustomNotes que Vivify no usa).
+   - `_outline-shader-ref/UnlitOutlines.shader` y `SurfaceOutlines.shader` — Ronja's inverted-hull shader (CC-BY 4.0). Base del look "darker with neon outline".
+
+   Pasos para implementar:
+   1. Estudiar la mesh del cubo en `CustomNotesUnityProject/Assets/CustomNotes/Notes/...` y copiar el FBX (o equivalente) a `VivifyTemplate/Assets/Aline/Prefabs/projectiles/`. Validar UVs y normales.
+   2. Crear `VivifyTemplate/Assets/Aline/Shaders/Outline.shader` adaptado de Ronja's `UnlitOutlines.shader`. **Crítico para VR:** añadir macros SPI (`UNITY_SETUP_INSTANCE_ID`, `UNITY_VERTEX_OUTPUT_STEREO`, `UNITY_VERTEX_INPUT_INSTANCE_ID`) a ambas passes (BS 1.34.2 usa Single Pass Instanced). Atribución a Ronja en header.
+   3. Material `M_NoteOutline` (o dos: `_Red` / `_Blue`, o uno solo y exponer color via track Vivify). Params iniciales: `_Color = (0.05, 0.05, 0.08, 1)`, `_OutlineColor = (saber color)`, `_OutlineThickness = 0.03`.
+   4. Prefab `NoteCube.prefab` bajo `Assets/Aline/Prefabs/projectiles/`. Empty root + child mesh con material. Sin `NoteDescriptor`.
+   5. F5 build + actualizar CRC.
+   6. Eventos en `NormalStandard.dat`: `AssignObjectPrefab` con `colorNotes.basicNote.asset = "assets/aline/prefabs/projectiles/notecube.prefab"`. Aplica globalmente — todos los cubos (no solo Skill4) heredan el look.
+   7. Validar en BS: cube se ve outlined, `dissolveArrow` desync resuelto (no hay geometría de arrow en nuestro mesh), cut detection sigue funcionando.
+
+   Skill afectada: actualizar [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) con el patrón de Outline shader + adaptación SPI cuando esté validado.
+
+   **b) Partículas en sphere despawn** — sustituir el `DestroyObject` actual de la sphere con un `InstantiatePrefab` de un ParticleSystem custom (energía blanca + humo negro tipo E33). El cubo idealmente lleva trail o partícula que lo sigue (track compartido o `AssignTrackParent`). Trabajo serio: ParticleSystem autorizado en Unity + shader propio + bundleado en `aline_bundle`. Commit propio.
+
+   **c) Hit particle** — finetune visual cuando el saber corte el cubo. Diferido hasta validar (a) y (b).
+
+   **d) Tunear `travel_beats`** — actual 2 beats (1.2s). Probablemente bajar a 1-1.5 para más intensidad cuando combat sea real.
+
+   **e) Quitar `uninteractable: true`** y configurar `c` (color, alternar 0/1 por flow) y `d` (cut direction, según ángulo de aproximación de cada cubo) para parry puntuable.
+
+   **Limpieza pendiente**: `d:/vivify_repo/ShaderTutorials/` quedó como dir vacío con `.git` corrupto tras un clone fallido (proceso fantasma bloqueando). El shader que necesitamos ya está descargado en `_outline-shader-ref/`. Borrar manualmente cuando el proceso libere el lock (reboot soluciona).
 2. **A con `Skill3`** (3 piedras gigantes, fase 1) — variante de Skill4 (mismo patrón hold-then-launch, N=3, NJS más baja, scale grande).
 3. **B con `DashIn-Idle1`** (mele estándar, fase 1) — valida la choreography de tres beats (DashIn + golpe + DashOut). Caso aparte (Aline se mueve, no hay proyectil).
 4. **F con `Skill2_Start/Loop/End`** (carga + explosión, fase 1) — valida secuencia multi-stage de triggers y timing largo.

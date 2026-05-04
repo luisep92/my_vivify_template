@@ -88,3 +88,5 @@ Viven en `d:\vivify_repo\` (carpeta contenedora). Detalle en [`docs/ARQUITECTURA
 - `fmodel-mcp/` — wrapper canónico para inspeccionar/exportar assets de E33. CLI .NET sobre CUE4Parse + MCP server Python. Tools `mcp__fmodel__fmodel_*` en Claude Code. Repo público en [github.com/luisep92/fmodel-mcp](https://github.com/luisep92/fmodel-mcp).
 - `unity-mcp/` — fork minimal del MCP for Unity portado a Unity 2019.4. Tools `mcp__unity-mcp__*` en Claude. Wireado vía `Packages/manifest.json`. Detalle en [unity-mcp/README.md](../unity-mcp/README.md).
 - `FModel.exe`, `ReMapper-master/` — fallback GUI / scripting Deno (este último aún sin usar).
+- `CustomNotesUnityProject/` — reference Unity project de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject), usado como base para el polish del cube visual (mesh + estructura de prefab). Sin `NoteDescriptor` (componente CustomNotes-only).
+- `_outline-shader-ref/` — `.shader` files de Ronja descargados directos (CC-BY 4.0) como base del shader inverted-hull para los cubos custom.
