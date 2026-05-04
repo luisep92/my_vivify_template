@@ -214,6 +214,54 @@ DynamicBone, FinalIK, Magica Cloth, JiggleBones, SpringBones — cualquier asset
 
 Para efectos tipo physics-on-bones (sway, jiggle, secondary motion), la única ruta viable es **AnimationClip pre-baked** que mueve los bones via `m_LocalRotation`/`m_LocalPosition` curves, looped via Animator. Sí funciona en bundle. Para deformaciones que requieran reaccionar a inputs en tiempo real (collision, wind direction): no factible en Vivify, diferir a "post-Phase-2" o aceptar como limitación.
 
+### Outline shader (inverted-hull con saber color per-instance)
+
+Para reemplazar el visual del note cube via `AssignObjectPrefab` en ataques familia A. Adaptado del tutorial "020 Inverted Hull Unlit" de Ronja (CC-BY 4.0, atribución en header).
+
+Source canónico: [`Assets/Aline/Shaders/AlineOutline.shader`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineOutline.shader). Validado con `NoteCube.prefab` el 2026-05-04.
+
+**Forma del look:** cuerpo casi-negro azulado + outline neón del color del saber (rojo si el note es `c=0`, azul si `c=1`). El outline aparece automáticamente porque Vivify pasa `_Color` per-instance al shader del prefab cuando se usa `colorNotes.{asset, anyDirectionAsset, debrisAsset}` en `AssignObjectPrefab` (doc heckdocs Vivify events).
+
+**Patrón clave:**
+
+1. **2 passes opacos.** Pass 1: cuerpo (`Cull Back`, color sólido `_BodyColor`). Pass 2: outline (`Cull Front`, vértices extruidos a lo largo de la normal, color sólido `_Color × _OutlineIntensity`). Ambos `ZWrite On`.
+
+2. **Offset del outline en world space, no object space.** `worldPos += worldNormal * _OutlineThickness` antes del clip projection. Razón: el prefab típico tiene `localScale=45` (compensa que la mesh `Default Base.fbx` de CustomNotes viene en 0.011 raw). En object space, `_OutlineThickness=0.02` se convierte en ~1m world (un disparate). En world space queda en metros directamente, slider predecible.
+
+3. **GPU instancing en pass 2 para `_Color` per-instance.** Sin esto, Vivify no puede pasar el saber color por nota:
+   ```hlsl
+   #pragma multi_compile_instancing
+
+   UNITY_INSTANCING_BUFFER_START(Props)
+       UNITY_DEFINE_INSTANCED_PROP(fixed4, _Color)
+   UNITY_INSTANCING_BUFFER_END(Props)
+
+   // En vert: UNITY_TRANSFER_INSTANCE_ID(v, o);
+   // En frag: UNITY_SETUP_INSTANCE_ID(i);
+   //         fixed4 c = UNITY_ACCESS_INSTANCED_PROP(Props, _Color);
+   ```
+   Y `mat.enableInstancing = true` en el material. Sin el flag, Unity no compila la variant correcta.
+
+4. **SPI macros en ambas passes** (BS 1.34.2 = Single Pass Instanced VR). Estándar del repo: `UNITY_VERTEX_INPUT_INSTANCE_ID` en `appdata`, `UNITY_VERTEX_OUTPUT_STEREO` en `v2f`, `UNITY_SETUP_INSTANCE_ID + UNITY_INITIALIZE_OUTPUT + UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO` en vert.
+
+5. **Sin `_MainTex`.** La mesh `Default Base.fbx` de CustomNotes no trae UVs. Body y outline son colores sólidos, sin samplers. Ahorro de complejidad y zero cost de texturizado.
+
+6. **`[HDR] _Color` con `_OutlineIntensity` multiplier.** Default `_OutlineIntensity=2.0`. BS aplica bloom interno al rendering — valores HDR > 1 hacen que el outline brille en lugar de quedar plano. Bajar a 1.5 si queda lavado, subir a 2.5+ si se quiere más punch.
+
+**Mesh source:** `Default Base.fbx` de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject). El proyecto entero queda fuera del repo en `d:/vivify_repo/CustomNotesUnityProject/`. Solo usamos la mesh; **NO** copiamos `NoteDescriptor` (componente del mod CustomNotes que Vivify no consume). Bevel suave de la mesh da el look "comic", sin arrow geometry → resuelve el `dissolveArrow desync` documentado en `family-a-recipe.md`.
+
+**Convertir a prefab:** Empty root con `MeshFilter + MeshRenderer` apuntando a la mesh `Cube` interna del FBX, material `M_NoteOutline` asignado, `localScale=45` (compensa los 0.011 raw → world ~0.5m, equivalente al note BS default). Asignar al `aline_bundle`.
+
+**Gotcha — Vivify pasa `_Cutout` por proximidad, no por `animation.dissolve`:**
+
+El doc heckdocs dice que `AssignObjectPrefab` setea `_Color`, `_Cutout`, `_CutoutTexOffset` per-instance. Los shaders del template Vivify (`CustomBomb`, `CustomNoteArrow`, `CustomNoteBase`) leen `_Cutout` con convención `0=visible, 1=dissolved`.
+
+**Pero comportamiento observado en BS 1.34.2 con Vivify (validado 2026-05-04):** `_Cutout` per-instance NO sigue la curve `customData.animation.dissolve`. Parece estar driven por proximidad del note al player (probablemente para preparar el cut animation post-hit). Resultado: si el shader implementa `clip(cutout - 0.5)`, los notes se ocultan **justo al dispararse al player** — comportamiento no deseado para ataques familia A donde queremos verlos durante todo el launch.
+
+**Workaround:** declarar `_Cutout` per-instance en el instancing buffer (queda como hook para parry / debris fade futuros) pero **no usarla para clip activo**. El "dissolve trick" de ocultar los notes durante NJS jump-in se hace via `customData.animation.scale` con primer punto `(0,0,0)` (Heck usa el primer punto durante jump-in y los objetos quedan invisibles efectivamente). Detalle en `family-a-recipe.md`.
+
+**No probado en este proyecto** pero plausible para iteraciones futuras: si quisiéramos un dissolve real (ej. fade post-cut), sería más fiable controlar via `AnimateTrack` setando una property custom en el material per-track, en lugar de depender de `_Cutout` automático de Vivify.
+
 ### Gotcha: la "ORM" de Sandfall NO es una ORM standard
 
 Confirmado 2026-05-03 con `Curator_Body_OcclusionRoughnessMetallic.png`: aunque el nombre sigue la convención UE (Occlusion R, Roughness G, Metallic B packed grayscale), el contenido visual es **pseudocolor multichannel** (naranja+verde+magenta saturados, no grayscale). El R channel tiene valores ~0.5-1.0 mayoritariamente — multiplicado como AO da prácticamente identidad, no oscurece nada.

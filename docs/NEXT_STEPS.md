@@ -136,20 +136,22 @@ Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de t
 
    **Polish — orden y plan concreto:**
 
-   **a) Cube visual swap via `AssignObjectPrefab`** — siguiente paso. **Resources ya en sitio** (clonados/descargados a `d:/vivify_repo/`):
-   - `CustomNotesUnityProject/` (clone de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject)) — reference del Unity project. Solo nos llevamos la mesh del cubo + estructura de prefab. **NO** copiamos `NoteDescriptor` (componente del mod CustomNotes que Vivify no usa).
-   - `_outline-shader-ref/UnlitOutlines.shader` y `SurfaceOutlines.shader` — Ronja's inverted-hull shader (CC-BY 4.0). Base del look "darker with neon outline".
+   **a) Cube visual swap via `AssignObjectPrefab`** — **hecho 2026-05-04**.
 
-   Pasos para implementar:
-   1. Estudiar la mesh del cubo en `CustomNotesUnityProject/Assets/CustomNotes/Notes/...` y copiar el FBX (o equivalente) a `VivifyTemplate/Assets/Aline/Prefabs/projectiles/`. Validar UVs y normales.
-   2. Crear `VivifyTemplate/Assets/Aline/Shaders/Outline.shader` adaptado de Ronja's `UnlitOutlines.shader`. **Crítico para VR:** añadir macros SPI (`UNITY_SETUP_INSTANCE_ID`, `UNITY_VERTEX_OUTPUT_STEREO`, `UNITY_VERTEX_INPUT_INSTANCE_ID`) a ambas passes (BS 1.34.2 usa Single Pass Instanced). Atribución a Ronja en header.
-   3. Material `M_NoteOutline` (o dos: `_Red` / `_Blue`, o uno solo y exponer color via track Vivify). Params iniciales: `_Color = (0.05, 0.05, 0.08, 1)`, `_OutlineColor = (saber color)`, `_OutlineThickness = 0.03`.
-   4. Prefab `NoteCube.prefab` bajo `Assets/Aline/Prefabs/projectiles/`. Empty root + child mesh con material. Sin `NoteDescriptor`.
-   5. F5 build + actualizar CRC.
-   6. Eventos en `NormalStandard.dat`: `AssignObjectPrefab` con `colorNotes.basicNote.asset = "assets/aline/prefabs/projectiles/notecube.prefab"`. Aplica globalmente — todos los cubos (no solo Skill4) heredan el look.
-   7. Validar en BS: cube se ve outlined, `dissolveArrow` desync resuelto (no hay geometría de arrow en nuestro mesh), cut detection sigue funcionando.
+   - Mesh: `Default Base.fbx` de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) → copiado como `Assets/Aline/Prefabs/projectiles/NoteCube.fbx` (1536v / 3068t, sin UVs, normals + tangents OK, bounds 0.011 → compensado con `localScale=45` en el prefab).
+   - Shader [`Aline/Outline`](../VivifyTemplate/Assets/Aline/Shaders/AlineOutline.shader) — inverted-hull adaptado de Ronja (CC-BY 4.0), 2 passes opacos, offset del outline en world space, GPU instancing en pass 2 para que Vivify pase `_Color` per-instance (saber color: rojo si `c=0`, azul si `c=1`). Macros SPI en ambas passes. Sin `_MainTex` (la mesh no trae UVs). Receta consolidada en skill [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) sección "Outline shader (inverted-hull con saber color per-instance)".
+   - Material `M_NoteOutline` con `_BodyColor=(0.005, 0.005, 0.025, 1)` (azul muy profundo casi-negro), `_OutlineIntensity=2.0` (HDR para que el bloom de BS punche), `_OutlineThickness=0.02` (2cm world). GPU instancing habilitado.
+   - Prefab `NoteCube.prefab` con root + MeshRenderer en mismo GO. `localScale=(45, 45, 45)`. Asignado a `aline_bundle`.
+   - Evento `AssignObjectPrefab` en `NormalStandard.dat` (`b=0`, `loadMode=Single`, los 7 tracks de skill4, `anyDirectionAsset` porque los notes son `d=8`).
 
-   Skill afectada: actualizar [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) con el patrón de Outline shader + adaptación SPI cuando esté validado.
+   **Gotcha mayor descubierto en el proceso (Heck animation timing per-note):** el doc heck dice que `customData.animation` per-note va relativa al **lifetime individual** del objeto, donde `t=0` = post-landing (acaba el NJS jump-in), `t=0.5` = hit time, `t=1` = despawn. **Durante el NJS jump-in los objetos usan estrictamente el primer punto de cada curve.** Eso significa que:
+   - `scale` curve original `[[0.1,0.1,0.1, 0.5], [1,1,1, 0.515], [1,1,1, 1]]` con primer punto `(0.1, 0.1, 0.1)` mantenía los notes visibles como **puntitos pequeños** durante todo el NJS travel desde far Z.
+   - Cambio a `[[0,0,0,0], [0,0,0,0.499], [1,1,1,0.515], [1,1,1,1]]` deja primer punto en `(0,0,0)` → cubes invisibles durante el jump-in. El pop a `t=0.5` sigue coincidiendo con sphere spawn (`b=hit_beat`) y rotation (`t=0.5..0.52`), todo sincronizado.
+   - El `dissolve` curve en convención Heck (`0=transparent, 1=opaque`) Vivify la mapea internamente a `_Cutout` per-instance, pero **`_Cutout` que Vivify pasa parece estar driven por proximidad al player, no por la dissolve curve**: si el shader la lee con `clip(cutout - 0.5)`, oculta los notes justo al dispararse al player. Por eso el shader **declara `_Cutout` per-instance pero NO la usa para discard activo** (queda como hook para parry / debris fade).
+
+   **Resuelto en el camino:** `dissolveArrow` desync (la limitación de `DisappearingArrowControllerBase` documentada en family-a-recipe). El cube custom no tiene geometría de arrow → el controller vanilla no tiene nada que tocar → no hay race condition.
+
+   Detalle operativo + nuevo template de evento en skill [`vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md). Decisión consolidada en [DECISIONES.md → "Cube swap via AssignObjectPrefab + outline shader inverted-hull"](DECISIONES.md).
 
    **b) Partículas en sphere despawn** — sustituir el `DestroyObject` actual de la sphere con un `InstantiatePrefab` de un ParticleSystem custom (energía blanca + humo negro tipo E33). El cubo idealmente lleva trail o partícula que lo sigue (track compartido o `AssignTrackParent`). Trabajo serio: ParticleSystem autorizado en Unity + shader propio + bundleado en `aline_bundle`. Commit propio.
 

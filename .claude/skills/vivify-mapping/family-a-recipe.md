@@ -139,30 +139,28 @@ Para suavizar la deceleración (eliminar los stutter visuales entre segmentos): 
 
 ## Dissolve trick (ocultar el "primer viaje")
 
-Sin esto, BS interpola visiblemente el cubo desde su spawn natural (far Z) hasta el primer keyframe del path durante el jump-in (= time 0 → 0.5). Es el "primer viaje desde el fondo del mundo" que descartamos.
+Sin esto, los cubes son visibles durante todo el NJS jump-in desde far Z (parecen "puntitos pequeños viajando" porque la scale curve los mantiene a `scale=0.1` o similar). Eso rompe el efecto de "aparecen materializándose en la sphere".
 
-Fix: `dissolve` y `dissolveArrow` con path que es 0 durante jump-in y 1 desde time=0.5:
+**Fix canónico (validado 2026-05-04 con cube swap):** primer punto de `scale` curve a `(0, 0, 0)`. Doc heck: durante el jump-in los objetos "strictly use the first point in the point definition" → cubes invisibles efectivamente porque `scale=0` colapsa los vértices al origen.
 
 ```json
-"dissolve":      [[0, 0], [0, 0.499], [1, 0.5], [1, 1]]
-"dissolveArrow": [[0, 0], [0, 0.499], [1, 0.5], [1, 1]]
+"scale": [[0, 0, 0, 0], [0, 0, 0, 0.499], [1, 1, 1, 0.515], [1, 1, 1, 1]]
 ```
 
-**Requisito:** el jugador debe tener **CustomNotes mod desactivado**, o intercepta `dissolve` y fuerza visibilidad. Documentado en `Info.dat._customData._warnings` por difficulty.
+- NJS jump-in: usa primer punto `(0, 0, 0)` → invisible.
+- `t=0..0.499`: scale=0 → invisible.
+- `t=0.499..0.515`: pop scale 0→1 (sync con sphere spawn `t=0.5` y rotation curve `t=0.5..0.52`).
+- `t=0.515..1`: scale=1 → visible toda la fase sphere hold + launch + despawn.
 
-## Limitación conocida: dissolveArrow inconsistente
+**Por qué no usar `dissolve` curve:** Vivify sí pasa `_Cutout` per-instance al shader del prefab, pero el valor está driven por proximidad al player (no por la `dissolve` curve). Si el shader implementa `clip(cutout)` con cualquier semántica, los cubes se ocultan justo al dispararse al player — opuesto a lo que queremos. Detalle del gotcha en skill [`vivify-materials`](../vivify-materials/SKILL.md) sección "Outline shader". `dissolve` y `dissolveArrow` curves se quedaron en el `.dat` del Skill4 actual pero **no aportan al efecto** y son removibles si se prefiere limpieza.
 
-El arrow/dot del cubo se ve descoordinado entre cubos (algunos sí, otros no, al mismo beat absoluto). **Causa identificada en source de NoodleExtensions/Heck:**
+## Cube swap via `AssignObjectPrefab` (parte de la receta default)
 
-`DisappearingArrowControllerBase<T>` es un componente vanilla de BS que escribe la transparencia del arrow cada frame basándose en distancia al saber. NoodleExtensions wrappea el setter (1 escritura por `ManualUpdate`) pero **no patchea el LateUpdate del controller vanilla**. En notas con `definitePosition` lejos del lane, el controller vanilla nunca ve el saber acercándose y machaca el valor de NE cada frame. Race condition.
+El note BS default tiene su propia geometría con arrow/dot indicator que sufre `dissolveArrow` desync (`DisappearingArrowControllerBase` race condition documentada en source de NoodleExtensions: el controller vanilla machaca el valor que NE escribe, porque NE no patchea su LateUpdate).
 
-`dissolve` no tiene este problema porque NE patchea `CutoutAnimateEffect.Start` con `SkipStart` para el body. El arrow no tiene patch equivalente.
+**Fix permanente:** swap del visual del cube por un prefab propio sin geometría de arrow. Prefab canónico [`NoteCube.prefab`](../../../VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteCube.prefab) con shader [`Aline/Outline`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineOutline.shader). Receta del shader (inverted-hull + SPI + GPU instancing para saber color per-instance) en skill [`vivify-materials`](../vivify-materials/SKILL.md) sección "Outline shader". El prefab queda en `aline_bundle` y aplica globalmente al resto de notes BS por `track` (no afecta a notes fuera de los tracks listados en el evento).
 
-**Workaround (polish pendiente):** swap del cube visual via `AssignObjectPrefab` con un mesh propio que NO tenga geometría de arrow → el controller vanilla no tiene nada que tocar. Encaja con el polish de "cube look" que ya tenemos en backlog.
-
-**Por ahora:** aceptar la inconsistencia visual durante prototipado.
-
-Sources verificados: [Aeroluna/Heck — ObjectInitializer.cs](https://github.com/Aeroluna/Heck/blob/master/NoodleExtensions/HeckImplementation/ObjectInitializer.cs), [CutoutManager.cs](https://github.com/Aeroluna/Heck/blob/master/NoodleExtensions/Managers/CutoutManager.cs), [CutoutEffectPatches.cs](https://github.com/Aeroluna/Heck/blob/master/NoodleExtensions/HarmonyPatches/SmallFixes/CutoutEffectPatches.cs).
+Sources del bug original verificados: [Aeroluna/Heck — ObjectInitializer.cs](https://github.com/Aeroluna/Heck/blob/master/NoodleExtensions/HeckImplementation/ObjectInitializer.cs), [CutoutManager.cs](https://github.com/Aeroluna/Heck/blob/master/NoodleExtensions/Managers/CutoutManager.cs), [CutoutEffectPatches.cs](https://github.com/Aeroluna/Heck/blob/master/NoodleExtensions/HarmonyPatches/SmallFixes/CutoutEffectPatches.cs).
 
 ## Templates de eventos
 

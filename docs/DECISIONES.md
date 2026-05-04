@@ -170,6 +170,18 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
+### Cube swap via `AssignObjectPrefab` + outline shader inverted-hull
+
+**Regla:** Los notes BS de los ataques familia A se renderizan con un prefab propio ([`NoteCube.prefab`](../VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteCube.prefab) + shader [`Aline/Outline`](../VivifyTemplate/Assets/Aline/Shaders/AlineOutline.shader)) en lugar del visual default de BS, vía `AssignObjectPrefab` con `anyDirectionAsset` listando los tracks afectados. Mesh de `Default Base.fbx` (CustomNotes), shader inverted-hull con SPI + GPU instancing para que Vivify pase `_Color` per-instance (saber color rojo/azul automático).
+
+**Por qué:** Resuelve el `dissolveArrow desync` de raíz (sin geometría de arrow → el `DisappearingArrowControllerBase` vanilla no tiene nada que tocar → no hay race condition con el `dissolveArrow` que escribe NoodleExtensions). Da control total del look "darker comic + neon outline" que encaja con el feel del boss fight de Aline. Y el patrón es reutilizable para cualquier ataque familia A futuro sin tener que volver a tocar shader/material.
+
+**Coste asumido:** el `_Cutout` que Vivify pasa per-instance está driven por proximidad al player (no por la curve `customData.animation.dissolve`), así que el shader no puede usarlo para clip activo (oculta los notes justo al dispararse, no deseado). El "dissolve trick" para ocultar el NJS jump-in se hace via `customData.animation.scale` con primer punto `(0, 0, 0)` (Heck usa el primer punto durante jump-in → cubes invisibles efectivamente). Mecánica documentada en [`family-a-recipe.md → Dissolve trick`](../.claude/skills/vivify-mapping/family-a-recipe.md).
+
+**Pendiente:** el cube actualmente no muestra dot/arrow indicator. Para `d=8` (any direction, Phase 1) no es bloqueante, pero queda como sub-paso del polish del Skill4 cuando se haga parry real con direcciones específicas.
+
+---
+
 ### Idioma: docs en español, commits en inglés
 
 **Regla:** Los archivos del proyecto (código, docs, skills, comments) en **español**. Los mensajes de git **en inglés** desde 2026-04-26 inclusive. Los commits iniciales en español (`Initial commit`, `Configurar repo: ...`) se quedan como están — no traducir retroactivamente.

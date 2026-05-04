@@ -58,6 +58,51 @@
         }
       }
     },
+    "m_noteoutline": {
+      "path": "assets/aline/prefabs/projectiles/m_noteoutline.mat",
+      "properties": {
+        "_BodyColor": {
+          "value": [
+            0.005,
+            0.005,
+            0.025,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_Color": {
+          "value": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_OutlineIntensity": {
+          "value": 2.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_OutlineThickness": {
+          "value": 0.02,
+          "type": {
+            "Float": null
+          }
+        },
+        "_Cutout": {
+          "value": 1.0,
+          "type": {
+            "Float": null
+          }
+        }
+      }
+    },
     "m_telegraphsphere": {
       "path": "assets/aline/prefabs/projectiles/m_telegraphsphere.mat",
       "properties": {
@@ -373,6 +418,7 @@
   },
   "prefabs": {
     "aline": "assets/aline/prefabs/aline.prefab",
+    "notecube": "assets/aline/prefabs/projectiles/notecube.prefab",
     "telegraphsphere": "assets/aline/prefabs/projectiles/telegraphsphere.prefab",
     "rock_cliff": "assets/aline/scenery/prefabs/rock_cliff.prefab",
     "rockplatform": "assets/aline/scenery/prefabs/rockplatform.prefab",
@@ -382,7 +428,7 @@
     "C:/Program Files (x86)/Steam/steamapps/common/Beat Saber/Beat Saber_Data/CustomWIPLevels/Test/bundleWindows2021.vivify"
   ],
   "bundleCRCs": {
-    "_windows2021": 1065031097
+    "_windows2021": 1068079553
   },
   "isCompressed": false
 }
