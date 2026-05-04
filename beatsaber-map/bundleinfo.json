@@ -58,6 +58,22 @@
         }
       }
     },
+    "m_notedot": {
+      "path": "assets/aline/prefabs/projectiles/m_notedot.mat",
+      "properties": {
+        "_Color": {
+          "value": [
+            3.0,
+            3.0,
+            3.0,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        }
+      }
+    },
     "m_noteoutline": {
       "path": "assets/aline/prefabs/projectiles/m_noteoutline.mat",
       "properties": {
@@ -428,7 +444,7 @@
     "C:/Program Files (x86)/Steam/steamapps/common/Beat Saber/Beat Saber_Data/CustomWIPLevels/Test/bundleWindows2021.vivify"
   ],
   "bundleCRCs": {
-    "_windows2021": 1068079553
+    "_windows2021": 2640058040
   },
   "isCompressed": false
 }

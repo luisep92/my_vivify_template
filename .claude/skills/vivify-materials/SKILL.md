@@ -262,6 +262,30 @@ El doc heckdocs dice que `AssignObjectPrefab` setea `_Color`, `_Cutout`, `_Cutou
 
 **No probado en este proyecto** pero plausible para iteraciones futuras: si quisiéramos un dissolve real (ej. fade post-cut), sería más fiable controlar via `AnimateTrack` setando una property custom en el material per-track, en lugar de depender de `_Cutout` automático de Vivify.
 
+### Dot/Arrow indicator overlay shader (`Aline/DotOverlay`)
+
+Para indicators flat (dot, arrow) que viven sobre la cara del cube y deben ser **siempre visibles** sobre el body+outline, sin pelear con z-buffer. Source: [`Assets/Aline/Shaders/AlineDotOverlay.shader`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineDotOverlay.shader).
+
+**Patrón:** color sólido HDR + `ZTest Always` + `ZWrite Off` + `Cull Off` + `Queue=Geometry+10`. Sin clip, sin sampler. SPI macros estándar.
+
+```hlsl
+Tags { "RenderType"="Opaque" "Queue"="Geometry+10" }
+Cull Off
+ZTest Always
+ZWrite Off
+```
+
+`ZTest Always` hace que el indicator siempre pase el depth test → visible aunque esté detrás del body o al mismo depth que el outline (caso típico cuando el child GameObject del indicator está cerca de la cara del cube). `ZWrite Off` evita que el indicator contamine el depth buffer para frames posteriores. `Cull Off` permite verlo desde ambos lados (defensivo si la rotación child queda al revés).
+
+**Por qué no `Aline/Standard` para esto:** Standard tiene `Cull Off` y queue normal (`AlphaTest`), pero respeta el ZTest LEqual que pelea con el outline pass del body. El indicator queda al mismo depth que la geometría inflada del outline (en el caso del NoteCube, outline thickness 0.02m world cubre exactamente la distancia desde la cara del cube hasta donde está el indicator). El z-fight oculta el indicator algunos frames sí otros no — bug visual constante.
+
+**Posicionamiento del indicator child** (Dot/Arrow):
+- `localPosition=(0,0,0)` — centro del cube. ZTest Always hace que el indicator se vea proyectado al centro de la silueta del cube desde cualquier ángulo, sin importar la rotación face-to-player del cube.
+- `localRotation=Euler(90, 0, 0)` — gira el plano XY de la mesh `Dot`/`Arrow` (ambas mesas planas en XY) para alinearlo con la cara visible del cube. Sin esta rotación el plano queda paralelo al view direction del player y se ve "de canto" (línea fina).
+- Material en `aline_bundle`. Color HDR overbright `(3, 3, 3, 1)` para neón blanco visible.
+
+Validado 2026-05-04 con `NoteCube.prefab` + child `Dot` (mesh `Dot` de `Default Arrows.fbx` de CustomNotes).
+
 ### Gotcha: la "ORM" de Sandfall NO es una ORM standard
 
 Confirmado 2026-05-03 con `Curator_Body_OcclusionRoughnessMetallic.png`: aunque el nombre sigue la convención UE (Occlusion R, Roughness G, Metallic B packed grayscale), el contenido visual es **pseudocolor multichannel** (naranja+verde+magenta saturados, no grayscale). El R channel tiene valores ~0.5-1.0 mayoritariamente — multiplicado como AO da prácticamente identidad, no oscurece nada.

@@ -149,11 +149,36 @@ Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de t
    - Cambio a `[[0,0,0,0], [0,0,0,0.499], [1,1,1,0.515], [1,1,1,1]]` deja primer punto en `(0,0,0)` → cubes invisibles durante el jump-in. El pop a `t=0.5` sigue coincidiendo con sphere spawn (`b=hit_beat`) y rotation (`t=0.5..0.52`), todo sincronizado.
    - El `dissolve` curve en convención Heck (`0=transparent, 1=opaque`) Vivify la mapea internamente a `_Cutout` per-instance, pero **`_Cutout` que Vivify pasa parece estar driven por proximidad al player, no por la dissolve curve**: si el shader la lee con `clip(cutout - 0.5)`, oculta los notes justo al dispararse al player. Por eso el shader **declara `_Cutout` per-instance pero NO la usa para discard activo** (queda como hook para parry / debris fade).
 
-   **Resuelto en el camino:** `dissolveArrow` desync (la limitación de `DisappearingArrowControllerBase` documentada en family-a-recipe). El cube custom no tiene geometría de arrow → el controller vanilla no tiene nada que tocar → no hay race condition.
+   **Resuelto en el camino:** `dissolveArrow` desync (la limitación de `DisappearingArrowControllerBase` documentada en family-a-recipe). El cube custom no tiene geometría de arrow vanilla → el controller vanilla no tiene nada que tocar → no hay race condition.
 
-   Detalle operativo + nuevo template de evento en skill [`vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md). Decisión consolidada en [DECISIONES.md → "Cube swap via AssignObjectPrefab + outline shader inverted-hull"](DECISIONES.md).
+   **Dot indicator añadido al prefab:** child GameObject con la mesh `Dot` de `Default Arrows.fbx` de CustomNotes (`NoteArrows.fbx` en el repo) y shader [`Aline/DotOverlay`](../VivifyTemplate/Assets/Aline/Shaders/AlineDotOverlay.shader) (color sólido HDR + `ZTest Always` + `ZWrite Off`). Posicionado en `localPosition=(0,0,0)` (centro del cube) con `localRotation=Euler(90,0,0)` para alinear el plano XY de la mesh con la cara visible. ZTest Always hace que el dot atraviese body+outline y aparezca siempre centrado al silhouette desde cualquier rotation face-to-player.
 
-   **b) Partículas en sphere despawn** — sustituir el `DestroyObject` actual de la sphere con un `InstantiatePrefab` de un ParticleSystem custom (energía blanca + humo negro tipo E33). El cubo idealmente lleva trail o partícula que lo sigue (track compartido o `AssignTrackParent`). Trabajo serio: ParticleSystem autorizado en Unity + shader propio + bundleado en `aline_bundle`. Commit propio.
+   **Direccionales (futuro):** infraestructura ya lista — `NoteArrows.fbx` trae también la mesh `Arrow`. Para `d=0..7` crear `NoteCubeDir.prefab` análogo con un Arrow child apuntando local +Y (BS rota el prefab según `d`); aplicar via `AssignObjectPrefab.colorNotes.asset` (en lugar de `anyDirectionAsset`) sobre los tracks direccionales. Misma rotation `Euler(90,0,0)` para el child probablemente.
+
+   Detalle operativo + nuevo template de evento en skill [`vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md). Patrón shader del DotOverlay en [`vivify-materials → Dot/Arrow indicator overlay shader`](../.claude/skills/vivify-materials/SKILL.md). Decisión consolidada en [DECISIONES.md → "Cube swap via AssignObjectPrefab + outline shader inverted-hull"](DECISIONES.md).
+
+   **b) Partículas en sphere despawn + trail del cube** — siguiente sub-paso. Dos efectos relacionados:
+
+   **(b1) Sphere despawn → puff de partículas.** Sustituir el `DestroyObject` actual de cada sphere con un `InstantiatePrefab` de un ParticleSystem custom que emite un burst en la posición de la sphere. Look objetivo: energía blanca + humo negro tipo E33, ~0.5-1s de duración. Investigar si ParticleSystem sobrevive al stripping del bundle Vivify (los componentes built-in suelen sí; los modules custom no).
+
+   **(b2) Trail del cube en su launch.** Cuando el cube se dispara al player (t=0.857..0.929), debería dejar un trail visible (energía siguiendo). Decidir entre:
+   - **Trail Renderer** built-in de Unity — barato, sigue la trayectoria automáticamente. Probable que sobreviva al stripping (built-in Unity component).
+   - **ParticleSystem con emission al launch** (mismo ParticleSystem vinculado al cube via `AssignTrackParent` o como child del prefab que se activa en el momento de fire).
+   - **Esto necesita validar primero** qué componente de partículas/trail soporta el bundle pipeline. Prototipar con un ParticleSystem mínimo en Unity, F5, ver si renderiza en BS.
+
+   Resources ya en sitio:
+   - Shader/material patterns para emisión brillante: ya tenemos `Aline/DotOverlay` y `Aline/Outline` con HDR. Reutilizables o adaptables.
+   - El bundle pipeline + auto-sync CRC funciona end-to-end.
+   - Las spheres tienen tracks individuales (`skill4_sphere_<i>`), así que se puede hacer `AssignTrackParent` o eventos targeted por track.
+
+   Pasos para implementar:
+   1. Crear `Assets/Aline/VFX/SphereBurst.prefab` con un ParticleSystem (modo burst, color energía+humo). Material con shader propio (probable additive blend para "energía", separate ParticleSystem o sub-emitter para humo). Bundlear.
+   2. Validar primero en Scene view + en BS bundle build que el ParticleSystem renderiza (descartar stripping issues antes de invertir tiempo en tuning visual).
+   3. En `NormalStandard.dat`: reemplazar los 7 `DestroyObject` de las spheres por una secuencia `InstantiatePrefab(SphereBurst, position=sphere_world)` + `DestroyObject(sphere)` simultáneos. Los burst persisten unos beats hasta auto-despawn (configurar `duration` en el ParticleSystem).
+   4. Para el trail del cube: añadir un Trail Renderer al `NoteCube.prefab` como child o componente del root. Ajustar `time`, `width`, color (HDR rojo si saber red, blanco neutro). Validar que se renderiza en BS bundle.
+   5. Iterar visual: longitud, fade, velocidad de emisión.
+
+   Skill afectada al cerrar: actualizar [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) o crear [`vivify-vfx`](../.claude/skills/vivify-vfx/SKILL.md) según volumen del knowledge — ParticleSystem en bundles Vivify, Trail Renderer compatibility, shaders aditivos para partículas.
 
    **c) Hit particle** — finetune visual cuando el saber corte el cubo. Diferido hasta validar (a) y (b).
 
