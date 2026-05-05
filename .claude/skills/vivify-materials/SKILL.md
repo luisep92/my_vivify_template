@@ -286,6 +286,75 @@ ZWrite Off
 
 Validado 2026-05-04 con `NoteCube.prefab` + child `Dot` (mesh `Dot` de `Default Arrows.fbx` de CustomNotes).
 
+### Particle shaders en bundles Vivify
+
+Para `ParticleSystem` (built-in Unity) que renderiza dentro de un bundle Vivify. Validado 2026-05-05 con `SphereBurst.prefab` + cube child smoke (E33-style envelope + world trail). ParticleSystem **sí** sobrevive al stripping del bundle (es componente core de Unity, no MonoBehaviour custom — ver "MonoBehaviour custom NO sobrevive al stripping" arriba).
+
+**Gotcha 1 — los shaders de mesh estática (POSITION-only) NO valen para billboard particles.**
+
+`Aline/DotOverlay` y similares declaran `appdata { float4 vertex : POSITION; UNITY_VERTEX_INPUT_INSTANCE_ID }`. Eso vale para `MeshRenderer` con vertex buffer estático. `ParticleSystemRenderer` en `Billboard` mode genera quads con `POSITION + COLOR + TEXCOORD0` por particle (color es la modulación per-particle, UV el cuadrante del quad para máscara). Si el shader no declara `COLOR/TEXCOORD0`, los particles emiten OK pero salen invisibles (color por defecto a 0 + sin máscara = nada).
+
+Diagnóstico empírico: el log `[Vivify/InstantiatePrefab] Enabled [...prefab]` confirma instanciación + bundle correcto, así que el silencio visual = shader incompatible, no stripping.
+
+**Patrón shader compatible (ver [`AlineParticleSmoke.shader`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineParticleSmoke.shader) y [`AlineParticle.shader`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineParticle.shader)):**
+
+```hlsl
+struct appdata {
+    float4 vertex : POSITION;
+    float4 color  : COLOR;       // modulación per-particle (gradient + startColor)
+    float2 uv     : TEXCOORD0;   // 0..1 across quad, para procedural mask
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+};
+
+struct v2f {
+    float4 position : SV_POSITION;
+    float4 color    : COLOR;
+    float2 uv       : TEXCOORD0;
+    UNITY_VERTEX_OUTPUT_STEREO
+};
+
+// vert: o.position = UnityObjectToClipPos(v.vertex); o.color = v.color; o.uv = v.uv;
+// frag: máscara procedural desde uv * tint * v.color
+```
+
+SPI macros idénticas al resto de shaders del repo (BS 1.34.2 SinglePassInstanced VR).
+
+**Gotcha 2 — aditivo HDR para "energía", alpha-blend para "humo oscuro".**
+
+Aditivo (`Blend SrcAlpha One`) sobre fondo bright (skybox blanquecino) **no muestra negros** porque suma. Smoke oscuro requiere alpha-blend (`Blend SrcAlpha OneMinusSrcAlpha`).
+
+| Caso | Shader | Blend | Tint |
+|---|---|---|---|
+| Sparks / energía / glow | `Aline/Particle` | `SrcAlpha One` (additive) | HDR overbright `(3,3,3,1)` o más |
+| Humo / dust / dark wisps | `Aline/ParticleSmoke` | `SrcAlpha OneMinusSrcAlpha` (alpha) | LDR oscuro `(0.04,0.04,0.06,1)` |
+
+`Cull Off`, `ZWrite Off` para los dos. `ZTest LEqual` (default — humo respeta z-buffer; queda detrás del cube body si va detrás).
+
+**Gotcha 3 — `simulationSpace=Local` vs `World` define si el efecto sigue al parent o se queda en el mundo.**
+
+| simulationSpace | Comportamiento | Cuándo usar |
+|---|---|---|
+| `Local` | Particles attached al transform del parent. Mover/rotar parent → particles se mueven con él. | Envoltura contenida que viaja con el proyectil (smoke envelope). |
+| `World` | Particles emitidos en world coords. Mover parent → particles previamente emitidos quedan donde estaban. | Trail / scia que se queda atrás cuando el parent se mueve. Burst de humo en posición fija. |
+
+Combinar ambos en el mismo prefab para un efecto rico: un emitter Local (envelope) + otro World (trail). Ejemplo en [`NoteCube.prefab`](../../../VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteCube.prefab) con `SmokeEnvelope` + `SmokeTrailWorld` siblings.
+
+**Gotcha 4 — Hacer particles invisibles durante NJS jump-in via `scalingMode=Hierarchy` + `localScale=1/parent_scale`.**
+
+Cuando un ParticleSystem es child de un BS note prefab (ej. `NoteCube.prefab` con `localScale=45` y customData.animation.scale curve `[0,0,0]` durante jump-in), queremos que las particles también sean invisibles durante el jump-in y aparezcan al `scale-pop`. Pero por default Unity scala particles "Local" — solo respeta el `localScale` del propio GO del PS, no el lossyScale del parent.
+
+**Solución:**
+- `MainModule.scalingMode = Hierarchy` — ahora el sistema usa lossyScale (parent × child).
+- `child.localScale = (1/parent_scale, 1/parent_scale, 1/parent_scale)` — neutraliza el factor 45 del parent. Resultado: lossyScale efectivo = 1 cuando parent.lossyScale=45 (post scale-pop), y = 0 cuando parent.lossyScale=0 (durante jump-in y antes del pop).
+
+Sin esto, hay que recurrir a `MainModule.startDelay` aproximando la duración del NJS jump-in en segundos — frágil porque depende de NJS+BPM y de cuándo el ParticleSystem awake'a.
+
+**Gotcha 5 — fade-in de alpha en trails crea "gap" visible entre cube y cola.**
+
+Si la `colorOverLifetime` curve arranca en alpha=0 ("fade in"), las particles recién emitidas son invisibles ~0.2-0.3s. Durante ese tiempo el cube se mueve varios metros → la cola visible arranca lejos del cube, no pegada.
+
+**Solución:** alpha curve para trails arranca ya en el peak (`0.85` o lo que toque) y solo hace fade-out al final. El "soft start" lo aporta la máscara procedural del shader (suave en el borde del quad), no la curva de lifetime. Para envelope (Local sim, attached al cube) sí se puede usar fade-in sin gap visible — porque el particle se mueve con el cube y "aparece progresivamente" en su sitio.
+
 ### Gotcha: la "ORM" de Sandfall NO es una ORM standard
 
 Confirmado 2026-05-03 con `Curator_Body_OcclusionRoughnessMetallic.png`: aunque el nombre sigue la convención UE (Occlusion R, Roughness G, Metallic B packed grayscale), el contenido visual es **pseudocolor multichannel** (naranja+verde+magenta saturados, no grayscale). El R channel tiene valores ~0.5-1.0 mayoritariamente — multiplicado como AO da prácticamente identidad, no oscurece nada.

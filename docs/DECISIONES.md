@@ -182,6 +182,24 @@ Reglas fuertes del proyecto, una entrada por decisión. Solo el "qué" y un pár
 
 ---
 
+### Particle visuals via 3 ParticleSystems coordinados (sin texture)
+
+**Regla:** Para los ataques familia A, las partículas que dan vida al telegraph + cube son **3 `ParticleSystem` separados** (todos `Aline/ParticleSmoke` shader, máscara circular procedural sin texture):
+
+1. `SphereBurst.prefab` (1 PS, World sim) — burst inicial al `spawn_beat` de cada sphere. Sustituye visualmente las antiguas "telegraph spheres". Auto-destroy via `stopAction=Destroy`.
+2. `NoteCube.prefab → SmokeEnvelope` child (PS Local sim) — envoltura contenida pegada al cube durante todo su lifetime, viaja con él en hover y launch.
+3. `NoteCube.prefab → SmokeTrailWorld` child (PS World sim) — cola que queda atrás cuando el cube se mueve, particles emitidos persisten en world space.
+
+Los dos children del cube usan **`scalingMode=Hierarchy` + `localScale=(1/parent_scale)`** para heredar `lossyScale=0` del cube root durante NJS jump-in → invisibles automáticamente, sin necesitar `startDelay` (que sería frágil porque depende de NJS+BPM).
+
+**Por qué no Trail Renderer (la idea original de (b2)):** Trail Renderer es un componente diferente (línea geométrica continua adheri al transform), pero (a) duplica conocimiento porque el equivalente con ParticleSystem World ya da el mismo efecto, (b) los Trail Renderers no producen el "envelope contenido" que sí da un PS Local, y (c) shaders custom sobre Trail Renderer requieren otro shader pattern que no aporta sobre Aline/ParticleSmoke ya escrito. Con ParticleSystem cubrimos los 3 roles (burst, envelope, trail) con la misma stack de shader+material, mismas técnicas de scaling, mismo conocimiento.
+
+**Por qué shader procedural sin texture:** las máscaras circulares + procedural cross/star se computan baratas en frag shader, evita meter PNGs adicionales al bundle, y permite tunear forma/falloff vía `_SoftEdge`/`_CoreOpacity` properties sin re-exportar texturas. Para humo wispy es suficiente; si hace falta algo más complejo (noise patterns, animated texture sheets) se puede añadir cuando haya caso de uso. Ver detalles operativos en [`vivify-materials → Particle shaders`](../.claude/skills/vivify-materials/SKILL.md).
+
+**Coste asumido:** 3 ParticleSystems vs uno solo más complejo aumenta count de componentes, pero los costes (drawcalls, batching) son trivials a la cantidad de notes en el mapa (Phase 1 ~50-100 notes total). Validado 2026-05-05.
+
+---
+
 ### Idioma: docs en español, commits en inglés
 
 **Regla:** Los archivos del proyecto (código, docs, skills, comments) en **español**. Los mensajes de git **en inglés** desde 2026-04-26 inclusive. Los commits iniciales en español (`Initial commit`, `Configurar repo: ...`) se quedan como están — no traducir retroactivamente.

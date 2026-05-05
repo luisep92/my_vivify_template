@@ -430,6 +430,108 @@
           }
         }
       }
+    },
+    "m_smoke": {
+      "path": "assets/aline/vfx/m_smoke.mat",
+      "properties": {
+        "_TintColor": {
+          "value": [
+            0.04,
+            0.04,
+            0.0599999651,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_SoftEdge": {
+          "value": 0.85,
+          "type": {
+            "Float": null
+          }
+        },
+        "_CoreOpacity": {
+          "value": 0.45,
+          "type": {
+            "Float": null
+          }
+        }
+      }
+    },
+    "m_smoketrail": {
+      "path": "assets/aline/vfx/m_smoketrail.mat",
+      "properties": {
+        "_TintColor": {
+          "value": [
+            0.04,
+            0.04,
+            0.0599999651,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_SoftEdge": {
+          "value": 0.7,
+          "type": {
+            "Float": null
+          }
+        },
+        "_CoreOpacity": {
+          "value": 0.85,
+          "type": {
+            "Float": null
+          }
+        }
+      }
+    },
+    "m_starspark": {
+      "path": "assets/aline/vfx/m_starspark.mat",
+      "properties": {
+        "_TintColor": {
+          "value": [
+            3.0,
+            3.0,
+            3.0,
+            1.0
+          ],
+          "type": {
+            "Color": null
+          }
+        },
+        "_RayThickness": {
+          "value": 8.0,
+          "type": {
+            "Float": null
+          }
+        },
+        "_RayLengthFalloff": {
+          "value": 1.2,
+          "type": {
+            "Float": null
+          }
+        },
+        "_RayBoost": {
+          "value": 1.5,
+          "type": {
+            "Float": null
+          }
+        },
+        "_CoreSize": {
+          "value": 0.08,
+          "type": {
+            "Float": null
+          }
+        },
+        "_CoreBoost": {
+          "value": 3.0,
+          "type": {
+            "Float": null
+          }
+        }
+      }
     }
   },
   "prefabs": {
@@ -438,13 +540,14 @@
     "telegraphsphere": "assets/aline/prefabs/projectiles/telegraphsphere.prefab",
     "rock_cliff": "assets/aline/scenery/prefabs/rock_cliff.prefab",
     "rockplatform": "assets/aline/scenery/prefabs/rockplatform.prefab",
+    "sphereburst": "assets/aline/vfx/sphereburst.prefab",
     "cube": "assets/test/prefabs/cube.prefab"
   },
   "bundleFiles": [
     "C:/Program Files (x86)/Steam/steamapps/common/Beat Saber/Beat Saber_Data/CustomWIPLevels/Test/bundleWindows2021.vivify"
   ],
   "bundleCRCs": {
-    "_windows2021": 2640058040
+    "_windows2021": 2802687219
   },
   "isCompressed": false
 }

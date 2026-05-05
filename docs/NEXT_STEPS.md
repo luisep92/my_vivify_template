@@ -157,28 +157,22 @@ Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de t
 
    Detalle operativo + nuevo template de evento en skill [`vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md). Patrón shader del DotOverlay en [`vivify-materials → Dot/Arrow indicator overlay shader`](../.claude/skills/vivify-materials/SKILL.md). Decisión consolidada en [DECISIONES.md → "Cube swap via AssignObjectPrefab + outline shader inverted-hull"](DECISIONES.md).
 
-   **b) Partículas en sphere despawn + trail del cube** — siguiente sub-paso. Dos efectos relacionados:
+   **b) Partículas para sphere telegraph + cube smoke envelope/trail** — **hecho 2026-05-05** (b1 + b2 unificados; el plan original tenía Trail Renderer separado pero al final un ParticleSystem child resolvió los dos roles + el de "telegraph" mejor).
 
-   **(b1) Sphere despawn → puff de partículas.** Sustituir el `DestroyObject` actual de cada sphere con un `InstantiatePrefab` de un ParticleSystem custom que emite un burst en la posición de la sphere. Look objetivo: energía blanca + humo negro tipo E33, ~0.5-1s de duración. Investigar si ParticleSystem sobrevive al stripping del bundle Vivify (los componentes built-in suelen sí; los modules custom no).
+   **Diseño final (3 ParticleSystems coordinados, todos `Aline/ParticleSmoke` shader):**
 
-   **(b2) Trail del cube en su launch.** Cuando el cube se dispara al player (t=0.857..0.929), debería dejar un trail visible (energía siguiendo). Decidir entre:
-   - **Trail Renderer** built-in de Unity — barato, sigue la trayectoria automáticamente. Probable que sobreviva al stripping (built-in Unity component).
-   - **ParticleSystem con emission al launch** (mismo ParticleSystem vinculado al cube via `AssignTrackParent` o como child del prefab que se activa en el momento de fire).
-   - **Esto necesita validar primero** qué componente de partículas/trail soporta el bundle pipeline. Prototipar con un ParticleSystem mínimo en Unity, F5, ver si renderiza en BS.
+   - **`SphereBurst.prefab`** (1 ParticleSystem, World sim): instanciado al `spawn_beat[i]` de cada sphere. Sustituye visualmente las telegraph spheres del aviso — burst de humo oscuro (14 puffs, lifetime 1.5-2.2s, auto-destroy via `stopAction=Destroy`). Material `M_Smoke` con `_CoreOpacity=0.45` (humo difuso/sutil, no domina la escena). Las telegraph spheres del .dat (`InstantiatePrefab` + `DestroyObject` para `skill4_sphere_*`) se ELIMINARON — el burst es ahora todo el telegraph visual.
+   - **`NoteCube.prefab → SmokeEnvelope` child** (Local sim): envoltura contenida pegada al cube durante todo su lifetime. `simulationSpace=Local` → particles attached al cube transform; `scalingMode=Hierarchy` + `localScale=(1/45, 1/45, 1/45)` → hereda el `lossyScale=0` del cube root durante NJS jump-in → automáticamente invisible hasta el `scale-pop`. Rate 15/s, lifetime 0.6-1.0s, startSize 0.8-1.2, alpha peak 0.95.
+   - **`NoteCube.prefab → SmokeTrailWorld` child** (World sim): cola que queda atrás cuando el cube se dispara. Misma técnica de scaling para invisibility durante jump-in. Rate 30/s (densidad alta para que la cola lea continua a velocidades altas, no como "balines"), lifetime 0.7-1.0s, alpha peak 0.85 desde t=0 (sin fade-in, evita gap visible entre cube y cola).
 
-   Resources ya en sitio:
-   - Shader/material patterns para emisión brillante: ya tenemos `Aline/DotOverlay` y `Aline/Outline` con HDR. Reutilizables o adaptables.
-   - El bundle pipeline + auto-sync CRC funciona end-to-end.
-   - Las spheres tienen tracks individuales (`skill4_sphere_<i>`), así que se puede hacer `AssignTrackParent` o eventos targeted por track.
+   **Recetas / shaders nuevos consolidados en skills:**
+   - [`vivify-materials → Particle shaders en bundles Vivify`](../.claude/skills/vivify-materials/SKILL.md): vertex inputs requeridos (POSITION + COLOR + TEXCOORD0; los shaders POSITION-only para mesh estática NO valen para billboard particles), aditivo HDR vs alpha-blend, simulationSpace=Local vs World, truco scalingMode=Hierarchy+localScale=1/parent_scale, alpha curves sin fade-in para trails.
+   - [`vivify-mapping/family-a-recipe.md → Modelo conceptual + Cube swap`](../.claude/skills/vivify-mapping/family-a-recipe.md): arquitectura "telegraph + cube" actualizada al modelo de 3 ParticleSystems; templates de eventos (`InstantiatePrefab(SphereBurst)` reemplaza a sphere+destroy).
 
-   Pasos para implementar:
-   1. Crear `Assets/Aline/VFX/SphereBurst.prefab` con un ParticleSystem (modo burst, color energía+humo). Material con shader propio (probable additive blend para "energía", separate ParticleSystem o sub-emitter para humo). Bundlear.
-   2. Validar primero en Scene view + en BS bundle build que el ParticleSystem renderiza (descartar stripping issues antes de invertir tiempo en tuning visual).
-   3. En `NormalStandard.dat`: reemplazar los 7 `DestroyObject` de las spheres por una secuencia `InstantiatePrefab(SphereBurst, position=sphere_world)` + `DestroyObject(sphere)` simultáneos. Los burst persisten unos beats hasta auto-despawn (configurar `duration` en el ParticleSystem).
-   4. Para el trail del cube: añadir un Trail Renderer al `NoteCube.prefab` como child o componente del root. Ajustar `time`, `width`, color (HDR rojo si saber red, blanco neutro). Validar que se renderiza en BS bundle.
-   5. Iterar visual: longitud, fade, velocidad de emisión.
-
-   Skill afectada al cerrar: actualizar [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) o crear [`vivify-vfx`](../.claude/skills/vivify-vfx/SKILL.md) según volumen del knowledge — ParticleSystem en bundles Vivify, Trail Renderer compatibility, shaders aditivos para partículas.
+   **Pendiente de validar (no bloqueante):**
+   - VR test (sensación de humo contenido + cola en headset puede leer distinto que en flatscreen).
+   - Velocidad de cubos más alta (`travel_beats` < 2): hipotesis es que el rate de 30/s del trail ya cubre, pero confirmar empíricamente cuando se llegue al polish (d).
+   - "Borrón / haze" al spawn beat (un quad aditivo grande puntual) diferido a iteración 2 si el telegraph sin él se siente flojo.
 
    **c) Hit particle** — finetune visual cuando el saber corte el cubo. Diferido hasta validar (a) y (b).
 

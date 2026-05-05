@@ -8,12 +8,22 @@ Implementación reutilizable de un ataque familia A. Validado con Skill4 en `Nor
 
 ## Modelo conceptual
 
-Cada proyectil es una pareja **indicador + cubo**:
+Cada proyectil es una pareja **telegraph (humo) + cubo**:
 
-- **Indicador** = Vivify prefab (esfera semitransparente) que aparece en una posición fija "encima de Aline" durante una ventana de aviso (~10 beats), se hace visible con un pop animation, mantiene posición, y desaparece justo cuando dispara su cubo.
-- **Cubo** = nota BS nativa con `definitePosition` que la mantiene "anclada" a la posición del indicador durante todo el aviso, y al `launch_beat` se mueve al jugador en `~2 beats`.
+- **Telegraph** = `InstantiatePrefab` de [`SphereBurst.prefab`](../../../VivifyTemplate/Assets/Aline/VFX/SphereBurst.prefab) en la posición fija "encima de Aline" en `spawn_beat`. Es un **burst de humo oscuro** (1 ParticleSystem child, simulationSpace=World, lifetime ~1.5-2.2s, auto-destroy via `stopAction=Destroy`). Sustituye lo que antes eran "esferas placeholder semitransparentes" — el humo SOLO ocupa el sitio del aviso. No persiste hasta `launch_beat`; la presencia del cube haciéndose visible al hit_beat hace de telegraph posterior.
+- **Cubo** = nota BS nativa (`AssignObjectPrefab` → `NoteCube.prefab` swap) con `definitePosition` que la mantiene "anclada" a la posición del telegraph durante todo el aviso, y al `launch_beat` se mueve al jugador en `~2 beats`. El cube tiene **2 ParticleSystem children** (`SmokeEnvelope` Local-sim para envoltura contenida + `SmokeTrailWorld` World-sim para cola en launch). Detalle en sección "Cube swap" abajo.
 
-El cubo **es** el sistema de parry — cortable, scoreable. El indicador es solo telegraph visual; tras el `launch_beat` se reemplazará por partículas (polish pendiente).
+El cubo **es** el sistema de parry — cortable, scoreable. El telegraph (burst inicial + envoltura) es solo cosmético.
+
+**Arquitectura de partículas (3 ParticleSystems coordinados):**
+
+| Particle | Lifetime visual | Vive en | Cuándo aparece |
+|---|---|---|---|
+| `SphereBurst.Smoke` | 1.5-2.2s, 14 puffs en burst | World, posición fija sphere | `spawn_beat` (telegraph inicial) |
+| `NoteCube.SmokeEnvelope` | Continuo durante vida del cube, rate 15/s, lifetime 0.6-1.0s | Local al cube transform | Aparece automáticamente al `scale-pop` del cube (ver gotcha "scalingMode=Hierarchy" en [`vivify-materials → Particle shaders`](../vivify-materials/SKILL.md)) |
+| `NoteCube.SmokeTrailWorld` | Continuo durante vida del cube, rate 30/s, lifetime 0.7-1.0s | World | Igual que envelope; durante hover los particles emiten cerca del cube; durante launch los particles previamente emitidos quedan en world → cola continua detrás. |
+
+Los tres usan `Aline/ParticleSmoke` shader (alpha-blend dark, máscara circular procedural). M_Smoke (CoreOpacity 0.45 — burst suave) y M_SmokeTrail (CoreOpacity 0.85 — envelope/trail visibles) son materiales separados para tunear opacidad sin afectar al resto.
 
 ## Inputs (parámetros por instancia del ataque)
 
@@ -160,8 +170,10 @@ El note BS default tiene su propia geometría con arrow/dot indicator que sufre 
 
 **Fix permanente:** swap del visual del cube por un prefab propio sin geometría de arrow vanilla. Prefab canónico [`NoteCube.prefab`](../../../VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteCube.prefab):
 
-- **Body**: mesh `Default Base.fbx` de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) con shader [`Aline/Outline`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineOutline.shader) (inverted-hull + SPI + GPU instancing para saber color per-instance). Receta del shader en skill [`vivify-materials → Outline shader`](../vivify-materials/SKILL.md).
+- **Body**: mesh `Default Base.fbx` de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) con shader [`Aline/Outline`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineOutline.shader) (inverted-hull + SPI + GPU instancing para saber color per-instance). Receta del shader en skill [`vivify-materials → Outline shader`](../vivify-materials/SKILL.md). `localScale=45` para compensar bounds 0.011 de la mesh raw.
 - **Indicator**: child GameObject `Dot` con la mesh `Dot` de `Default Arrows.fbx` (`NoteArrows.fbx` en el repo), shader [`Aline/DotOverlay`](../../../VivifyTemplate/Assets/Aline/Shaders/AlineDotOverlay.shader) (color sólido HDR + `ZTest Always` + `ZWrite Off` para que el dot atraviese el body+outline regardless de profundidad). `localPosition=(0,0,0)` (centro del cube), `localRotation=Euler(90, 0, 0)` (alinea el plano XY de la mesh con la cara del cube facing player). Sin esa rotación el plano queda paralelo al view direction y se ve "de canto". Material `M_NoteDot` en `aline_bundle` con `_Color=(3, 3, 3, 1)` HDR.
+- **Smoke envelope**: child GameObject `SmokeEnvelope` con `ParticleSystem` configurado `simulationSpace=Local`, `scalingMode=Hierarchy`, `localScale=(1/45, 1/45, 1/45)` (neutraliza el `localScale=45` del root). Shader `Aline/ParticleSmoke`, material `M_SmokeTrail`. Rate 15/s, lifetime 0.6-1.0s, startSize 0.8-1.2, alpha peak 0.95 con fade-in suave (envelope visualmente "respira" alrededor del cube). Hereda el `scale=0` del root durante NJS jump-in → invisible automáticamente hasta el `scale-pop`. Detalle del truco scalingMode en [`vivify-materials → Particle shaders → Gotcha 4`](../vivify-materials/SKILL.md).
+- **Smoke trail (world)**: child GameObject `SmokeTrailWorld` con `ParticleSystem` `simulationSpace=World`, mismo `scalingMode=Hierarchy` + `localScale=(1/45, 1/45, 1/45)` para que también herede invisibility durante jump-in. Material `M_SmokeTrail`. Rate 30/s (densidad alta para que la cola lea continua a velocidades altas, no como "balines flotando"), lifetime 0.7-1.0s, startSize 0.4-0.8, alpha peak 0.85 desde t=0 (sin fade-in, evita gap entre cube y cola — ver [`vivify-materials → Gotcha 5`](../vivify-materials/SKILL.md)). Durante hover del cube los particles emiten al lado del cube; durante launch los particles previos quedan en world → trail.
 
 Aplica via `AssignObjectPrefab` con `anyDirectionAsset` (los notes son `d=8` = dot/any direction). Para soporte direccional futuro (notes con `d=0..7`), usar `asset` en lugar de `anyDirectionAsset` y reemplazar el child `Dot` por la mesh `Arrow` del mismo `NoteArrows.fbx` (apuntando local +Y; BS rota automáticamente el prefab según el valor `d`). Misma rotation pattern (90X probablemente) para alinear el plano XY del Arrow con la cara visible.
 
@@ -188,25 +200,18 @@ Sources del bug original verificados: [Aeroluna/Heck — ObjectInitializer.cs](h
 }}
 ```
 
-### 3. Sphere spawn (N InstantiatePrefab)
+### 3. Telegraph burst (N InstantiatePrefab de SphereBurst, en `spawn_beat`)
 
 ```json
 {"b": <spawn_beat[i]>, "t": "InstantiatePrefab", "d": {
-  "id": "<attack_id>_sphere_<i>",
-  "asset": "assets/aline/prefabs/projectiles/telegraphsphere.prefab",
-  "position": [<sphere_world[i]>],
-  "rotation": [0, 0, 0],
-  "scale": [<sphere_scale>, <sphere_scale>, <sphere_scale>]
+  "asset": "assets/aline/vfx/sphereburst.prefab",
+  "position": [<sphere_world[i]>]
 }}
 ```
 
-### 4. Sphere despawn (N DestroyObject, en `launch_beat`)
+Sin `id`: el prefab se autodestruye via `stopAction=Destroy` cuando termina el ParticleSystem (no hace falta `DestroyObject`). Sin `rotation`/`scale`: defaults OK para el burst (es un puff omnidireccional).
 
-```json
-{"b": <launch_beat[i]>, "t": "DestroyObject", "d": {
-  "id": "<attack_id>_sphere_<i>"
-}}
-```
+> **Nota histórica:** la versión anterior usaba un prefab de "esfera semitransparente" que duraba todo el aviso (`spawn_beat → launch_beat`) con un `DestroyObject` al final. Se reemplazó (2026-05-05) por el burst de humo, que sustituye la esfera entera. El cube cubre la presencia visual del telegraph desde su `scale-pop` en adelante (envuelto en `SmokeEnvelope`).
 
 ### 5. Cubo BS nativo (N colorNotes, en `b = spawn_beat`)
 
@@ -314,7 +319,8 @@ Las posiciones forman un semicírculo centrado en `(0, 3, 8)` con radio 3m, áng
 
 ## Polish pendiente (no en la receta, anotado)
 
-- Partículas en sphere despawn (cuando el cubo se dispara la sphere "explota" en partículas).
-- `AssignObjectPrefab` para swap del cube visual y resolver el dissolveArrow desync.
+- Validación con `travel_beats` más bajo (cubos más rápidos): probable que el SmokeTrailWorld necesite re-tuning de rate/lifetime para que la cola siga leyendo continua. Hipotesis: rate ya prepara para velocidades altas (30/s), pero confirmar empíricamente.
+- Validación VR (cabeza moviéndose): la sensación de "humo contenido alrededor del cube" + cola al disparar puede leer distinto desde headset que en flatscreen mode.
 - Quitar `uninteractable` y configurar `c`/`d` para parry real puntuable.
-- Tunear velocidad de disparo (`travel_beats` más bajo para más intenso).
+- Bug separado: el outline del cube spawn aparece blanco antes de cambiar a rojo (probable: `_Color` instanced del shader Aline/Outline arranca en blanco default antes de que Vivify pushee el saber color en el primer frame visible). No bloquea pero queda anotado.
+- (Opcional) "Borrón / haze" puntual al spawn beat — un quad aditivo grande con vida corta para enfatizar la "explosión visual" del telegraph. Diferido si el burst sin él se siente suficiente.
