@@ -5,16 +5,16 @@ description: Use when editing Beat Saber map .dat files (Info.dat, [Difficulty]S
 
 # Vivify Mapping
 
-Editar el mapa Beat Saber con Vivify. Cubre los `.dat`, los eventos Vivify y el catálogo de familias de ataque.
+Editing the Beat Saber map with Vivify. Covers the `.dat` files, Vivify events, and the attack family catalog.
 
-## Formatos
+## Formats
 
-- `*Standard.dat`, `BPMInfo.dat` → V3 beatmap (`"version": "3.x.x"`, claves cortas `b/x/y/c/d/t`, `customData` sin underscore).
-- `Info.dat` → schema con underscore (`_version: "2.x.x"`, `_difficultyBeatmapSets`, etc.). BS 1.34.2 espera este; no hay alternativa.
+- `*Standard.dat`, `BPMInfo.dat` → V3 beatmap (`"version": "3.x.x"`, short keys `b/x/y/c/d/t`, `customData` without underscore).
+- `Info.dat` → schema with underscore (`_version: "2.x.x"`, `_difficultyBeatmapSets`, etc.). BS 1.34.2 expects this; no alternative.
 
-### Schema mínimo V3 requerido en cada `*Standard.dat`
+### Minimum V3 schema required in each `*Standard.dat`
 
-Si falta una entry, BS no parsea el archivo y la dificultad no carga:
+If an entry is missing, BS won't parse the file and the difficulty won't load:
 
 ```
 version, bpmEvents, rotationEvents, colorNotes, bombNotes, obstacles, sliders,
@@ -24,11 +24,11 @@ basicEventTypesWithKeywords: {d: []}, useNormalEventsAsCompatibleEvents: false,
 customData: {}
 ```
 
-Las que no usemos van como `[]` literal.
+The ones we don't use go as literal `[]`.
 
-### Cheatsheet V2 → V3
+### V2 → V3 cheatsheet
 
-Útil cuando copias snippets de `vivify_examples/` (algunos antiguos siguen siendo V2) o de docs antiguos.
+Useful when copying snippets from `vivify_examples/` (some old ones are still V2) or from old docs.
 
 | V2 | V3 |
 |---|---|
@@ -47,19 +47,19 @@ Las que no usemos van como `[]` literal.
 | `_track` | `track` |
 | `_animation` | `animation` |
 | `_dissolve` / `_definitePosition` | `dissolve` / `definitePosition` |
-| `_disableSpawnEffect: true` | `spawnEffect: false` (renombrado e invertido) |
+| `_disableSpawnEffect: true` | `spawnEffect: false` (renamed and inverted) |
 | `_pointDefinitions: [{_name, _points}]` array | `pointDefinitions: {name: points}` dict |
 | `_environment[*]._id` | `environment[*].id` |
 
-### Gotcha PowerShell `ConvertTo-Json` con arrays vacíos
+### Gotcha PowerShell `ConvertTo-Json` with empty arrays
 
-PowerShell serializa `@()` como `{}` (objeto), no como `[]` (array). BS rechaza el `.dat` si encuentra `{}` donde espera array. Workaround: usar `,@()` (comma-prefix) para forzar array vacío. Y `[IO.File]::WriteAllText($path, $json, [System.Text.UTF8Encoding]::new($false))` para strip BOM (BS no parsea con BOM).
+PowerShell serializes `@()` as `{}` (object), not as `[]` (array). BS rejects the `.dat` if it finds `{}` where it expects an array. Workaround: use `,@()` (comma-prefix) to force an empty array. And `[IO.File]::WriteAllText($path, $json, [System.Text.UTF8Encoding]::new($false))` to strip the BOM (BS doesn't parse with BOM).
 
 ## Asset paths
 
-**Siempre lowercase** dentro de eventos: `assets/aline/prefabs/aline.prefab`, no `Assets/Aline/...`. Match exacto con `bundleinfo.json`.
+**Always lowercase** inside events: `assets/aline/prefabs/aline.prefab`, not `Assets/Aline/...`. Exact match with `bundleinfo.json`.
 
-Antes de añadir un `InstantiatePrefab`/`SetMaterialProperty`, abrir `bundleinfo.json` y verificar que el path existe — corta el ciclo "edito el evento → abro el juego → falla → vuelvo".
+Before adding an `InstantiatePrefab`/`SetMaterialProperty`, open `bundleinfo.json` and verify the path exists — cuts the "edit the event → open the game → fail → come back" cycle.
 
 ## Standard event templates
 
@@ -86,7 +86,7 @@ Antes de añadir un `InstantiatePrefab`/`SetMaterialProperty`, abrir `bundleinfo
 { "b": 16, "t": "DestroyObject", "d": { "id": "alineMain" } }
 ```
 
-**El nombre es `DestroyObject`, no `DestroyPrefab`.** `DestroyPrefab` no existe — BS lo ignora silenciosamente y los prefabs se acumulan. Verificar nombres de eventos contra [`docs/heckdocs-main/docs/vivify/events.md`](../../../docs/heckdocs-main/docs/vivify/events.md).
+**The name is `DestroyObject`, not `DestroyPrefab`.** `DestroyPrefab` doesn't exist — BS silently ignores it and prefabs pile up. Verify event names against [`docs/heckdocs-main/docs/vivify/events.md`](../../../docs/heckdocs-main/docs/vivify/events.md).
 
 ### SetAnimatorProperty (Trigger / Bool / Float / Integer)
 
@@ -101,30 +101,30 @@ Antes de añadir un `InstantiatePrefab`/`SetMaterialProperty`, abrir `bundleinfo
 }
 ```
 
-Detalle de animaciones en la skill [`vivify-animations`](../vivify-animations/SKILL.md).
+Animation detail in the [`vivify-animations`](../vivify-animations/SKILL.md) skill.
 
-## Conversión lane units ↔ world meters (NoodleExtensions)
+## Lane units ↔ world meters conversion (NoodleExtensions)
 
-NoodleExtensions usa **lane units** en `coordinates`/`definitePosition` (1 lane = 0.6m). Vivify `InstantiatePrefab` usa **world meters**. Conversión calibrada empíricamente:
+NoodleExtensions uses **lane units** in `coordinates`/`definitePosition` (1 lane = 0.6m). Vivify `InstantiatePrefab` uses **world meters**. Empirically calibrated conversion:
 
 ```
-LANE_UNIT_M       = 0.6     # 1 lane unit = 0.6 metros
-LANE_X_ZERO_WORLD = -0.9    # lane x=0 corresponde a world x=-0.9
-LANE_Y_ZERO_WORLD =  1.0    # lane y=0 corresponde a world y=1.0 (ground level)
+LANE_UNIT_M       = 0.6     # 1 lane unit = 0.6 meters
+LANE_X_ZERO_WORLD = -0.9    # lane x=0 maps to world x=-0.9
+LANE_Y_ZERO_WORLD =  1.0    # lane y=0 maps to world y=1.0 (ground level)
 ```
 
-Fórmula:
+Formula:
 ```
 lane_x = (world_x - LANE_X_ZERO_WORLD) / LANE_UNIT_M
 lane_y = (world_y - LANE_Y_ZERO_WORLD) / LANE_UNIT_M
-lane_z = world_z / LANE_UNIT_M     # sin offset, player en world z=0
+lane_z = world_z / LANE_UNIT_M     # no offset, player at world z=0
 ```
 
-La doc Beatwalls sugiere `x=0=center` pero empíricamente necesita el offset. **Usar la calibración, no la doc.**
+The Beatwalls docs suggest `x=0=center` but empirically it needs the offset. **Use the calibration, not the docs.**
 
-## Settings Setter (en `Info.dat._difficultyBeatmaps[]._customData`)
+## Settings Setter (in `Info.dat._difficultyBeatmaps[]._customData`)
 
-Heck implementa un dialog que se muestra al jugador antes de cargar el mapa proponiendo settings. Cancelable. Restaura al salir.
+Heck implements a dialog shown to the player before loading the map proposing settings. Cancelable. Restored on exit.
 
 ### Schema
 
@@ -144,15 +144,15 @@ Heck implementa un dialog que se muestra al jugador antes de cargar el mapa prop
 }
 ```
 
-- `_requirements`: hard — sin el mod, BS no carga el mapa. Añadir `"Noodle Extensions"` si el `.dat` usa `coordinates`/`definitePosition`/etc.
-- `_suggestions`: soft — recomendado pero opcional.
-- Heck **salta** silenciosamente settings cuyos mods no están instalados, así que es seguro mandar bloques de Counters+/UITweaks aunque no estés seguro de qué tiene el jugador.
+- `_requirements`: hard — without the mod, BS won't load the map. Add `"Noodle Extensions"` if the `.dat` uses `coordinates`/`definitePosition`/etc.
+- `_suggestions`: soft — recommended but optional.
+- Heck silently **skips** settings whose mods are not installed, so it's safe to ship Counters+/UITweaks blocks even if you're not sure what the player has.
 
-Doc oficial: [`docs/heckdocs-main/docs/settings.md`](../../../docs/heckdocs-main/docs/settings.md).
+Official doc: [`docs/heckdocs-main/docs/settings.md`](../../../docs/heckdocs-main/docs/settings.md).
 
 ### Starter pack
 
-Derivado de scan a 10 mapas Vivify del corpus. Los settings con mayor cobertura.
+Derived from scanning 10 Vivify maps from the corpus. The settings with the most coverage.
 
 ```json
 "_settings": {
@@ -170,43 +170,43 @@ Derivado de scan a 10 mapas Vivify del corpus. Los settings con mayor cobertura.
 }
 ```
 
-| Setting | Cobertura corpus | Por qué |
+| Setting | Corpus coverage | Why |
 |---|---|---|
-| `_noteJumpDurationTypeSettings: "Dynamic"` | 10/10 | Sin esto, jugadores en modo Static ignoran nuestro NJS. |
-| `_environmentEffectsFilterPreset: "AllEffects"` | 6/10 | Algunos juegan en NoEffects por epilepsia/perf — eso rompe el custom env Vivify. |
-| `_leftHanded: false` | 8/10 | Si la coreografía asume diestro, fuérzalo. |
-| `_environments._overrideEnvironments: false` | 4/10 (crítico) | Si el jugador tiene env override global (BillieEnvironment, etc), nuestro env no carga. |
-| `_chroma._disableEnvironmentEnhancements: false` | 10/10 | Fuerza que se apliquen los `customData.environment[]` del `.dat` (los que disable BS env). |
-| `_chroma._disableChromaEvents: false` | 5/10 | Análogo para eventos Chroma. |
+| `_noteJumpDurationTypeSettings: "Dynamic"` | 10/10 | Without this, players in Static mode ignore our NJS. |
+| `_environmentEffectsFilterPreset: "AllEffects"` | 6/10 | Some play on NoEffects for epilepsy/perf — that breaks the custom Vivify env. |
+| `_leftHanded: false` | 8/10 | If choreography assumes right-handed, force it. |
+| `_environments._overrideEnvironments: false` | 4/10 (critical) | If the player has a global env override (BillieEnvironment, etc), our env doesn't load. |
+| `_chroma._disableEnvironmentEnhancements: false` | 10/10 | Forces `customData.environment[]` from the `.dat` to apply (those that disable BS env). |
+| `_chroma._disableChromaEvents: false` | 5/10 | Same idea for Chroma events. |
 
-**Adicionales por necesidad:**
+**Add as needed:**
 
-- `_playerOptions._noTextsAndHuds: true` — apaga HUD vanilla (combo, score, multiplier, energy, miss text). Para showcase cinemático SÍ.
-- `_countersPlus._mainEnabled: false` — apaga HUD de Counters+ (mod independiente del HUD vanilla). Necesario si pones `_noTextsAndHuds: true`.
-- `_uiTweaks._{multiplier,energy,combo,position,progress}Enabled: false` — apaga UITweaks. Misma razón.
-- `_graphics._maxShockwaveParticles: 0` — útil si tienes muchos efectos custom.
+- `_playerOptions._noTextsAndHuds: true` — turns off vanilla HUD (combo, score, multiplier, energy, miss text). For cinematic showcase, YES.
+- `_countersPlus._mainEnabled: false` — turns off Counters+ HUD (mod independent of the vanilla HUD). Required if you set `_noTextsAndHuds: true`.
+- `_uiTweaks._{multiplier,energy,combo,position,progress}Enabled: false` — turns off UITweaks. Same reason.
+- `_graphics._maxShockwaveParticles: 0` — useful if you have lots of custom effects.
 
-**Gotcha — `PlayersPlace` no es HUD.** Es GameObject del environment. `_noTextsAndHuds` NO lo quita. Hay que apagarla con `customData.environment[]` en el `.dat`. Receta en [`vivify-environment`](../vivify-environment/SKILL.md) sección "Disable BS environment".
+**Gotcha — `PlayersPlace` is not HUD.** It's an environment GameObject. `_noTextsAndHuds` does NOT remove it. You have to turn it off with `customData.environment[]` in the `.dat`. Recipe in [`vivify-environment`](../vivify-environment/SKILL.md) section "Disable BS environment".
 
-**Ejemplos del corpus:** `vivify_examples/43a26 (luminescent - nasafrasa)` y `43a2e (Ego Death - Sands)` para `_settings`. `43999 (42-flux - Aeroluna)` y `43a24 (End Times - Chaimzy)` para estrategias de `customData.environment[]`.
+**Corpus examples:** `vivify_examples/43a26 (luminescent - nasafrasa)` and `43a2e (Ego Death - Sands)` for `_settings`. `43999 (42-flux - Aeroluna)` and `43a24 (End Times - Chaimzy)` for `customData.environment[]` strategies.
 
-## Catálogo de familias de ataque
+## Attack family catalog
 
-Para añadir un ataque al mapa, **no escribir eventos desde cero**. Cada habilidad de Aline está modelada como una **familia reutilizable** con su contrato (inputs, secuencia de eventos, encoding del parry, parámetros tunables, reglas de no-conflicto). Ver [`families.md`](families.md).
+To add an attack to the map, **don't write events from scratch**. Each of Aline's abilities is modeled as a **reusable family** with its contract (inputs, event sequence, parry encoding, tunable parameters, no-conflict rules). See [`families.md`](families.md).
 
-Familias actuales:
-- **A — Ranged Sequence** (proyectiles secuenciales) — receta validada e instanciable en [`family-a-recipe.md`](family-a-recipe.md)
+Current families:
+- **A — Ranged Sequence** (sequential projectiles) — validated and instantiable recipe in [`family-a-recipe.md`](family-a-recipe.md)
 - **B — Melee Directional Slash**
-- **C — Distortion Window** (post-process grayscale, modificador apilable)
-- **D — Shrinking Indicator** (parry de precisión, estilo E33)
+- **C — Distortion Window** (post-process grayscale, stackable modifier)
+- **D — Shrinking Indicator** (precision parry, E33 style)
 - **E — Multi-hit Chain**
 - **F — Charging AoE Ball**
 
-Status por familia y orden de prototipado en [docs/NEXT_STEPS.md sección 4](../../../docs/NEXT_STEPS.md).
+Status per family and prototyping order in [docs/NEXT_STEPS.md section 4](../../../docs/NEXT_STEPS.md).
 
-## Validar paths antes de usarlos
+## Validate paths before using them
 
-`bundleinfo.json` lista los assets reales del bundle:
+`bundleinfo.json` lists the actual assets in the bundle:
 
 ```json
 {
@@ -217,31 +217,31 @@ Status por familia y orden de prototipado en [docs/NEXT_STEPS.md sección 4](../
 }
 ```
 
-Antes de un `InstantiatePrefab`/`SetMaterialProperty`, verificar que el `asset` aparece exactamente (lowercase). Es el path del `.mat`/`.prefab` en el bundle, no el path del Asset path Unity.
+Before an `InstantiatePrefab`/`SetMaterialProperty`, verify that the `asset` appears exactly (lowercase). It's the `.mat`/`.prefab` path in the bundle, not the Unity Asset path.
 
-## Errores comunes y diagnóstico
+## Common errors and diagnosis
 
-| Síntoma en log de BS | Causa | Fix |
+| Symptom in BS log | Cause | Fix |
 |---|---|---|
-| `[Vivify/InstantiatePrefab] Enabled` | (positivo) confirma que el evento se procesa | — |
-| `Could not find UnityEngine.GameObject [path]` | Path mal escrito o en mayúsculas | Lowercase + match exacto con `bundleinfo.json` |
-| `[Vivify/AssetBundleManager] Checksum not defined` | CRCs en `Info.dat` no matchean bundle | Resync desde `bundleinfo.json` (skill `unity-rebuild`) |
-| `Asset bundle could not be loaded` | Bundle corrupto/ausente, falta el `.vivify` | Rebuild en Unity (F5) |
-| `[Vivify] Track does not exist` en AnimateTrack | Track no creado por un `InstantiatePrefab` previo | Comprobar orden temporal |
-| Prefab carga pero invisible | Escala mala (UE5 cm → Unity m) o fuera de cámara | `scale: [0.01, 0.01, 0.01]` + revisar position |
-| Prefab carga pero negro/oscuro | Sin Directional Light dentro del prefab | Añadir luz al prefab; las luces vanilla NO afectan a Vivify |
-| Evento ignorado silenciosamente | `t` mal escrito o evento inexistente (e.g. `DestroyPrefab`) | Verificar nombre contra `docs/heckdocs-main/docs/vivify/events.md` |
-| Cambios en `.dat` no se reflejan en BS | BS está cacheando | Salir al menú principal y reentrar |
-| Prefabs Vivify se sustituyen por modelos custom o `dissolve` no funciona | Mod CustomNotes activo del jugador → intercepta el rendering de notas | El jugador debe desactivar CustomNotes; documentar en `Info.dat._customData._warnings` por dificultad. No hay force-disable desde el mapa. |
+| `[Vivify/InstantiatePrefab] Enabled` | (positive) confirms the event is being processed | — |
+| `Could not find UnityEngine.GameObject [path]` | Path misspelled or in uppercase | Lowercase + exact match with `bundleinfo.json` |
+| `[Vivify/AssetBundleManager] Checksum not defined` | CRCs in `Info.dat` don't match bundle | Resync from `bundleinfo.json` (`unity-rebuild` skill) |
+| `Asset bundle could not be loaded` | Bundle corrupt/missing, `.vivify` not present | Rebuild in Unity (F5) |
+| `[Vivify] Track does not exist` on AnimateTrack | Track not created by a previous `InstantiatePrefab` | Check temporal order |
+| Prefab loads but invisible | Bad scale (UE5 cm → Unity m) or out of camera view | `scale: [0.01, 0.01, 0.01]` + check position |
+| Prefab loads but black/dark | No Directional Light inside the prefab | Add a light to the prefab; vanilla lights do NOT affect Vivify |
+| Event silently ignored | `t` misspelled or nonexistent event (e.g. `DestroyPrefab`) | Verify name against `docs/heckdocs-main/docs/vivify/events.md` |
+| Changes in `.dat` not reflected in BS | BS is caching | Exit to main menu and re-enter |
+| Vivify prefabs replaced by custom models or `dissolve` doesn't work | Player has CustomNotes mod active → it intercepts note rendering | The player has to disable CustomNotes; document it in `Info.dat._customData._warnings` per difficulty. No force-disable from the map. |
 
-## Dónde está el log
+## Where the log is
 
-`beatsaber-logs/_latest.log` (junction al directorio de logs de BS). Para sesiones anteriores hay `*.log.gz` en la misma carpeta (descomprimir con `gzip -dc` o `Expand-Archive`).
+`beatsaber-logs/_latest.log` (junction to the BS log directory). For previous sessions there are `*.log.gz` in the same folder (decompress with `gzip -dc` or `Expand-Archive`).
 
-## Debugging checklist cuando un prefab no aparece
+## Debugging checklist when a prefab doesn't show up
 
-1. Buscar `[Vivify/InstantiatePrefab] Enabled` en `_latest.log` — si no está, el evento es malformado.
-2. Buscar `Checksum not defined` — CRCs desactualizados, copiar de `bundleinfo.json`.
-3. Buscar `Could not find UnityEngine.GameObject [path]` — path mal escrito o no expuesto en bundle.
-4. Si todo el log sale limpio pero no se ve: revisar `position`/`scale` (UE5 cm → Unity m, scale 0.01) y que la cámara lo enfoque.
-5. Si se ve pero está negro: añadir Directional Light hijo del prefab en Unity y rebuild. Para shaders sensibles al ambient sin GI baking, ver [`vivify-materials`](../vivify-materials/SKILL.md).
+1. Look for `[Vivify/InstantiatePrefab] Enabled` in `_latest.log` — if it's not there, the event is malformed.
+2. Look for `Checksum not defined` — CRCs outdated, copy from `bundleinfo.json`.
+3. Look for `Could not find UnityEngine.GameObject [path]` — path misspelled or not exposed in the bundle.
+4. If the log comes out clean but nothing shows: check `position`/`scale` (UE5 cm → Unity m, scale 0.01) and that the camera frames it.
+5. If it shows but it's black: add a Directional Light as a child of the prefab in Unity and rebuild. For shaders sensitive to ambient without GI baking, see [`vivify-materials`](../vivify-materials/SKILL.md).

@@ -5,33 +5,32 @@ description: Use when working with ReMapper (Deno/TypeScript) to script Beat Sab
 
 # ReMapper Scripting
 
-ReMapper es una tool de Deno/TypeScript para generar contenido del mapa
-programáticamente (notas, paredes, eventos custom) en lugar de colocarlos a
-mano en ChroMapper.
+ReMapper is a Deno/TypeScript tool to generate map content programmatically
+(notes, walls, custom events) instead of placing them by hand in ChroMapper.
 
-## Estado: TO BE DONE
+## Status: TO BE DONE
 
-Esta skill es un **esqueleto**. El contenido real se rellena cuando empecemos
-a usar ReMapper de verdad (paso 4 de [docs/NEXT_STEPS.md](../../../docs/NEXT_STEPS.md)).
+This skill is a **skeleton**. The real content gets filled in when we actually
+start using ReMapper (step 4 of [docs/NEXT_STEPS.md](../../../docs/NEXT_STEPS.md)).
 
-## Dónde vive
+## Where it lives
 
-ReMapper está en `d:\vivify_repo\ReMapper-master\` — fuera del repo principal,
-en la carpeta contenedora. Tiene su propio `.git`. Decisión documentada en
+ReMapper is at `d:\vivify_repo\ReMapper-master\` — outside the main repo,
+in the containing folder. It has its own `.git`. Decision documented in
 [docs/DECISIONES.md](../../../docs/DECISIONES.md).
 
-## Pendiente de cubrir cuando empecemos
+## Pending to cover when we start
 
-- Setup inicial (instalar Deno, primer script "hello world")
-- Patrón de invocación desde el repo (script wrapper en `scripts/`?)
-- Output target: ¿escribir directo a `beatsaber-map/ExpertPlusStandard.dat`? ¿Staging intermedio?
-- Cómo combinar ReMapper con eventos Vivify ya existentes (no pisarlos)
-- Errores comunes en runtime de Deno
-- Patrones útiles: generadores de patrones, wall arts, eventos sincronizados
+- Initial setup (install Deno, first "hello world" script)
+- Invocation pattern from the repo (wrapper script in `scripts/`?)
+- Output target: write directly to `beatsaber-map/ExpertPlusStandard.dat`? Intermediate staging?
+- How to combine ReMapper with existing Vivify events (not stomp on them)
+- Common errors in Deno runtime
+- Useful patterns: pattern generators, wall arts, synced events
 
-## Mientras tanto
+## In the meantime
 
-Si el usuario pregunta por ReMapper antes de que esté hecho el setup:
-- El repo de referencia está en `d:\vivify_repo\ReMapper-master\src/`
-- Documentación oficial: ver `docs/heckdocs-main/` y el README dentro del propio ReMapper
-- Antes de empezar, decidir el flujo de output — esa decisión condiciona todo lo demás
+If the user asks about ReMapper before the setup is done:
+- The reference repo is at `d:\vivify_repo\ReMapper-master\src/`
+- Official documentation: see `docs/heckdocs-main/` and the README inside ReMapper itself
+- Before starting, decide the output flow — that decision conditions everything else

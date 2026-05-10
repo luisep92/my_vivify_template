@@ -1,78 +1,78 @@
 # PRODUCTO — Aline Boss Fight
 
-## Concepto
+## Concept
 
-**Showcase map** de Beat Saber tipo **boss fight** contra **Aline**, la Curatress de *Expedition 33*. El prefab 3D de Aline aparece en escena como enemigo y va lanzando habilidades; cada habilidad es un **ataque telegrafiado** con una **ventana de parry** que el jugador resuelve golpeando una nota direccional. La traducción es directa: el sistema de parry de E33 (timing + dirección) ya es, mecánicamente, lo que hace BS.
+**Showcase map** for Beat Saber, **boss fight** style, against **Aline**, the Curatress from *Expedition 33*. Aline's 3D prefab appears on scene as the enemy and starts throwing abilities; each ability is a **telegraphed attack** with a **parry window** the player resolves by hitting a directional note. The translation is direct: E33's parry system (timing + direction) is already, mechanically, what BS does.
 
-No es un mapa "normal" con gimmicks Vivify, ni un mapa rítmico al uso. Las notas son la encarnación del parry, no el flow rítmico de la canción. La música va de ambiente.
+It's not a "normal" map with Vivify gimmicks, nor a regular rhythmic map. The notes are the embodiment of the parry, not the song's rhythmic flow. The music plays as ambience.
 
-## Tono
+## Tone
 
-**Showcase cinemático, no scored.** Decisión cerrada en [DECISIONES.md](DECISIONES.md). Implica:
+**Cinematic showcase, not scored.** Decision locked in [DECISIONES.md](DECISIONES.md). Implies:
 
-- Densidad libre — silencios largos entre ataques son aceptables si la fase narrativa lo pide.
-- Legibilidad del telegraph manda sobre el flow rítmico al elegir NJS, posición y timing de notas.
-- No optimizamos para leaderboard ni ranqueo. Lo que optimizamos es el **wow-factor** y el valor demostrativo del repo.
+- Density is free — long silences between attacks are acceptable if the narrative phase calls for it.
+- Telegraph legibility wins over rhythmic flow when picking NJS, position and note timing.
+- We don't optimize for leaderboard or ranking. What we optimize for is the **wow-factor** and the demonstrative value of the repo.
 
-## Canción
+## Song
 
-Pendiente de elegir definitivamente. Probable: pieza del OST de *Expedition 33* asociada a Aline o al combate. La elección final condiciona tempo, fases y duración.
+Pending final pick. Likely: a piece from the *Expedition 33* OST associated with Aline or the combat. The final pick conditions tempo, phases and duration.
 
-> Marcador de decisión: ver entrada en [DECISIONES.md](DECISIONES.md) cuando se cierre.
+> Decision marker: see entry in [DECISIONES.md](DECISIONES.md) when it closes.
 
-## Duración objetivo
+## Target duration
 
-~2-3 minutos. Suficiente para una estructura por fases sin que el prefab cansante visualmente.
+~2-3 minutes. Enough for a phase structure without the prefab getting visually tiring.
 
-## Narrativa / arc del boss fight
+## Narrative / boss fight arc
 
-Estructura por fases (a rellenar conforme avance el diseño):
+Phase structure (to fill in as design progresses):
 
-El boss fight tiene tres fases canónicas en E33, identificadas por el idle de Aline: en el suelo, flotando, derrotada. La estructura del mapa las respeta:
+The boss fight has three canonical phases in E33, identified by Aline's idle: on the ground, floating, defeated. The map structure respects them:
 
-| Fase | Idle base | Skills disponibles | Familias en juego | Estado |
+| Phase | Base idle | Available skills | Families in play | State |
 |---|---|---|---|---|
-| Intro / aparición | — | — | arranca con flow más convencional (BS estándar) antes de pivotar al primer ataque | Pendiente |
-| Fase 1 — combate en suelo | `Idle1` | `Skill1`, `Skill2`, `Skill3`, `Skill4`, `Skill5` | A (Skill3, Skill4), B (DashIn-Idle1), B+C (Skill5 con distorsión), E (Skill1), F (Skill2 multi-stage) | Pendiente |
-| Transición 1→2 | `Idle1_to_idle2_transition` + `Skill6` | — | beat narrativo: Aline flota, se arma con pincel grande, distorsión | Pendiente |
-| Fase 2 — flotando con pincel | `Idle2` | `Skill7`, `Skill8`, `Skill10`, `Skill12` | E (Skill7, Skill10, Skill12), caso especial clímax (Skill8) | Pendiente |
-| Transición 2→3 | `Idle2_to_idle3_transition` | — | Aline cae al suelo, derrotada | Pendiente |
-| Outro / fase 3 | `Idle3` | `Skill_Aline_P3_Skill1`, `Skill_Aline_P3_Skill2` | sin combate (curaciones narrativas), resolución, fade | Pendiente |
+| Intro / appearance | — | — | starts with a more conventional flow (standard BS) before pivoting to the first attack | Pending |
+| Phase 1 — ground combat | `Idle1` | `Skill1`, `Skill2`, `Skill3`, `Skill4`, `Skill5` | A (Skill3, Skill4), B (DashIn-Idle1), B+C (Skill5 with distortion), E (Skill1), F (Skill2 multi-stage) | Pending |
+| Transition 1→2 | `Idle1_to_idle2_transition` + `Skill6` | — | narrative beat: Aline floats, arms herself with the big brush, distortion | Pending |
+| Phase 2 — floating with brush | `Idle2` | `Skill7`, `Skill8`, `Skill10`, `Skill12` | E (Skill7, Skill10, Skill12), special climax case (Skill8) | Pending |
+| Transition 2→3 | `Idle2_to_idle3_transition` | — | Aline falls to the ground, defeated | Pending |
+| Outro / phase 3 | `Idle3` | `Skill_Aline_P3_Skill1`, `Skill_Aline_P3_Skill2` | no combat (narrative healing), resolution, fade | Pending |
 
-Cuando se concrete cada fase, va a [DECISIONES.md](DECISIONES.md) si hay un porqué grande detrás.
+When each phase gets nailed down, it goes to [DECISIONES.md](DECISIONES.md) if there's a big rationale behind it.
 
-## Familias de ataque
+## Attack families
 
-Cada habilidad de Aline se modela como una **familia de ataque reutilizable**: prefab + animación + secuencia de eventos `.dat` + codificación de parry, definida una vez como contrato y instanciada N veces a lo largo del mapa con timings/direcciones distintos.
+Each of Aline's abilities is modeled as a **reusable attack family**: prefab + animation + `.dat` event sequence + parry encoding, defined once as a contract and instantiated N times across the map with different timings/directions.
 
-| Familia | Mecánica | Parry | Source en Aline |
+| Family | Mechanic | Parry | Source in Aline |
 |---|---|---|---|
-| **A — Ranged Sequence** | Aline lanza N proyectiles que caen secuencialmente sobre el jugador | Cadena de N notas, cada una codifica origen del proyectil | `Skill3` (3 piedras), `Skill4` (N pequeños) |
-| **B — Melee Directional Slash** | Aproximación + corte con línea/streak telegrafiando dirección + retirada | Una nota con dirección **opuesta** al slash | `DashIn-Idle1`, `Skill5` (con C) |
-| **D — Shrinking Indicator** | Anillo que se contrae alrededor del bloque, parry de precisión | Nota única en el momento exacto del cierre | invento nuestro (no source clip) |
-| **E — Multi-hit Chain** | Cadena de N parries en sucesión rápida durante una animación con N hits embebidos | N notas con separación dictada por la anim | `Skill1` (fase 1), `Skill7`, `Skill10`, `Skill12` (fase 2) |
-| **F — Charging AoE Ball** | Aline carga una bola que crece, parry único en la explosión | Nota única en el momento de explosión | `Skill2_Start` / `_Loop` / `_End` |
-| **Modificador C — Distortion Overlay** | Filtro post-process grayscale apilable sobre cualquier familia | (no impone parry; lo dicta la familia base) | `Skill5` (canónico, sobre B) |
+| **A — Ranged Sequence** | Aline throws N projectiles that fall sequentially on the player | Chain of N notes, each one encodes the projectile's origin | `Skill3` (3 stones), `Skill4` (N small ones) |
+| **B — Melee Directional Slash** | Approach + slash with a line/streak telegraphing direction + retreat | A single note with direction **opposite** to the slash | `DashIn-Idle1`, `Skill5` (with C) |
+| **D — Shrinking Indicator** | Ring contracting around the block, precision parry | Single note at the exact moment of closure | our own invention (no source clip) |
+| **E — Multi-hit Chain** | Chain of N parries in rapid succession during an animation with N hits embedded | N notes with separation dictated by the anim | `Skill1` (phase 1), `Skill7`, `Skill10`, `Skill12` (phase 2) |
+| **F — Charging AoE Ball** | Aline charges a ball that grows, single parry on the explosion | Single note at the moment of explosion | `Skill2_Start` / `_Loop` / `_End` |
+| **Modifier C — Distortion Overlay** | Grayscale post-process filter stackable on any family | (doesn't impose a parry; the base family dictates it) | `Skill5` (canonical, on top of B) |
 
-El catálogo formal con templates de eventos y el mapeo completo Animator→familia vive en [`.claude/skills/vivify-mapping/families.md`](../.claude/skills/vivify-mapping/families.md). Extensible — si surge un patrón que no encaja en ninguna existente, se añade como familia G/H siguiendo el mismo contrato.
+The formal catalogue with event templates and the full Animator→family mapping lives in [`.claude/skills/vivify-mapping/families.md`](../.claude/skills/vivify-mapping/families.md). Extensible — if a pattern shows up that doesn't fit any existing one, it's added as family G/H following the same contract.
 
-## Criterios de éxito
+## Success criteria
 
-- **Jugable end-to-end**: el mapa se carga, el prefab aparece, las notas se pueden completar sin crashes.
-- **Narrativa legible** incluso para alguien que no conoce *Expedition 33*: el espectador entiende que es un boss fight aunque no sepa quién es Aline.
-- **Cada ataque es legible**: el telegraph deja claro qué viene y por dónde, antes de que la nota llegue al jugador. Si el ataque no se "lee" sin instrucciones, no está terminado.
-- **Performance estable** en hardware medio (no usar shaders pesados sin necesidad).
-- **Compatible con BS 1.34.2** (PC). Quest queda fuera de scope salvo decisión expresa.
+- **Playable end-to-end**: the map loads, the prefab appears, the notes can be completed without crashes.
+- **Legible narrative** even for someone who doesn't know *Expedition 33*: the viewer understands it's a boss fight even if they don't know who Aline is.
+- **Every attack is legible**: the telegraph makes clear what's coming and from where, before the note reaches the player. If the attack doesn't "read" without instructions, it's not finished.
+- **Stable performance** on mid-range hardware (don't use heavy shaders unnecessarily).
+- **Compatible with BS 1.34.2** (PC). Quest is out of scope unless explicitly decided otherwise.
 
 ## Deadlines
 
-- **Torneo**: fecha pendiente.
-- **Checkpoint personal**: si en una semana desde el inicio del texturizado no hay progreso visible, pivot a un mapa normal sin Vivify. Mejor un mapa terminado que un boss fight a medias.
+- **Tournament**: date pending.
+- **Personal checkpoint**: if a week from the start of texturing there's no visible progress, pivot to a normal map without Vivify. Better a finished map than a half-done boss fight.
 
-## Referencias visuales / inspiración
+## Visual references / inspiration
 
-Pendiente. Apuntar mapas Vivify de la comunidad que sirvan de referencia (notas + prefab interactuando, transiciones de fase, etc.).
+Pending. Note down Vivify community maps that can serve as reference (notes + prefab interacting, phase transitions, etc.).
 
-## Audiencia
+## Audience
 
-Yo (mapper) + jurado del torneo + comunidad Vivify. **Audiencia secundaria**: espectadores que no juegan BS pero conocen *Expedition 33* — el repo es público y el caso de uso (E33 + BS + Vivify) tiene potencial viral. La calidad de docs y la legibilidad de cada ataque importan también para esta audiencia, que va a ver clips, no a jugarlo.
+Me (mapper) + tournament jury + Vivify community. **Secondary audience**: viewers who don't play BS but know *Expedition 33* — the repo is public and the use case (E33 + BS + Vivify) has viral potential. The quality of docs and the legibility of each attack matter for this audience too, who will watch clips, not play it.

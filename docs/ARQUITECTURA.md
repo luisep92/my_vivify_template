@@ -1,35 +1,35 @@
-# ARQUITECTURA — Pipeline técnico
+# ARCHITECTURE — Technical pipeline
 
-## Bootstrap desde cold clone
+## Bootstrap from cold clone
 
-Pasos para arrancar el proyecto en una máquina nueva, en orden estricto.
+Steps to bring the project up on a fresh machine, strict order.
 
-1. **Instalar Beat Saber 1.34.2** + cadena de mods de Aeroluna (Vivify, Heck, CustomJSONData, Chroma, NoodleExtensions). Versiones exactas en [BS_Dependencies.txt](../BS_Dependencies.txt). **No usar Mod Assistant** — instalar a mano desde [github.com/Aeroluna/Heck/releases](https://github.com/Aeroluna/Heck/releases) y [github.com/Aeroluna/Vivify/releases](https://github.com/Aeroluna/Vivify/releases). Mod Assistant a veces sirve versiones obsoletas que rompen las dependencias entre sí.
+1. **Install Beat Saber 1.34.2** + Aeroluna's mod chain (Vivify, Heck, CustomJSONData, Chroma, NoodleExtensions). Exact versions in [BS_Dependencies.txt](../BS_Dependencies.txt). **Do not use Mod Assistant** — install by hand from [github.com/Aeroluna/Heck/releases](https://github.com/Aeroluna/Heck/releases) and [github.com/Aeroluna/Vivify/releases](https://github.com/Aeroluna/Vivify/releases). Mod Assistant sometimes serves outdated versions that break the inter-dependencies.
 
-2. **Instalar Unity 2019.4.28f1** (versión exacta) desde Unity Hub. Distinta versión = bundle no compatible con BS.
+2. **Install Unity 2019.4.28f1** (exact version) from Unity Hub. Different version = bundle incompatible with BS.
 
-3. **Instalar Blender 4.2 LTS** + addon `io_scene_psk_psa` (Befzz/DarklightGames) habilitado en Preferences > Extensions. Necesario para procesar `.psa` (animaciones) y `.pskx` (meshes) de FModel.
+3. **Install Blender 4.2 LTS** + `io_scene_psk_psa` addon (Befzz/DarklightGames) enabled in Preferences > Extensions. Needed to process `.psa` (animations) and `.pskx` (meshes) from FModel.
 
-4. **Clonar el repo**:
+4. **Clone the repo**:
    ```
    git clone <url> d:\vivify_repo\my_vivify_template
    ```
 
-5. **Crear los junctions** (cmd, no PowerShell — `mklink` es interno de cmd):
+5. **Create the junctions** (cmd, not PowerShell — `mklink` is a cmd builtin):
    ```cmd
    cd d:\vivify_repo\my_vivify_template
    mklink /J beatsaber-map  "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\CustomWIPLevels\Test"
    mklink /J beatsaber-logs "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Logs"
    ```
-   Crear el directorio `CustomWIPLevels\Test\` antes si no existe. Tras esto, los `.dat` versionados (`Info.dat`, `*Standard.dat`, `BPMInfo.dat`, `bundleinfo.json`) ya están accesibles en `beatsaber-map/` (vía junction al directorio del juego).
+   Create the `CustomWIPLevels\Test\` directory beforehand if it doesn't exist. After this, the versioned `.dat` files (`Info.dat`, `*Standard.dat`, `BPMInfo.dat`, `bundleinfo.json`) are already accessible at `beatsaber-map/` (via junction to the game's directory).
 
-6. **Conseguir los binarios no versionados**. Lo que falta tras el clone:
-   - **Audio del mapa** (`beatsaber-map/La-mandanga.ogg`, ~2.3 MB) — gitignored. Conseguir aparte. Sin él el mapa no carga audio y BS puede rechazarlo.
-   - **Sandfall dump** (`d:\vivify_repo\Sandfall/`, ~40 GB) — re-rip del juego con FModel. Setup: `%APPDATA%\FModel\AppSettings.json` con game dir = `D:\SteamLibrary\steamapps\common\Expedition 33`, UE version = 5.4, mappings = `Expedition33Mappings-1.5.4.usmap` (también en `d:\vivify_repo\fmodel-mcp\mappings\`). Output dir esperado: `D:\vivify_repo\Output\Exports\`.
-   - **Aline_project.blend** (`Sandfall/Content/Characters/Enemies/HumanEnnemies/Aline/Aline_project.blend`) — gitignored. Reconstruir con `scripts/blender/import_all_psa.py` (27 actions de `.psa`) + `scripts/blender/synthesize_root_motion.py` (axis remap del root motion). Los scripts son el backup determinístico — versionados en git.
-   - **Texturas, FBXes, PSAs** dentro de `VivifyTemplate/Assets/Aline/` — gitignored por extensión. Recuperables vía pipeline de re-rip (ver "Recovery").
+6. **Get the non-versioned binaries**. What's missing after the clone:
+   - **Map audio** (`beatsaber-map/La-mandanga.ogg`, ~2.3 MB) — gitignored. Get separately. Without it the map can't load audio and BS may reject it.
+   - **Sandfall dump** (`d:\vivify_repo\Sandfall/`, ~40 GB) — re-rip the game with FModel. Setup: `%APPDATA%\FModel\AppSettings.json` with game dir = `D:\SteamLibrary\steamapps\common\Expedition 33`, UE version = 5.4, mappings = `Expedition33Mappings-1.5.4.usmap` (also in `d:\vivify_repo\fmodel-mcp\mappings\`). Expected output dir: `D:\vivify_repo\Output\Exports\`.
+   - **Aline_project.blend** (`Sandfall/Content/Characters/Enemies/HumanEnnemies/Aline/Aline_project.blend`) — gitignored. Rebuild with `scripts/blender/import_all_psa.py` (27 actions from `.psa`) + `scripts/blender/synthesize_root_motion.py` (root motion axis remap). The scripts are the deterministic backup — versioned in git.
+   - **Textures, FBXes, PSAs** under `VivifyTemplate/Assets/Aline/` — gitignored by extension. Recoverable via re-rip pipeline (see "Recovery").
 
-7. **Tools fuera del repo**. Si no están en `d:\vivify_repo/`:
+7. **Tools outside the repo**. If they're not in `d:\vivify_repo/`:
    ```
    cd d:\vivify_repo
    git clone https://github.com/luisep92/unity_vivify_mcp.git unity-mcp
@@ -39,56 +39,56 @@ Pasos para arrancar el proyecto en una máquina nueva, en orden estricto.
    curl -L -o _outline-shader-ref/UnlitOutlines.shader https://raw.githubusercontent.com/ronja-tutorials/ShaderTutorials/master/Assets/020_Inverted_Hull/UnlitOutlines.shader
    curl -L -o _outline-shader-ref/SurfaceOutlines.shader https://raw.githubusercontent.com/ronja-tutorials/ShaderTutorials/master/Assets/020_Inverted_Hull/SurfaceOutlines.shader
    ```
-   Detalles de wireado y arranque en [unity-mcp/README.md](../../unity-mcp/README.md) y [fmodel-mcp/README.md](../../fmodel-mcp/README.md). El proyecto Aline ya referencia `unity-mcp` vía `VivifyTemplate/Packages/manifest.json` (path local). `CustomNotesUnityProject` y `_outline-shader-ref` son **reference material** para el polish del cube visual (ver NEXT_STEPS sub-paso 4.1) — no se modifican, se copian fragmentos al proyecto Aline.
+   Wiring and startup details in [unity-mcp/README.md](../../unity-mcp/README.md) and [fmodel-mcp/README.md](../../fmodel-mcp/README.md). The Aline project already references `unity-mcp` via `VivifyTemplate/Packages/manifest.json` (local path). `CustomNotesUnityProject` and `_outline-shader-ref` are **reference material** for the cube visual polish (see NEXT_STEPS sub-step 4.1) — not modified, fragments are copied into the Aline project.
 
-8. **Abrir el proyecto Unity**: `VivifyTemplate/` desde Unity Hub. Primer import tarda ~5 min (regenera `Library/`). Si falta algún binario (FBX, PSA, PNG), saldrán warnings de "missing reference" — recuperar según el procedimiento de "Recovery" abajo.
+8. **Open the Unity project**: `VivifyTemplate/` from Unity Hub. First import takes ~5 min (regenerates `Library/`). If any binary (FBX, PSA, PNG) is missing, "missing reference" warnings will show — recover per the "Recovery" procedure below.
 
-9. **Primer build**: F5 (o `Vivify > Build > Build Configuration Window`). Genera `bundleWindows2021.vivify` + `bundleinfo.json` en `beatsaber-map/`. PostBuildSyncCRCs sincroniza el CRC a `Info.dat` automáticamente.
+9. **First build**: F5 (or `Vivify > Build > Build Configuration Window`). Generates `bundleWindows2021.vivify` + `bundleinfo.json` in `beatsaber-map/`. PostBuildSyncCRCs syncs the CRC into `Info.dat` automatically.
 
-10. **Lanzar BS**, ir a `Custom WIP Levels`, mapa `Test`. Las dificultades Easy/Normal/ExpertPlus deben aparecer.
+10. **Launch BS**, go to `Custom WIP Levels`, map `Test`. Easy/Normal/ExpertPlus difficulties should show up.
 
-## Recovery — qué pasa si borras X
+## Recovery — what happens if you delete X
 
-Tabla de "si borras X, ¿es recuperable y cómo?". Versionado = en git, recuperable con `git checkout`. Regenerable = se reconstruye con un comando local. Lost = no hay backup, hay que re-conseguir desde fuera.
+Table of "if you delete X, is it recoverable and how?". Versioned = in git, recoverable with `git checkout`. Regenerable = rebuilt with a local command. Lost = no backup, has to be re-acquired from outside.
 
-| Si borras... | Estado | Recovery |
+| If you delete... | Status | Recovery |
 |---|---|---|
-| Cualquier `.md`, `.cs`, `.shader`, `.mat`, `.prefab`, `.meta` | Versionado | `git checkout <path>` |
-| `beatsaber-map/*.dat`, `bundleinfo.json` | Versionado | `git checkout beatsaber-map/<file>` |
-| `beatsaber-map/bundleWindows2021.vivify` (~128 MB) | Regenerable | F5 en Unity (regenera bundle + bundleinfo.json + sync CRC) |
-| `beatsaber-map/La-mandanga.ogg` (~2.3 MB) | **Lost (sin backup, no versionado)** | Aceptado. El `.ogg` se queda ignorado — el audio del mapa no es un activo del repo, hay que conseguirlo aparte. |
-| `VivifyTemplate/Library/`, `Temp/`, `Logs/` | Regenerable | Abrir Unity, regenera solo (~5 min primer arranque) |
-| `VivifyTemplate/Assets/Aline/Textures/*.png` | Regenerable | Re-rip de `Sandfall/` con `mcp__fmodel__fmodel_export_texture` y mover el PNG de `Output/Exports/.../*.png` a la carpeta. Receta en [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) sección "Mapping de FModel → Unity". |
-| `VivifyTemplate/Assets/Aline/Animations/Aline_Anims.fbx` (~185 MB) | Regenerable | Re-export desde Blender: `scripts/blender/export_anims_fbx.py` (requiere `Aline_project.blend` con las 27 actions importadas). |
-| `VivifyTemplate/Assets/Aline/Hair/*.fbx` | Regenerable | Re-correr `scripts/blender/pskx_to_fbx.py` sobre el `.psk` de `Sandfall/Content/Characters/Hair/Mirror_Family/Aline/`. |
-| `VivifyTemplate/Assets/Aline/Scenery/Meshes/RockPlatform.fbx` | Regenerable | Re-correr `scripts/blender/build_rock_platform.py` (idempotente, construye + exporta FBX). |
-| `VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteCube.fbx` | Regenerable | Copiar `Default Base.fbx` desde [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) (`Assets/Meshes/Examples/Default Base.fbx`) → `VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteCube.fbx`. El `.meta` versionado preserva el GUID; el prefab `NoteCube.prefab` (versionado) referencia la mesh `Cube` interna del FBX. |
-| `VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteArrows.fbx` | Regenerable | Copiar `Default Arrows.fbx` desde el mismo repo CustomNotesUnityProject (`Assets/Meshes/Examples/Default Arrows.fbx`) → `VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteArrows.fbx`. El FBX trae dos meshes (`Dot` para `d=8`, `Arrow` para directionals); el prefab `NoteCube.prefab` referencia la mesh `Dot` como child indicator. |
-| `Sandfall/` (~40 GB) | Regenerable | Re-rip del juego con FModel (ver paso 6 del Bootstrap). Selectivo: solo lo que `VivifyTemplate/` referencia. |
-| `Aline_project.blend` (en `Sandfall/`) | Regenerable vía scripts (no versionado) | Reconstruir: `scripts/blender/import_all_psa.py` (importa los 27 `.psa` como actions desde `Sandfall/.../Animation/`) + `scripts/blender/synthesize_root_motion.py` (axis remap del root motion para clips con desplazamiento). Ambos scripts están versionados en git, idempotentes y self-contained — son el backup determinístico del `.blend`. El propio `.blend` se queda gitignored. |
-| `unity-mcp/` o `fmodel-mcp/` (fuera del repo) | Regenerable | `git clone` de los repos públicos (URLs en CLAUDE.md). |
-| `ReMapper-master/`, `FModel.exe` (fuera del repo) | Regenerable | Re-descargar de sus respectivas fuentes. Sin uso activo todavía. |
+| Any `.md`, `.cs`, `.shader`, `.mat`, `.prefab`, `.meta` | Versioned | `git checkout <path>` |
+| `beatsaber-map/*.dat`, `bundleinfo.json` | Versioned | `git checkout beatsaber-map/<file>` |
+| `beatsaber-map/bundleWindows2021.vivify` (~128 MB) | Regenerable | F5 in Unity (regenerates bundle + bundleinfo.json + sync CRC) |
+| `beatsaber-map/La-mandanga.ogg` (~2.3 MB) | **Lost (no backup, not versioned)** | Accepted. The `.ogg` stays ignored — the map audio isn't a repo asset, it has to be obtained separately. |
+| `VivifyTemplate/Library/`, `Temp/`, `Logs/` | Regenerable | Open Unity, regenerates on its own (~5 min first startup) |
+| `VivifyTemplate/Assets/Aline/Textures/*.png` | Regenerable | Re-rip from `Sandfall/` with `mcp__fmodel__fmodel_export_texture` and move the PNG from `Output/Exports/.../*.png` to the folder. Recipe in [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) section "FModel → Unity mapping". |
+| `VivifyTemplate/Assets/Aline/Animations/Aline_Anims.fbx` (~185 MB) | Regenerable | Re-export from Blender: `scripts/blender/export_anims_fbx.py` (requires `Aline_project.blend` with the 27 actions imported). |
+| `VivifyTemplate/Assets/Aline/Hair/*.fbx` | Regenerable | Re-run `scripts/blender/pskx_to_fbx.py` over the `.psk` from `Sandfall/Content/Characters/Hair/Mirror_Family/Aline/`. |
+| `VivifyTemplate/Assets/Aline/Scenery/Meshes/RockPlatform.fbx` | Regenerable | Re-run `scripts/blender/build_rock_platform.py` (idempotent, builds + exports FBX). |
+| `VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteCube.fbx` | Regenerable | Copy `Default Base.fbx` from [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) (`Assets/Meshes/Examples/Default Base.fbx`) → `VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteCube.fbx`. The versioned `.meta` preserves the GUID; the `NoteCube.prefab` (versioned) references the FBX's internal `Cube` mesh. |
+| `VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteArrows.fbx` | Regenerable | Copy `Default Arrows.fbx` from the same CustomNotesUnityProject repo (`Assets/Meshes/Examples/Default Arrows.fbx`) → `VivifyTemplate/Assets/Aline/Prefabs/projectiles/NoteArrows.fbx`. The FBX contains two meshes (`Dot` for `d=8`, `Arrow` for directionals); the `NoteCube.prefab` references the `Dot` mesh as child indicator. |
+| `Sandfall/` (~40 GB) | Regenerable | Re-rip the game with FModel (see Bootstrap step 6). Selective: only what `VivifyTemplate/` references. |
+| `Aline_project.blend` (in `Sandfall/`) | Regenerable via scripts (not versioned) | Rebuild: `scripts/blender/import_all_psa.py` (imports the 27 `.psa` as actions from `Sandfall/.../Animation/`) + `scripts/blender/synthesize_root_motion.py` (root motion axis remap for clips with displacement). Both scripts are versioned in git, idempotent, and self-contained — they are the deterministic backup of the `.blend`. The `.blend` itself stays gitignored. |
+| `unity-mcp/` or `fmodel-mcp/` (outside the repo) | Regenerable | `git clone` the public repos (URLs in CLAUDE.md). |
+| `ReMapper-master/`, `FModel.exe` (outside the repo) | Regenerable | Re-download from their respective sources. No active use yet. |
 
-## Visión general
+## Overview
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│ FUENTE: Expedition 33 (Unreal Engine 5)                              │
+│ SOURCE: Expedition 33 (Unreal Engine 5)                              │
 └──────────────────────────────────────────────────────────────────────┘
                               │
-                              ▼  fmodel-mcp (CLI .NET sobre CUE4Parse + MCP server Python)
-                                 GUI fallback: FModel.exe para browsing visual
+                              ▼  fmodel-mcp (.NET CLI over CUE4Parse + Python MCP server)
+                                 GUI fallback: FModel.exe for visual browsing
 ┌──────────────────────────────────────────────────────────────────────┐
 │ D:\vivify_repo\Output\Exports\Sandfall\Content\...                   │
-│   PNGs, .pskx, .psa, .json (selectivos, no dump completo)            │
-│   Scratch: lo confirmado se mueve a su destino                       │
+│   PNGs, .pskx, .psa, .json (selective, not full dump)                │
+│   Scratch: what's confirmed gets moved to its destination            │
 └──────────────────────────────────────────────────────────────────────┘
                               │
-                              ▼  Texturas: directo a Unity. Meshes: por Sandfall/ + Blender
+                              ▼  Textures: straight to Unity. Meshes: via Sandfall/ + Blender
                               │
                               ▼  Blender 4.2 LTS + Blender MCP server
 ┌──────────────────────────────────────────────────────────────────────┐
-│ .blend (rig + N actions importadas de .psa)                          │
+│ .blend (rig + N actions imported from .psa)                          │
 │ scripts/blender/import_all_psa.py    (batch import .psa → actions)   │
 │ scripts/blender/export_anims_fbx.py  (export armature + actions)     │
 │ → Aline.fbx       (mesh + rig)                                       │
@@ -98,26 +98,26 @@ Tabla de "si borras X, ¿es recuperable y cómo?". Versionado = en git, recupera
                               ▼  Unity 2019.4.28f1 + VivifyTemplate
 ┌──────────────────────────────────────────────────────────────────────┐
 │ VivifyTemplate/Assets/Aline/                                         │
-│   Prefabs/aline.prefab          (Animator en el PREFAB ROOT)         │
-│   Textures/                      (PNG de FModel)                     │
+│   Prefabs/aline.prefab          (Animator on the PREFAB ROOT)        │
+│   Textures/                      (PNGs from FModel)                  │
 │   Materials/                     (M_Aline_Body_1/2, M_Aline_Black)   │
 │   Shaders/Aline/Standard.shader  (unlit + alpha cutout + Cull Off)   │
-│   Animations/Aline_AC.controller (state machine 26 estados)          │
+│   Animations/Aline_AC.controller (state machine, 26 states)          │
 │   Editor/PostBuildSyncCRCs.cs    (auto CRC sync)                     │
 │   Editor/AlineAnimsImporter.cs   (preserveHierarchy=true + loopTime) │
-│   Editor/BuildAlineAnimator.cs   (Tools menu: regenera AC)           │
+│   Editor/BuildAlineAnimator.cs   (Tools menu: regenerates AC)        │
 │   Editor/InspectAlineClips.cs    (Tools menu: dump fcurves)          │
 └──────────────────────────────────────────────────────────────────────┘
                               │
                               ▼  F5 / Vivify > Build > Build Configuration Window
 ┌──────────────────────────────────────────────────────────────────────┐
-│ beatsaber-map/  (junction a CustomWIPLevels/Test/)                   │
+│ beatsaber-map/  (junction to CustomWIPLevels/Test/)                  │
 │   bundleWindows2021.vivify   (asset bundle, ~MB)                     │
-│   bundleWindows2019.vivify   (opcional)                              │
-│   bundleinfo.json            (CRCs + paths de assets)                │
+│   bundleWindows2019.vivify   (optional)                              │
+│   bundleinfo.json            (CRCs + asset paths)                    │
 └──────────────────────────────────────────────────────────────────────┘
                               │
-                              ▼  Sync auto de CRCs (Editor watcher)
+                              ▼  Auto CRC sync (Editor watcher)
 ┌──────────────────────────────────────────────────────────────────────┐
 │ beatsaber-map/Info.dat                                               │
 │   _customData._assetBundle._windows2021 = <CRC>                      │
@@ -128,66 +128,67 @@ Tabla de "si borras X, ¿es recuperable y cómo?". Versionado = en git, recupera
                               │
                               ▼  Beat Saber 1.34.2 + Vivify mod
 ┌──────────────────────────────────────────────────────────────────────┐
-│ Runtime: Vivify carga el bundle, instancia el prefab, anima tracks   │
+│ Runtime: Vivify loads the bundle, instantiates the prefab, animates  │
+│ tracks                                                               │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-## Stack — versiones exactas
+## Stack — exact versions
 
-| Capa | Tool | Versión | Por qué esta exacta |
+| Layer | Tool | Version | Why this exact one |
 |---|---|---|---|
-| Juego | Beat Saber | **1.34.2** (build 7115288407) | Última compatible con la cadena de mods de Aeroluna. |
-| Mod core | Vivify | **1.0.7+1.34.2** | Estable sobre 1.34.2. |
-| Mod core | Heck | **1.8.1+1.34.2** | Required por Vivify. |
-| Mod core | CustomJSONData | **2.6.8+1.34.2** | Required por Heck. |
-| Mod | Chroma | **2.9.22+1.34.2** | Iluminación custom. |
-| Mod | NoodleExtensions | **1.7.20+1.34.2** | Movimiento custom de notas. |
-| Editor | Unity | **2019.4.28f1** | Versión obligada por VivifyTemplate (Single Pass Instanced para Windows 2021). |
-| 3D | Blender | **4.2 LTS** | Importar `.psa` (addon DarklightGames PSK/PSA), exportar FBX para Unity. |
-| 3D — automation | Blender MCP | `uvx blender-mcp` (ahujasid/blender-mcp) | Permite a Claude Code ejecutar Python en Blender (inspección de rig, batch imports, export FBX). |
-| Asset explorer (GUI) | FModel | (última) | Browsing visual de UE5 assets. Para automation no-GUI usamos fmodel-mcp. |
-| Asset explorer (programático) | fmodel-mcp | propio (CUE4Parse 1.2.2 + .NET 9) | CLI + MCP server. Repo en `d:\vivify_repo\fmodel-mcp/`. Tools `mcp__fmodel__*` en Claude. |
-| Map editor | ChroMapper | (última) | Editor visual del mapa. |
-| Scripting | ReMapper | (master) | Generación programática de notas/eventos. **Aún sin usar.** |
-| Unity automation | unity-mcp (fork local) | port a 2019.4 | Fork minimal en `d:\vivify_repo\unity-mcp/` enganchado vía `Packages/manifest.json`. Bridge stdio en port 6400. Ver [unity-mcp/README.md](../../unity-mcp/README.md). |
+| Game | Beat Saber | **1.34.2** (build 7115288407) | Last one compatible with Aeroluna's mod chain. |
+| Mod core | Vivify | **1.0.7+1.34.2** | Stable on 1.34.2. |
+| Mod core | Heck | **1.8.1+1.34.2** | Required by Vivify. |
+| Mod core | CustomJSONData | **2.6.8+1.34.2** | Required by Heck. |
+| Mod | Chroma | **2.9.22+1.34.2** | Custom lighting. |
+| Mod | NoodleExtensions | **1.7.20+1.34.2** | Custom note motion. |
+| Editor | Unity | **2019.4.28f1** | Version mandated by VivifyTemplate (Single Pass Instanced for Windows 2021). |
+| 3D | Blender | **4.2 LTS** | Import `.psa` (DarklightGames PSK/PSA addon), export FBX for Unity. |
+| 3D — automation | Blender MCP | `uvx blender-mcp` (ahujasid/blender-mcp) | Lets Claude Code run Python in Blender (rig inspection, batch imports, FBX export). |
+| Asset explorer (GUI) | FModel | (latest) | Visual browsing of UE5 assets. For non-GUI automation we use fmodel-mcp. |
+| Asset explorer (programmatic) | fmodel-mcp | in-house (CUE4Parse 1.2.2 + .NET 9) | CLI + MCP server. Repo at `d:\vivify_repo\fmodel-mcp/`. `mcp__fmodel__*` tools in Claude. |
+| Map editor | ChroMapper | (latest) | Visual map editor. |
+| Scripting | ReMapper | (master) | Programmatic generation of notes/events. **Not used yet.** |
+| Unity automation | unity-mcp (local fork) | port to 2019.4 | Minimal fork at `d:\vivify_repo\unity-mcp/` hooked in via `Packages/manifest.json`. Stdio bridge on port 6400. See [unity-mcp/README.md](../../unity-mcp/README.md). |
 
-## Qué archivo vive dónde y por qué
+## Which file lives where and why
 
-### Dentro del repo
+### Inside the repo
 
-| Path | Qué | Versionado |
+| Path | What | Versioned |
 |---|---|---|
-| `CLAUDE.md`, `docs/*.md`, `BS_Dependencies.txt` | Documentación | Sí |
-| `.gitignore` | Reglas de versionado | Sí |
-| `.claude/skills/*/SKILL.md` | Instrucciones para Claude Code | Sí |
-| `scripts/snapshot-map.ps1` | Tool local para snapshots manuales | Sí |
-| `scripts/sync-crcs.ps1` | CRC sync post-build (invocado por Editor watcher) | Sí |
-| `scripts/blender/import_all_psa.py` | Batch import `.psa` → Blender actions | Sí |
-| `scripts/blender/export_anims_fbx.py` | Export armature + actions a FBX para Unity | Sí |
-| `docs/map-snapshots/.gitkeep` | Marcador de carpeta | Sí |
-| `docs/map-snapshots/*/` | Snapshots de los `.dat` antes de cambios grandes | **No** (ignorado por carpeta) |
-| `beatsaber-map/*.dat`, `bundleinfo.json` | Mapa: dificultades V3, manifest V2, BPM, info de bundle | **Sí** (desde 2026-05-04, commit `ef5bb7d`) |
-| `beatsaber-map/*.vivify`, `*.ogg`, `*.bak`, `*.v2bak` | Bundles compilados, audio, backups manuales | **No** |
-| `VivifyTemplate/Assets/**` (sin binarios) | Prefabs, scripts, materiales (`.mat`), shaders, `.meta` | Sí |
-| `VivifyTemplate/Assets/**/*.png/.fbx/.psa/...` | Texturas, modelos 3D, animaciones binarias | **No** |
-| `VivifyTemplate/Library/`, `Temp/`, `Logs/`, `UserSettings/` | Cache de Unity | **No** (cubierto por `VivifyTemplate/.gitignore`) |
-| `VivifyTemplate/Packages/`, `ProjectSettings/` | Manifest de paquetes y settings | Sí |
+| `CLAUDE.md`, `docs/*.md`, `BS_Dependencies.txt` | Documentation | Yes |
+| `.gitignore` | Versioning rules | Yes |
+| `.claude/skills/*/SKILL.md` | Instructions for Claude Code | Yes |
+| `scripts/snapshot-map.ps1` | Local tool for manual snapshots | Yes |
+| `scripts/sync-crcs.ps1` | Post-build CRC sync (invoked by Editor watcher) | Yes |
+| `scripts/blender/import_all_psa.py` | Batch import `.psa` → Blender actions | Yes |
+| `scripts/blender/export_anims_fbx.py` | Export armature + actions to FBX for Unity | Yes |
+| `docs/map-snapshots/.gitkeep` | Folder marker | Yes |
+| `docs/map-snapshots/*/` | Snapshots of the `.dat` files before big changes | **No** (folder-ignored) |
+| `beatsaber-map/*.dat`, `bundleinfo.json` | Map: V3 difficulties, V2 manifest, BPM, bundle info | **Yes** (since 2026-05-04, commit `ef5bb7d`) |
+| `beatsaber-map/*.vivify`, `*.ogg`, `*.bak`, `*.v2bak` | Compiled bundles, audio, manual backups | **No** |
+| `VivifyTemplate/Assets/**` (no binaries) | Prefabs, scripts, materials (`.mat`), shaders, `.meta` | Yes |
+| `VivifyTemplate/Assets/**/*.png/.fbx/.psa/...` | Textures, 3D models, binary animations | **No** |
+| `VivifyTemplate/Library/`, `Temp/`, `Logs/`, `UserSettings/` | Unity cache | **No** (covered by `VivifyTemplate/.gitignore`) |
+| `VivifyTemplate/Packages/`, `ProjectSettings/` | Package manifest and settings | Yes |
 
-### Fuera del repo (en `d:\vivify_repo\`)
+### Outside the repo (in `d:\vivify_repo\`)
 
-| Path | Qué | Por qué fuera |
+| Path | What | Why outside |
 |---|---|---|
-| `Sandfall/` | Dump de UE5 de Expedition 33 | ~40 GB. Tool de extracción, no parte del producto. |
-| `ReMapper-master/` | Tool de scripting Deno/TS | Tiene su propio `.git`. Mejor accesible al lado del repo. |
-| `FModel.exe` | Tool .exe ~47 MB | Binario, mejor fuera. GUI fallback. |
-| `fmodel-mcp/` | Wrapper canónico programático sobre CUE4Parse (CLI .NET 9 + MCP server Python) | Repo propio (`luisep92/fmodel-mcp`). Bridge stdio MCP. Ver [fmodel-mcp/README.md](../../fmodel-mcp/README.md). |
-| `Output/Exports/` | Scratch dir donde escriben FModel GUI y `mcp__fmodel__fmodel_export_*` | Tamaño variable. Lo confirmado se mueve a `my_vivify_template/Sandfall/` (meshes) o `VivifyTemplate/Assets/<area>/Textures/` (PNGs). |
-| `CustomNotesUnityProject/` | Repo canónico de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) — Unity project de referencia para custom notes (meshes, materials, shaders, prefab structure) | Reference para construir nuestros prefabs de proyectil via `AssignObjectPrefab`. **No usamos `NoteDescriptor`** (componente del mod CustomNotes); copiamos solo geometría/material. Unity 2018.x, abrir en 2019.4.28f1. |
-| `_outline-shader-ref/` | Carpeta ad-hoc con [Ronja's UnlitOutlines.shader / SurfaceOutlines.shader](https://github.com/ronja-tutorials/ShaderTutorials/tree/master/Assets/020_Inverted_Hull) descargados directos | Shader inverted-hull base para el outline de los cubos custom. CC-BY 4.0 — atribuir a Ronja en el header del shader cuando se adapte al proyecto Vivify. |
+| `Sandfall/` | UE5 dump of Expedition 33 | ~40 GB. Extraction tool, not part of the product. |
+| `ReMapper-master/` | Deno/TS scripting tool | Has its own `.git`. Better kept alongside the repo. |
+| `FModel.exe` | ~47 MB .exe tool | Binary, better outside. GUI fallback. |
+| `fmodel-mcp/` | Canonical programmatic wrapper over CUE4Parse (.NET 9 CLI + Python MCP server) | Its own repo (`luisep92/fmodel-mcp`). MCP stdio bridge. See [fmodel-mcp/README.md](../../fmodel-mcp/README.md). |
+| `Output/Exports/` | Scratch dir where FModel GUI and `mcp__fmodel__fmodel_export_*` write | Variable size. What's confirmed gets moved to `my_vivify_template/Sandfall/` (meshes) or `VivifyTemplate/Assets/<area>/Textures/` (PNGs). |
+| `CustomNotesUnityProject/` | Canonical repo from [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) — Unity project of reference for custom notes (meshes, materials, shaders, prefab structure) | Reference for building our projectile prefabs via `AssignObjectPrefab`. **We don't use `NoteDescriptor`** (CustomNotes mod component); we only copy geometry/material. Unity 2018.x, open in 2019.4.28f1. |
+| `_outline-shader-ref/` | Ad-hoc folder with [Ronja's UnlitOutlines.shader / SurfaceOutlines.shader](https://github.com/ronja-tutorials/ShaderTutorials/tree/master/Assets/020_Inverted_Hull) downloaded directly | Base inverted-hull shader for the custom cube outline. CC-BY 4.0 — credit Ronja in the shader header when adapting it to the Vivify project. |
 
-### Junctions a la instalación de Beat Saber
+### Junctions to the Beat Saber install
 
-Dos junctions de Windows (`mklink /J`) — el **link en sí** no se versiona (cada máquina lo crea), pero el **contenido del mapa** sí (los `.dat` y `bundleinfo.json` son fuente de verdad versionada en git desde commit `ef5bb7d`, 2026-05-04). Logs no se versionan.
+Two Windows junctions (`mklink /J`) — the **link itself** is not versioned (each machine creates it), but the **map content** is (the `.dat` files and `bundleinfo.json` are the versioned source of truth in git since commit `ef5bb7d`, 2026-05-04). Logs are not versioned.
 
 #### `beatsaber-map/` → `CustomWIPLevels\Test\`
 
@@ -195,7 +196,7 @@ Dos junctions de Windows (`mklink /J`) — el **link en sí** no se versiona (ca
 mklink /J beatsaber-map "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Beat Saber_Data\CustomWIPLevels\Test"
 ```
 
-Permite leer `Info.dat`, `*Standard.dat`, `BPMInfo.dat`, `bundleinfo.json` y `bundle*.vivify` con un path relativo desde el repo. Tras crear el junction en una máquina nueva, los `.dat` versionados ya están en git — solo faltan los binarios pesados (`*.vivify` se generan con F5/Build, `*.ogg` se copia manual una vez).
+Lets you read `Info.dat`, `*Standard.dat`, `BPMInfo.dat`, `bundleinfo.json` and `bundle*.vivify` with a relative path from the repo. After creating the junction on a fresh machine, the versioned `.dat` files are already in git — only the heavy binaries are missing (`*.vivify` are generated with F5/Build, `*.ogg` is copied manually once).
 
 #### `beatsaber-logs/` → `Beat Saber\Logs\`
 
@@ -203,86 +204,86 @@ Permite leer `Info.dat`, `*Standard.dat`, `BPMInfo.dat`, `bundleinfo.json` y `bu
 mklink /J beatsaber-logs "C:\Program Files (x86)\Steam\steamapps\common\Beat Saber\Logs"
 ```
 
-Permite leer logs de IPA + Vivify desde el repo. Estructura:
+Lets you read IPA + Vivify logs from the repo. Structure:
 
-- **`_latest.log`** — sesión actual sin comprimir. Es el que normalmente leemos.
-- **`<timestamp>.log`** — sesión actual sin comprimir (mismo contenido que `_latest.log`).
-- **`<timestamp>.log.gz`** — sesiones anteriores comprimidas con gzip. Para leer una concreta: `gzip -dc <archivo>` (Git Bash) o `Expand-Archive` desde PowerShell.
+- **`_latest.log`** — current session uncompressed. This is the one we normally read.
+- **`<timestamp>.log`** — current session uncompressed (same content as `_latest.log`).
+- **`<timestamp>.log.gz`** — previous sessions compressed with gzip. To read a specific one: `gzip -dc <file>` (Git Bash) or `Expand-Archive` from PowerShell.
 
-Útiles para diagnosticar:
+Useful for diagnosing:
 
-- `[Vivify/InstantiatePrefab] Enabled` (positivo: el evento se procesa).
-- `Could not find UnityEngine.GameObject` (path mal escrito en el evento).
-- `[Vivify/AssetBundleManager] Checksum not defined` (CRCs desactualizados).
-- `Asset bundle could not be loaded` (bundle ausente o corrupto).
-- `[Vivify] Track does not exist` (orden temporal de eventos roto).
+- `[Vivify/InstantiatePrefab] Enabled` (positive: the event is being processed).
+- `Could not find UnityEngine.GameObject` (wrong path in the event).
+- `[Vivify/AssetBundleManager] Checksum not defined` (CRCs out of date).
+- `Asset bundle could not be loaded` (bundle missing or corrupt).
+- `[Vivify] Track does not exist` (event temporal ordering broken).
 
-(Comando `cmd`, no PowerShell — `mklink` es interno de cmd.)
+(`cmd` command, not PowerShell — `mklink` is a cmd builtin.)
 
-## Flujo de rebuild
+## Rebuild flow
 
-Dos opciones equivalentes:
+Two equivalent options:
 
-- **F5** — atajo. Equivale a "Build Working Version Uncompressed". Para iteración.
-- **`Vivify > Build > Build Configuration Window`** — ventana con control sobre plataformas (Windows 2019 / Windows 2021 / Android 2021) y modo de compresión.
+- **F5** — shortcut. Equivalent to "Build Working Version Uncompressed". For iteration.
+- **`Vivify > Build > Build Configuration Window`** — window with control over platforms (Windows 2019 / Windows 2021 / Android 2021) and compression mode.
 
-Salida: bundles + `bundleinfo.json` en `beatsaber-map/`.
+Output: bundles + `bundleinfo.json` in `beatsaber-map/`.
 
 ### Uncompressed vs Compressed
 
-| Modo | Cuándo | Notas |
+| Mode | When | Notes |
 |---|---|---|
-| **Uncompressed** | Iteración, probar cambios | Default de F5. Bundle más grande, build casi instantáneo. **No distribuir.** |
-| **Compressed** | Antes de publicar el mapa | Build mucho más lento. Obligatorio para release. |
+| **Uncompressed** | Iteration, testing changes | F5 default. Larger bundle, build almost instant. **Don't distribute.** |
+| **Compressed** | Before publishing the map | Much slower build. Mandatory for release. |
 
-### Plataformas
+### Platforms
 
-| Bundle | Para | Single Pass Mode |
+| Bundle | For | Single Pass Mode |
 |---|---|---|
 | `_windows2019` | PC Beat Saber 1.29.1 | Single Pass |
-| `_windows2021` | PC Beat Saber 1.34.2+ (este proyecto) | Single Pass Instanced |
+| `_windows2021` | PC Beat Saber 1.34.2+ (this project) | Single Pass Instanced |
 | `_android2021` | Quest | Single Pass Instanced |
 
-Por defecto solo construimos `_windows2021`. Si en algún momento queremos sacar versión Quest, marcar también `_android2021` en la Build Configuration y sincronizar su CRC.
+By default we only build `_windows2021`. If at some point we want to ship a Quest version, also tick `_android2021` in the Build Configuration and sync its CRC.
 
-## Pipeline de animaciones
+## Animation pipeline
 
-Sub-flujo independiente del de prefab/material. Se ejecuta una vez para generar los AnimationClips, después solo se invocan vía evento `SetAnimatorProperty`.
+Sub-flow independent of the prefab/material one. Runs once to generate the AnimationClips, afterwards they're only invoked via `SetAnimatorProperty` event.
 
 ```
-.psa de FModel
-   │  scripts/blender/import_all_psa.py  (vía Blender MCP o Scripting workspace)
+.psa from FModel
+   │  scripts/blender/import_all_psa.py  (via Blender MCP or Scripting workspace)
    ▼
-Blender actions en bpy.data.actions (372 bones matched, scale fcurves stripped)
+Blender actions in bpy.data.actions (372 bones matched, scale fcurves stripped)
    │  scripts/blender/export_anims_fbx.py
-   │     - push actions a NLA tracks UNMUTED, strip name = "<armature>|<action>"
+   │     - push actions to NLA tracks UNMUTED, strip name = "<armature>|<action>"
    │     - export armature only, takes via bake_anim_use_nla_strips=True
    ▼
-Aline_Anims.fbx (~185 MB, gitignored, .meta sí versionado)
+Aline_Anims.fbx (~185 MB, gitignored, .meta is versioned)
    │  Unity 2019.4 FBX importer + Editor/AlineAnimsImporter:
-   │     - preserveHierarchy=true (mantiene SK_Curator_Aline como GO)
-   │     - loopTime=true en idles canónicos
+   │     - preserveHierarchy=true (keeps SK_Curator_Aline as GO)
+   │     - loopTime=true on canonical idles
    ▼
-26 AnimationClips como sub-assets, paths "SK_Curator_Aline/root/pelvis/..."
+26 AnimationClips as sub-assets, paths "SK_Curator_Aline/root/pelvis/..."
    │  Tools > Aline > Build Animator Controller (Editor/BuildAlineAnimator)
    ▼
-Aline_AC.controller con 26 estados, 26 triggers (Any State → X), auto-return a Idle1
-   │  Asignado al Animator component DEL PREFAB ROOT (no del child SK_Curator_Aline)
+Aline_AC.controller with 26 states, 26 triggers (Any State → X), auto-return to Idle1
+   │  Assigned to the Animator component on the PREFAB ROOT (not on the SK_Curator_Aline child)
    ▼
-Runtime: Vivify SetAnimatorProperty con id del prefab + trigger name
+Runtime: Vivify SetAnimatorProperty with prefab id + trigger name
 ```
 
-### Por qué el Animator vive en el prefab root + `preserveHierarchy=true`
+### Why the Animator lives on the prefab root + `preserveHierarchy=true`
 
-El export armature-only de Blender colapsa el armature object como nodo raíz del FBX. Unity, además, colapsa por defecto nodos top-level con un solo hijo. Sin contramedida, las clip paths salen como `root/pelvis/...` sin prefijo `SK_Curator_Aline`. La preview del FBX inspector usa `Aline.fbx` como modelo (vía avatar source) cuya jerarquía sí preserva `SK_Curator_Aline` → mismatch → T-pose.
+Blender's armature-only export collapses the armature object as the FBX root node. Unity, on top of that, collapses top-level nodes with a single child by default. Without a countermeasure, the clip paths come out as `root/pelvis/...` with no `SK_Curator_Aline` prefix. The FBX inspector preview uses `Aline.fbx` as the model (via avatar source), whose hierarchy does preserve `SK_Curator_Aline` → mismatch → T-pose.
 
-`preserveHierarchy=true` (set por `AlineAnimsImporter.OnPreprocessModel`) hace que Unity no colapse — `SK_Curator_Aline` sigue como GO en el FBX importado y todas las clip paths quedan prefijadas con `SK_Curator_Aline/...`. Con esas paths, el Animator puede vivir en el root del prefab y las paths matchean directamente.
+`preserveHierarchy=true` (set by `AlineAnimsImporter.OnPreprocessModel`) makes Unity not collapse — `SK_Curator_Aline` stays as a GO in the imported FBX and all clip paths are prefixed with `SK_Curator_Aline/...`. With those paths, the Animator can live on the prefab root and the paths match directly.
 
-Las scale curves que el FBX exporter mete por defecto en el armature object (path `""` original → `"SK_Curator_Aline"` con preserveHierarchy) caen en el GO `SK_Curator_Aline` (scale 1) → no-op. El root del prefab mantiene `localScale: 0.01` baked sin que las clips lo pisen. Decisión documentada en [DECISIONES.md#2026-05-01](DECISIONES.md).
+The scale curves that the FBX exporter puts by default on the armature object (path `""` originally → `"SK_Curator_Aline"` with preserveHierarchy) land on the `SK_Curator_Aline` GO (scale 1) → no-op. The prefab root keeps its `localScale: 0.01` baked without the clips stepping on it. Decision documented at [DECISIONES.md#2026-05-01](DECISIONES.md).
 
-### Naming convention de triggers
+### Trigger naming convention
 
-Los triggers en el AnimatorController tienen el nombre del clip menos el prefijo `Paintress_`:
+Triggers in the AnimatorController are named after the clip minus the `Paintress_` prefix:
 
 | Clip name | Trigger name |
 |---|---|
@@ -291,17 +292,17 @@ Los triggers en el AnimatorController tienen el nombre del clip menos el prefijo
 | `SK_Curator_Aline\|Paintress_Idle1_to_idle2_transition` | `Idle1_to_idle2_transition` |
 | `SK_Curator_Aline\|Skill_Aline_P3_Skill1` | `Skill_Aline_P3_Skill1` |
 
-Eso es lo que va en `properties[].id` del evento `SetAnimatorProperty` en el `.dat`.
+That's what goes into `properties[].id` of the `SetAnimatorProperty` event in the `.dat`.
 
-### Skill `vivify-animations`
+### `vivify-animations` skill
 
-Guía operativa del pipeline: setup once-per-character paso a paso + tabla de tools + reglas no negociables + 6 gotchas documentados (NLA strips muted, addon PSA action linking, preserveHierarchy, no SetEditorCurves plural en 2019.4, Inspector loopTime bug, rest pose mismatch). Consultar antes de tocar nada del flujo.
+Operational guide for the pipeline: step-by-step once-per-character setup + tool table + non-negotiable rules + 6 documented gotchas (NLA strips muted, addon PSA action linking, preserveHierarchy, no plural SetEditorCurves in 2019.4, Inspector loopTime bug, rest pose mismatch). Check it before touching anything in the flow.
 
 ---
 
-## `bundleinfo.json` como fuente de verdad
+## `bundleinfo.json` as source of truth
 
-Tras cada rebuild, `bundleinfo.json` queda con esta forma:
+After each rebuild, `bundleinfo.json` ends up looking like this:
 
 ```json
 {
@@ -324,31 +325,31 @@ Tras cada rebuild, `bundleinfo.json` queda con esta forma:
 }
 ```
 
-Dos usos:
+Two uses:
 
-1. **Validar paths antes de referenciarlos**: `prefabs.{name}` y `materials.{name}.path` listan los assets reales del bundle. Antes de añadir un `InstantiatePrefab` o un `SetMaterialProperty` al `.dat`, comprobar aquí que el path existe (lowercase, exacto).
-2. **CRC sync**: copiar `bundleCRCs._windows2021` (y `_windows2019`/`_android2021` si construyes esas plataformas) a `Info.dat._customData._assetBundle`.
+1. **Validate paths before referencing them**: `prefabs.{name}` and `materials.{name}.path` list the actual bundle assets. Before adding an `InstantiatePrefab` or a `SetMaterialProperty` to the `.dat`, check here that the path exists (lowercase, exact).
+2. **CRC sync**: copy `bundleCRCs._windows2021` (and `_windows2019`/`_android2021` if you build those platforms) into `Info.dat._customData._assetBundle`.
 
-## CRC sync — formato en `Info.dat`
+## CRC sync — format in `Info.dat`
 
 ```json
 "_customData": {
   "...": "...",
   "_assetBundle": {
-    "_windows2021": <CRC_DE_BUNDLEINFO>
+    "_windows2021": <CRC_FROM_BUNDLEINFO>
   }
 }
 ```
 
-Si los CRCs no matchean: error `[Vivify/AssetBundleManager] Checksum not defined` en el log de BS y el mapa no carga assets.
+If the CRCs don't match: `[Vivify/AssetBundleManager] Checksum not defined` error in the BS log and the map won't load assets.
 
-Bypass de iteración: lanzar BS con flag `-aerolunaisthebestmodder` (desactiva validación). **Quitar antes de publicar.**
+Iteration bypass: launch BS with the flag `-aerolunaisthebestmodder` (disables validation). **Remove before publishing.**
 
-## Mods — instalación manual
+## Mods — manual install
 
-Mod Assistant a veces instala versiones obsoletas de CustomJSONData/Heck/Chroma/NoodleExtensions que rompen dependencias entre sí. Para este proyecto, los mods de Aeroluna se instalan a mano desde GitHub:
+Mod Assistant sometimes installs outdated versions of CustomJSONData/Heck/Chroma/NoodleExtensions that break dependencies between each other. For this project, Aeroluna's mods are installed by hand from GitHub:
 
 - https://github.com/Aeroluna/Heck/releases
 - https://github.com/Aeroluna/Vivify/releases
 
-Versiones exactas en [BS_Dependencies.txt](../BS_Dependencies.txt).
+Exact versions in [BS_Dependencies.txt](../BS_Dependencies.txt).

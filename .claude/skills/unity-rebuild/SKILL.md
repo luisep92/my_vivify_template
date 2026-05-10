@@ -9,127 +9,127 @@ After modifying any prefab, material, shader, or asset in the VivifyTemplate Uni
 
 ## Standard rebuild flow
 
-1. Build (dos opciones equivalentes):
-    - **F5** (atajo rápido) — equivale a "Build Working Version Uncompressed". Para iteración.
-    - **`Vivify > Build > Build Configuration Window`** — ventana con control sobre plataformas (Windows 2019 / Windows 2021 / Android 2021) y modo Compressed/Uncompressed. **Compressed** obligatorio antes de subir el mapa a producción.
-2. Unity exporta `bundleWindows2021.vivify` (y otros variantes según config) + `bundleinfo.json` a la carpeta del mapa.
-3. **Sync de CRCs es automático.** El Editor script [`PostBuildSyncCRCs.cs`](../../../VivifyTemplate/Assets/Aline/Editor/PostBuildSyncCRCs.cs) tiene un `FileSystemWatcher` sobre `bundleinfo.json` y lanza `scripts/sync-crcs.ps1` cada vez que Vivify reescribe el archivo. Output del sync se ve en la consola de Unity (`[sync-crcs] ...`). Toggleable desde `Tools/Aline/Auto-sync CRCs after Vivify build`.
-4. Reiniciar Beat Saber (o solo relanzar el mapa) — Vivify recarga bundles por launch.
+1. Build (two equivalent options):
+    - **F5** (quick shortcut) — equivalent to "Build Working Version Uncompressed". For iteration.
+    - **`Vivify > Build > Build Configuration Window`** — window with control over platforms (Windows 2019 / Windows 2021 / Android 2021) and Compressed/Uncompressed mode. **Compressed** is mandatory before uploading the map to production.
+2. Unity exports `bundleWindows2021.vivify` (and other variants per config) + `bundleinfo.json` to the map folder.
+3. **CRC sync is automatic.** The Editor script [`PostBuildSyncCRCs.cs`](../../../VivifyTemplate/Assets/Aline/Editor/PostBuildSyncCRCs.cs) has a `FileSystemWatcher` on `bundleinfo.json` and launches `scripts/sync-crcs.ps1` every time Vivify rewrites the file. Sync output shows in the Unity console (`[sync-crcs] ...`). Toggleable from `Tools/Aline/Auto-sync CRCs after Vivify build`.
+4. Restart Beat Saber (or just relaunch the map) — Vivify reloads bundles on launch.
 
-**Manual fallback** (auto-sync desactivado o trabajando sin Unity abierto): `.\scripts\sync-crcs.ps1` (PowerShell). Desde bash: `powershell -ExecutionPolicy Bypass -File ./scripts/sync-crcs.ps1`. Mismo script que invoca el watcher — single source of truth.
+**Manual fallback** (auto-sync off or working without Unity open): `.\scripts\sync-crcs.ps1` (PowerShell). From bash: `powershell -ExecutionPolicy Bypass -File ./scripts/sync-crcs.ps1`. Same script the watcher invokes — single source of truth.
 
-## Estructura de los CRCs
+## CRC structure
 
-`bundleinfo.json` (escrito por Vivify) contiene hasta 3 CRCs según las plataformas que construyas:
+`bundleinfo.json` (written by Vivify) contains up to 3 CRCs depending on the platforms you build:
 
 ```json
 {
   "bundleCRCs": {
     "_windows2019": 2604998796,   // PC BS 1.29.1
-    "_windows2021": 2051513366,   // PC BS 1.34.2+ (este proyecto)
-    "_android2021": 3982829844    // Quest, solo si se construye
+    "_windows2021": 2051513366,   // PC BS 1.34.2+ (this project)
+    "_android2021": 3982829844    // Quest, only if built
   }
 }
 ```
 
-`Info.dat._customData._assetBundle` tiene que matchear exactamente los CRCs de `bundleinfo.json`:
+`Info.dat._customData._assetBundle` has to exactly match the CRCs in `bundleinfo.json`:
 
 ```json
 "_customData": {
   ...,
   "_assetBundle": {
-    "_windows2021": <CRC_DEL_BUNDLEINFO>
+    "_windows2021": <CRC_FROM_BUNDLEINFO>
   }
 }
 ```
 
-`sync-crcs.ps1` se encarga de mantener esto sincronizado. **Primera vez**: si la clave `_windows2021` (u otra plataforma) no existe aún en `Info.dat._customData._assetBundle`, hay que añadirla a mano una vez con valor placeholder (e.g. `0`); el script la detecta y la actualiza. En sucesivos rebuilds queda automatizado.
+`sync-crcs.ps1` is in charge of keeping this synced. **First time**: if the `_windows2021` (or other platform) key doesn't yet exist in `Info.dat._customData._assetBundle`, you have to add it by hand once with a placeholder value (e.g. `0`); the script detects it and updates it. On subsequent rebuilds it stays automated.
 
-## Plataformas — cuándo construir cada una
+## Platforms — when to build each one
 
-| Bundle | Para | Single Pass Mode | Por defecto en este proyecto |
+| Bundle | For | Single Pass Mode | Default in this project |
 |---|---|---|---|
 | `_windows2019` | PC Beat Saber 1.29.1 | Single Pass | No |
-| `_windows2021` | PC Beat Saber 1.34.2+ | Single Pass Instanced | **Sí** |
+| `_windows2021` | PC Beat Saber 1.34.2+ | Single Pass Instanced | **Yes** |
 | `_android2021` | Quest | Single Pass Instanced | No |
 
-Cambiar en `Vivify > Build > Build Configuration Window`.
+Change in `Vivify > Build > Build Configuration Window`.
 
-## Cuando los CRCs no matchean
+## When CRCs don't match
 
-Síntoma: `[Vivify/AssetBundleManager] Checksum not defined` (en `beatsaber-logs/_latest.log`). Siempre significa que los CRCs en `Info.dat` no matchean el archivo bundle. Releer `bundleinfo.json` y resyncar.
+Symptom: `[Vivify/AssetBundleManager] Checksum not defined` (in `beatsaber-logs/_latest.log`). Always means the CRCs in `Info.dat` don't match the bundle file. Reread `bundleinfo.json` and resync.
 
-## Bypass para iteración
+## Bypass for iteration
 
-Para iteración rápida sin resyncar CRCs cada vez, lanzar Beat Saber con flag `-aerolunaisthebestmodder`. Esto desactiva la validación de checksum. **Quitar el flag antes del testing final — el mapa publicado debe funcionar sin él.**
+For fast iteration without resyncing CRCs every time, launch Beat Saber with the flag `-aerolunaisthebestmodder`. This disables checksum validation. **Remove the flag before final testing — the published map has to work without it.**
 
-## Errores comunes en build
+## Common build errors
 
-| Síntoma | Causa | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
-| `BuildAssetBundles error` | Algún asset corrupto en `Assets/` | Revisar la consola de Unity, suele señalar el `.prefab`/`.mat` concreto |
-| Build OK pero `Info.dat` sigue rompiendo | CRCs no actualizados tras el rebuild | `.\scripts\sync-crcs.ps1` |
-| `Unity version mismatch` al abrir el proyecto | Unity != 2019.4.28f1 | Instalar exactamente esa versión desde Unity Hub |
-| Falta una plataforma en el output | Build Configuration no la incluía | `Vivify > Build > Build Configuration Window` y marcar Windows 2019 / 2021 / Android 2021 |
-| Mapa publicado se ve mal pero en local va bien | Subiste un build Uncompressed | Re-build en modo Compressed antes de publicar |
-| Texto del HUD descolocado en BS 1.29.1 | TextMeshPro de Unity 2019.4.28f1 | Downgrade TMP a `com.unity.textmeshpro@1.4.1` (no aplica a 1.34.2) |
-| `Unity license` error al abrir | License caducada o no renovada | Renovar en Unity Hub |
+| `BuildAssetBundles error` | Some corrupt asset in `Assets/` | Check the Unity console, it usually points to the specific `.prefab`/`.mat` |
+| Build OK but `Info.dat` still breaks | CRCs not updated after the rebuild | `.\scripts\sync-crcs.ps1` |
+| `Unity version mismatch` when opening the project | Unity != 2019.4.28f1 | Install exactly that version from Unity Hub |
+| A platform is missing in the output | Build Configuration didn't include it | `Vivify > Build > Build Configuration Window` and check Windows 2019 / 2021 / Android 2021 |
+| Published map looks bad but it's fine locally | You uploaded an Uncompressed build | Re-build in Compressed mode before publishing |
+| HUD text misaligned in BS 1.29.1 | TextMeshPro of Unity 2019.4.28f1 | Downgrade TMP to `com.unity.textmeshpro@1.4.1` (doesn't apply to 1.34.2) |
+| `Unity license` error when opening | License expired or not renewed | Renew in Unity Hub |
 
-## Qué NO necesita rebuild
+## What does NOT need a rebuild
 
-- Editar los `.dat` del mapa (notas, eventos, custom events). BS los lee directamente, no involucran al bundle.
-- Editar `Info.dat`. Igual.
-- Añadir luces con ChroMapper. Igual.
+- Editing the map's `.dat`s (notes, events, custom events). BS reads them directly, doesn't involve the bundle.
+- Editing `Info.dat`. Same.
+- Adding lights with ChroMapper. Same.
 
-Qué SÍ necesita rebuild: cualquier cambio en `VivifyTemplate/Assets/`. Prefabs, materiales, shaders, texturas, scripts.
+What DOES need a rebuild: any change in `VivifyTemplate/Assets/`. Prefabs, materials, shaders, textures, scripts.
 
-## Iterar materiales/shaders sin round-trip a BS
+## Iterating materials/shaders without a round-trip to BS
 
-Para iterar shaders y propiedades de material en `aline.prefab`, **NO ir directo a "Vivify > Build → relaunch BS → screenshot"**. Capturar el resultado en Unity Scene view via `mcp__unity-mcp__manage_camera screenshot capture_source=scene_view`. ~5s vs ~1min por iteración.
+To iterate shaders and material properties on `aline.prefab`, **DON'T go straight to "Vivify > Build → relaunch BS → screenshot"**. Capture the result in the Unity Scene view via `mcp__unity-mcp__manage_camera screenshot capture_source=scene_view`. ~5s vs ~1min per iteration.
 
-**Receta:**
+**Recipe:**
 
-1. Confirmar que la prefab está en escena: `mcp__unity-mcp__manage_scene get_hierarchy max_depth=2`. Si no está, instanciar.
-2. Posicionar Scene View con `mcp__unity-mcp__execute_code`:
+1. Confirm the prefab is in the scene: `mcp__unity-mcp__manage_scene get_hierarchy max_depth=2`. If not, instantiate it.
+2. Position the Scene View with `mcp__unity-mcp__execute_code`:
    ```csharp
    var sv = UnityEditor.SceneView.lastActiveSceneView;
    sv.Focus();
    sv.pivot = new Vector3(0, 1.6f, 0);                       // y = head height
-   sv.rotation = Quaternion.LookRotation(new Vector3(0, 0, -1)); // mirar cara desde +Z
+   sv.rotation = Quaternion.LookRotation(new Vector3(0, 0, -1)); // look at face from +Z
    sv.size = 0.15f;                                           // close-up
    sv.Repaint();
    ```
-   `size`: ~0.15 portrait, ~0.6 body. Si el prefab tiene `transform.forward = +Z` puede mostrarse "al revés" — probar `LookRotation((0,0,1))` y `((0,0,-1))`.
+   `size`: ~0.15 portrait, ~0.6 body. If the prefab has `transform.forward = +Z` it can show up "backwards" — try `LookRotation((0,0,1))` and `((0,0,-1))`.
 3. Screenshot: `mcp__unity-mcp__manage_camera screenshot capture_source=scene_view include_image=true max_resolution=600`. PNG inline.
-4. Iterar shader/props sin tocar BS hasta que el resultado sea bueno.
-5. Solo entonces F5 + screenshot BS para confirmar que el bundle stripping/keyword rewriting de Vivify no rompió nada.
+4. Iterate shader/props without touching BS until the result is good.
+5. Only then F5 + BS screenshot to confirm that Vivify's bundle stripping/keyword rewriting didn't break anything.
 
-**Cuándo SÍ hace falta el round-trip BS:** validar el render final con environment + cámara fija + skybox + post-procesado. Esos son detalles de phase final, no de iteración rápida.
+**When you DO need the BS round-trip:** validate the final render with environment + fixed camera + skybox + post-processing. Those are final-phase details, not fast iteration.
 
-**Caveat:** Scene view usa el render path del Editor. Pueden divergir del bundle: iluminación de escena (hay sun/sky por defecto en editor; en bundle solo lo que Vivify mande), shader keyword stripping del bundle build, post-procesado del editor.
+**Caveat:** Scene view uses the Editor render path. It can diverge from the bundle: scene lighting (there's a default sun/sky in editor; in the bundle only what Vivify sends), bundle build shader keyword stripping, editor post-processing.
 
-### Gotcha crítico: `manage_material set_material_shader_property` no sincroniza keywords
+### Critical gotcha: `manage_material set_material_shader_property` doesn't sync keywords
 
-`set_material_shader_property` setea el FLOAT del Toggle property pero **NO enable/disable el shader keyword asociado**. La sincronización float ↔ keyword del `[Toggle(NAME)]` attribute solo ocurre cuando el toggle se cambia desde el inspector de Unity, no via API. Workaround:
+`set_material_shader_property` sets the FLOAT of the Toggle property but **does NOT enable/disable the associated shader keyword**. The float ↔ keyword sync of the `[Toggle(NAME)]` attribute only happens when the toggle is changed from the Unity inspector, not via API. Workaround:
 
 ```csharp
 mat.EnableKeyword("USE_RADIAL_FADE");
-// o
+// or
 mat.DisableKeyword("USE_RADIAL_FADE");
 UnityEditor.EditorUtility.SetDirty(mat);
 UnityEditor.AssetDatabase.SaveAssets();
 ```
 
-Vía `mcp__unity-mcp__execute_code`. Si el shader tiene `#ifdef USE_RADIAL_FADE`, sin EnableKeyword el código ifdef nunca se ejecuta aunque el float esté a 1 — bug muy difícil de detectar porque el material parece configurado correcto en Inspector.
+Via `mcp__unity-mcp__execute_code`. If the shader has `#ifdef USE_RADIAL_FADE`, without EnableKeyword the ifdef code never runs even though the float is at 1 — a bug that's very hard to detect because the material looks correctly configured in the Inspector.
 
-## Diagnóstico: menu item missing + Console limpia = compile silenciosa rota
+## Diagnosis: missing menu item + clean Console = silent broken compile
 
-Si un menu item de Unity (`Window > X`) no aparece tras instalar un package y la Console está completamente limpia (0 errors, 0 warnings relevantes), NO confíes en que la asamblea compiló. Comprobar: existe `<proyecto>/Library/ScriptAssemblies/` y contiene los DLLs esperados (`<package-name>.Editor.dll`, `Assembly-CSharp.dll`)? Si la carpeta no existe o está vacía, **la compilación falló silenciosamente** y los `[MenuItem]` no se registraron porque la asamblea entera no se cargó.
+If a Unity menu item (`Window > X`) doesn't appear after installing a package and the Console is completely clean (0 errors, 0 relevant warnings), DON'T trust that the assembly compiled. Check: does `<project>/Library/ScriptAssemblies/` exist and contain the expected DLLs (`<package-name>.Editor.dll`, `Assembly-CSharp.dll`)? If the folder doesn't exist or is empty, **compilation failed silently** and the `[MenuItem]`s didn't register because the whole assembly didn't load.
 
-**Causas típicas en orden de probabilidad:**
-1. **Duplicate DLL** solapando plataformas (caso canónico: package vendoriza `Newtonsoft.Json.dll` y el proyecto ya trae uno). Fix: dejar solo uno (preferir el que viva en `Plugins/` del proyecto host, no vendorizado en el package). El asmdef del package con `precompiledReferences: ["Newtonsoft.Json.dll"]` y `overrideReferences: false` recoge el que esté disponible.
-2. asmdef con `precompiledReferences` apuntando a un DLL inexistente.
-3. asmdef con `references` a otro asmdef que no existe.
-4. Paquete con APIs no soportadas en 2019.4 (puede silenciar el error a Editor.log también).
+**Typical causes in order of probability:**
+1. **Duplicate DLL** overlapping platforms (canonical case: package vendors `Newtonsoft.Json.dll` and the project already ships one). Fix: keep only one (prefer the one living in the host project's `Plugins/`, not vendored in the package). The package's asmdef with `precompiledReferences: ["Newtonsoft.Json.dll"]` and `overrideReferences: false` picks up whichever is available.
+2. asmdef with `precompiledReferences` pointing to a non-existent DLL.
+3. asmdef with `references` to another asmdef that doesn't exist.
+4. Package with APIs unsupported in 2019.4 (may silence the error to Editor.log too).
 
-`Editor.log` a veces sí tiene los `error CS`, pero a veces solo dice `[ScriptCompilation] Recompiling all scripts ... CompileScripts: 2130ms` sin más detalle. Es señal débil — usar la presencia/ausencia de DLLs en `Library/ScriptAssemblies/` como autoritativa.
+`Editor.log` sometimes does have the `error CS`s, but sometimes just says `[ScriptCompilation] Recompiling all scripts ... CompileScripts: 2130ms` with no further detail. It's a weak signal — use the presence/absence of DLLs in `Library/ScriptAssemblies/` as authoritative.

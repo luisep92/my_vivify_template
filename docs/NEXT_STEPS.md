@@ -1,234 +1,234 @@
 # NEXT_STEPS
 
-## Estado actual
+## Current state
 
-Pipeline operativo end-to-end:
+End-to-end pipeline operational:
 
-- **Beatmap V3** (`*Standard.dat`, `BPMInfo.dat`); Info.dat en su schema underscore. Mapa versionado en git (commit `ef5bb7d`).
-- **Vivify** carga el bundle e instancia `aline.prefab` en escena. Sync de CRCs automático tras F5 (`Editor/PostBuildSyncCRCs.cs` → `scripts/sync-crcs.ps1`).
-- **Aline texturizada** con 5 materiales custom: `M_Aline_BlackBody` (fresnel), `M_Aline_Body_1`, `M_Aline_Body_2` (BodyLit con normal+fake-light), `M_Aline_Dress` (EnergyMask translucent), `M_Aline_Face` (radial fade). Detalle en [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md).
-- **Pelo de Aline** rigged con 163 strand bones + sway loop (`HairSway.anim`).
-- **Animaciones**: pipeline `.psa` → Blender → FBX → Unity Animator → Vivify funcionando con root motion canónico para clips con desplazamiento. Detalle en [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md).
-- **Escenario E33** custom (`RockPlatform.fbx`, 217K polys, 3 submeshes: rock + ivy carpet azul + bushes rosas). Disable del environment vanilla via Chroma `customData.environment[]`. Skybox custom `M_Skybox_E33`.
-- **Difficulties** registradas: Easy (locomotion sandbox), Normal (clon de Easy + trigger Skill4 en b=40, sin gameplay aún — playground para iterar familia A), ExpertPlus (sandbox de cube test).
-- **MCPs propios**:
-  - `unity-mcp` (fork local en `d:\vivify_repo\unity-mcp/`, bridge stdio:6400). Tools `read_console`, `refresh_unity`, `execute_code`, `manage_animation`, `manage_asset`, `manage_material`, `manage_prefabs`, etc.
-  - `fmodel-mcp` (`d:\vivify_repo\fmodel-mcp/`, repo público `luisep92/fmodel-mcp`). Tools `mcp__fmodel__fmodel_*`: `search`, `read`, `inspect_material`, `export_texture`/`mesh`/`raw`, `list_exports`, `status`. Flujo canónico para inspeccionar/exportar assets de E33.
+- **Beatmap V3** (`*Standard.dat`, `BPMInfo.dat`); Info.dat in its underscore schema. Map versioned in git (commit `ef5bb7d`).
+- **Vivify** loads the bundle and instances `aline.prefab` in the scene. CRC sync automatic after F5 (`Editor/PostBuildSyncCRCs.cs` → `scripts/sync-crcs.ps1`).
+- **Aline textured** with 5 custom materials: `M_Aline_BlackBody` (fresnel), `M_Aline_Body_1`, `M_Aline_Body_2` (BodyLit with normal+fake-light), `M_Aline_Dress` (EnergyMask translucent), `M_Aline_Face` (radial fade). Detail in [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md).
+- **Aline's hair** rigged with 163 strand bones + sway loop (`HairSway.anim`).
+- **Animations**: `.psa` → Blender → FBX → Unity Animator → Vivify pipeline working with canonical root motion for clips with displacement. Detail in [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md).
+- **E33 stage** custom (`RockPlatform.fbx`, 217K polys, 3 submeshes: rock + blue ivy carpet + pink bushes). Vanilla environment disable via Chroma `customData.environment[]`. Custom skybox `M_Skybox_E33`.
+- **Difficulties** registered: Easy (locomotion sandbox), Normal (clone of Easy + Skill4 trigger at b=40, no gameplay yet — playground for iterating family A), ExpertPlus (cube test sandbox).
+- **Our own MCPs**:
+  - `unity-mcp` (local fork at `d:\vivify_repo\unity-mcp/`, bridge stdio:6400). Tools `read_console`, `refresh_unity`, `execute_code`, `manage_animation`, `manage_asset`, `manage_material`, `manage_prefabs`, etc.
+  - `fmodel-mcp` (`d:\vivify_repo\fmodel-mcp/`, public repo `luisep92/fmodel-mcp`). Tools `mcp__fmodel__fmodel_*`: `search`, `read`, `inspect_material`, `export_texture`/`mesh`/`raw`, `list_exports`, `status`. Canonical flow to inspect/export E33 assets.
 
 ---
 
-## Próximos pasos (en orden)
+## Next steps (in order)
 
-> **Scope:** Phase 1 + intro cosmética, deadline soft. Detalle en [DECISIONES.md → "Scope: Phase 1 + intro cosmética; deadline soft"](DECISIONES.md). Las familias de ataque a prototipar quedan reducidas a las que aparecen en Phase 1.
+> **Scope:** Phase 1 + cosmetic intro, soft deadline. Detail in [DECISIONES.md → "Scope: Phase 1 + cosmetic intro; soft deadline"](DECISIONES.md). The attack families to prototype are reduced to the ones that appear in Phase 1.
 
-> Pivot anterior: con la decisión de **showcase map** ([DECISIONES.md](DECISIONES.md)), el orden cambia. La canción y el state machine narrativo dependen de tener primero los **sistemas de ataque** definidos como contratos reutilizables. Componer fases sobre sistemas inestables es la receta del embolado.
+> Previous pivot: with the **showcase map** decision ([DECISIONES.md](DECISIONES.md)), the order changes. The song and narrative state machine depend on having the **attack systems** first, defined as reusable contracts. Composing phases on top of unstable systems is a recipe for a mess.
 
-### 1. Catálogo de familias de ataque + contratos — **hecho**
+### 1. Attack family catalog + contracts — **done**
 
-Cinco familias (A/B/D/E/F) + modificador C apilable formalizadas en [`families.md`](../.claude/skills/vivify-mapping/families.md): inputs, secuencia de eventos, encoding del parry, parámetros tunables, no-conflicto. Mapeo completo Animator→familia incluido. Visión de fase a fase en [PRODUCTO.md](PRODUCTO.md).
+Five families (A/B/D/E/F) + stackable modifier C formalized in [`families.md`](../.claude/skills/vivify-mapping/families.md): inputs, event sequence, parry encoding, tunable parameters, non-conflict. Full Animator→family mapping included. Phase-by-phase vision in [PRODUCTO.md](PRODUCTO.md).
 
-### 2. Sandbox de locomoción — hecho
+### 2. Locomotion sandbox — done
 
-Implementado en `beatsaber-map/EasyStandard.dat` (difficulty Easy del mapa Test, registrada en `Info.dat`). Cadena de `SetAnimatorProperty` recorre idles, transiciones, dashes y stuns canónicos. Validado e2e en BS (2026-05-01): idles, transiciones y dashes encadenan limpio sin snap-back; DashIn traslada el GO ~6m forward, DashOut lo devuelve.
+Implemented in `beatsaber-map/EasyStandard.dat` (Easy difficulty of the Test map, registered in `Info.dat`). Chain of `SetAnimatorProperty` runs through idles, transitions, dashes, and canonical stuns. Validated e2e in BS (2026-05-01): idles, transitions, and dashes chain cleanly without snap-back; DashIn translates the GO ~6m forward, DashOut returns it.
 
-### 2.5. Re-export `Aline_Anims.fbx` con root motion canónico — hecho
+### 2.5. Re-export `Aline_Anims.fbx` with canonical root motion — done
 
-Pipeline final operativo:
-1. Los `.psa` bakean motion forward en `pose.bones["root"].location[1]` (Y bone-local). Verificable con `scripts/blender/inspect_motion.py`.
-2. Unity 2019.4 con `Generic + Copy From Other Avatar` no extrae motion de un bone interno como root motion, da igual lo que se ponga en `motionNodeName` del clip importer o del avatar source. Sí extrae si el motion vive en `location` del armature object.
-3. Solución: `scripts/blender/synthesize_root_motion.py` mueve el motion del bone "root" al armature object con axis remap (Y bone → Z object negated) compensando la cadena de transformaciones del FBX exporter (`axis_up="Y"`) + rotación 270°X que el armature object adquiere en Unity.
-4. `AlineAnimsImporter` setea `motionNodeName="SK_Curator_Aline"` + desbakea XZ e Y por clip (`XzRootMotionSuffixes`).
-5. Animator del prefab con Apply Root Motion = ON aplica el delta al root del prefab.
+Final operational pipeline:
+1. The `.psa` files bake forward motion into `pose.bones["root"].location[1]` (Y bone-local). Verifiable with `scripts/blender/inspect_motion.py`.
+2. Unity 2019.4 with `Generic + Copy From Other Avatar` doesn't extract motion from an internal bone as root motion, regardless of what you put in `motionNodeName` of the clip importer or the avatar source. It does extract if the motion lives in `location` of the armature object.
+3. Solution: `scripts/blender/synthesize_root_motion.py` moves the motion from the "root" bone to the armature object with axis remap (Y bone → Z object negated) compensating the FBX exporter's transform chain (`axis_up="Y"`) + the 270°X rotation that the armature object picks up in Unity.
+4. `AlineAnimsImporter` sets `motionNodeName="SK_Curator_Aline"` + unbakes XZ and Y per clip (`XzRootMotionSuffixes`).
+5. The prefab's Animator with Apply Root Motion = ON applies the delta to the prefab root.
 
-Detalle operativo y gotchas en la skill [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md) sección "Root motion para clips con desplazamiento" + "Caminos cerrados". Decisión consolidada en [`DECISIONES.md`](DECISIONES.md).
+Operational detail and gotchas in the [`vivify-animations`](../.claude/skills/vivify-animations/SKILL.md) skill, "Root motion for clips with displacement" + "Closed paths" sections. Consolidated decision in [`DECISIONES.md`](DECISIONES.md).
 
-### 3. Environment custom + materiales de Aline — **hecho salvo intro cosmética**
+### 3. Custom environment + Aline materials — **done except cosmetic intro**
 
-El environment por defecto de BS (TimbalandEnvironment) se come visualmente a Aline: los materiales `BlackPart`/`BlackPart1`/`CuratorFace` negros desaparecen sobre fondo oscuro. Cualquier trabajo de fresnel/face shader sobre Aline es no-juzgable hasta tener un contexto visual correcto. Por eso environment va antes que materiales en este paso. Capacidades Vivify validadas en `docs/heckdocs-main/docs/vivify/events.md` + `environment/environment.md`.
+The default BS environment (TimbalandEnvironment) visually eats Aline: the `BlackPart`/`BlackPart1`/`CuratorFace` black materials disappear on a dark background. Any fresnel/face shader work on Aline isn't judgeable until we have a correct visual context. That's why environment goes before materials in this step. Vivify capabilities validated in `docs/heckdocs-main/docs/vivify/events.md` + `environment/environment.md`.
 
-Subpasos en orden:
+Substeps in order:
 
-1. **Skybox custom** — **hecho 2026-05-02**. Material `M_Skybox_E33` con shader `Skybox/Panoramic`, textura `T_Skybox_6_HybrydNoiseVT` (4096×2048 equirect, ripeada de Sandfall via FModel), tint blanco, exposure 1.0, rotación 180°. Bundleado bajo `aline_bundle`. Eventos `SetRenderingSettings` + `SetCameraProperty.clearFlags=Skybox` (ambos necesarios — el primero solo no rinde). Source canónico identificado pero no usado: `M_Flowmap_Nebula_9_Inst_2` → `T_Skybox_12_HybridNoiseVT` en `Monolith_Interior_PaintressGrandFinale`. Skybox_6 (blue-grey nocturno) elegido sobre el _12 (cosmic-red) por encaje al look misty/azul de la pelea original. Metodología del rip + receta del skybox en skill [`vivify-environment`](../.claude/skills/vivify-environment/SKILL.md).
+1. **Custom skybox** — **done 2026-05-02**. `M_Skybox_E33` material with `Skybox/Panoramic` shader, `T_Skybox_6_HybrydNoiseVT` texture (4096×2048 equirect, ripped from Sandfall via FModel), white tint, exposure 1.0, 180° rotation. Bundled under `aline_bundle`. `SetRenderingSettings` + `SetCameraProperty.clearFlags=Skybox` events (both needed — the first alone doesn't render). Canonical source identified but unused: `M_Flowmap_Nebula_9_Inst_2` → `T_Skybox_12_HybridNoiseVT` in `Monolith_Interior_PaintressGrandFinale`. Skybox_6 (nighttime blue-grey) chosen over _12 (cosmic-red) for its fit with the misty/blue look of the original fight. Rip methodology + skybox recipe in the [`vivify-environment`](../.claude/skills/vivify-environment/SKILL.md) skill.
 
-2. **Switch a DefaultEnvironment + disable + Settings Setter** — **hecho 2026-05-02**. `Info.dat._environmentName` cambiado a `DefaultEnvironment`. Disable del env via `customData.environment[]` con tres comandos: yeet `Environment|GameCore` (regex, position -69420), `active: false` para `DustPS` y `PlayersPlace`. Settings Setter en `Info.dat._customData._settings` por dificultad: starter pack + HUD off. Validado en BS. Receta consolidada en [`vivify-environment`](../.claude/skills/vivify-environment/SKILL.md) y [`vivify-mapping`](../.claude/skills/vivify-mapping/SKILL.md).
+2. **Switch to DefaultEnvironment + disable + Settings Setter** — **done 2026-05-02**. `Info.dat._environmentName` changed to `DefaultEnvironment`. Env disable via `customData.environment[]` with three commands: yeet `Environment|GameCore` (regex, position -69420), `active: false` for `DustPS` and `PlayersPlace`. Settings Setter in `Info.dat._customData._settings` per difficulty: starter pack + HUD off. Validated in BS. Recipe consolidated in [`vivify-environment`](../.claude/skills/vivify-environment/SKILL.md) and [`vivify-mapping`](../.claude/skills/vivify-mapping/SKILL.md).
 
-3. **Ambient lighting** — **diferido a Phase 2** (intentado y revertido 2026-05-03, commits `2fd1d7a`/`163a2f9` y reverts `b68ab0f`/`cf1fe45`).
+3. **Ambient lighting** — **deferred to Phase 2** (tried and reverted 2026-05-03, commits `2fd1d7a`/`163a2f9` and reverts `b68ab0f`/`cf1fe45`).
 
-   Implementación arquitectural (`AlineLighting.cginc` con `AlineShade` modulativo + `AlineRimTint` aditivo, refactor de 4 shaders, `_AmbientFloor=0` para que lights-out sea lights-out de verdad) llegó a funcionar end-to-end via `unity_AmbientSky/Equator/Ground` (gotcha del `ShadeSH9=0` en bundles Vivify: ver [`vivify-materials → Ambient en bundles Vivify`](../.claude/skills/vivify-materials/SKILL.md)).
+   Architectural implementation (`AlineLighting.cginc` with modulative `AlineShade` + additive `AlineRimTint`, refactor of 4 shaders, `_AmbientFloor=0` so that lights-out is really lights-out) got to end-to-end working via `unity_AmbientSky/Equator/Ground` (gotcha of `ShadeSH9=0` in Vivify bundles: see [`vivify-materials → Ambient in Vivify bundles`](../.claude/skills/vivify-materials/SKILL.md)).
 
-   **Por qué el revert:** con un solo skybox y cero cambios de iluminación en Phase 1, el sistema añadía tuning constante sin valor narrativo. Cada combinación skybox×ambientMode×ambientValues requería iterar visualmente. Lección de timing en [`DECISIONES.md → Construir sistemas de capa baja cuando hay caso de uso`](DECISIONES.md).
+   **Why the revert:** with a single skybox and zero lighting changes in Phase 1, the system added constant tuning with no narrative value. Each skybox×ambientMode×ambientValues combination required visual iteration. Timing lesson in [`DECISIONES.md → Build low-layer systems when there's a use case`](DECISIONES.md).
 
-   **Cuándo retomar (Phase 2):** cuando haya cambios de lighting con propósito narrativo (cambio de fase, fade outs, partículas con luz real, recolor de skybox como FX). Commits cherry-pickeables como punto de partida.
+   **When to revisit (Phase 2):** when there are lighting changes with narrative purpose (phase change, fade outs, particles with real light, skybox recolor as FX). Cherry-pickable commits as a starting point.
 
-   Estado actual: cada material tiene su `_LightDir/_LightStrength/_Ambient` hardcoded (BodyLit) o sin lighting (Hair/Fresnel/EnergyMask/Face). Aline lee bien sobre el skybox blue-grey sin reaccionar al entorno. Suficiente para Phase 1.
+   Current state: each material has its own hardcoded `_LightDir/_LightStrength/_Ambient` (BodyLit) or no lighting (Hair/Fresnel/EnergyMask/Face). Aline reads well on the blue-grey skybox without reacting to the environment. Enough for Phase 1.
 
-4. **Mesh del escenario E33** — **hecho 2026-05-02 con custom mesh, iterado a versión rocosa**. Probamos primero rip directo (`SM_Rock_A_CliffEdge` + textura `Albedo_2K_vlzkba1fw` de Megascans/Jagged_Rock que el juego usa) — la geometría natural irregular hacía imposible alinear pies de Aline a milímetro. Switch a custom mesh en Blender via blender-mcp.
+4. **E33 stage mesh** — **done 2026-05-02 with custom mesh, iterated to a rocky version**. We tried direct rip first (`SM_Rock_A_CliffEdge` + texture `Albedo_2K_vlzkba1fw` from Megascans/Jagged_Rock that the game uses) — natural irregular geometry made it impossible to align Aline's feet to the millimeter. Switched to custom mesh in Blender via blender-mcp.
 
-   **v1 (2026-05-02 mediodía):** óvalo plano 6m × 10m × 0.5m, dips sutiles (max 8cm), `position: [0, 0.97, 4]`. Funcional pero el cap NGON dejaba el top como un solo polígono y la textura mostraba rayos radiales (UV planar desde arriba).
+   **v1 (2026-05-02 midday):** flat oval 6m × 10m × 0.5m, subtle dips (max 8cm), `position: [0, 0.97, 4]`. Functional but the NGON cap left the top as a single polygon and the texture showed radial rays (planar UV from above).
 
-   **v2 (2026-05-02 tarde):** versión rocosa estilo cima de montaña. Builder reusable en `scripts/blender/build_rock_platform.py`. Óvalo 12×18m con corredor central plano 5×11m (jugador en `z=0` al centro, Aline en `z=8` al borde del eje largo), silueta perimetral irregular vía noise(cos θ, sin θ), relieve en flancos hasta +50cm/-18cm con falloff de 2m hacia el corredor, smart UVs (sin rayos), shading smooth. `position: [0, 0.97, 0]` (centrado en el jugador). Pipeline: Blender → FBX → Unity import → `Vivify/Build/Build Working Version Uncompressed` → PostBuildSyncCRCs auto-sync. Iteraciones para ajustar amplitud relieve y empujar bumps fuera del corredor. Patrón consolidado en skill `vivify-environment` (secciones "Receta del mesh custom" y "Gotcha: FBX axis flip").
+   **v2 (2026-05-02 afternoon):** rocky mountaintop-style version. Reusable builder in `scripts/blender/build_rock_platform.py`. 12×18m oval with a flat 5×11m central corridor (player at `z=0` center, Aline at `z=8` at the edge of the long axis), irregular perimeter silhouette via noise(cos θ, sin θ), relief on the flanks up to +50cm/-18cm with 2m falloff toward the corridor, smart UVs (no rays), smooth shading. `position: [0, 0.97, 0]` (centered on the player). Pipeline: Blender → FBX → Unity import → `Vivify/Build/Build Working Version Uncompressed` → PostBuildSyncCRCs auto-sync. Iterations to tune relief amplitude and push bumps away from the corridor. Pattern consolidated in the `vivify-environment` skill (sections "Custom mesh recipe" and "Gotcha: FBX axis flip").
 
-   **Decoración del escenario — pétalos azules (hecho 2026-05-03):** scatter merged en el mismo `RockPlatform.fbx` como segundo material slot/submesh. Mesh source: `Sandfall/Content/EnviroPacks/Real_Ivy_Pack/Meshes/foliage/ivy/SM_ivy_floor_plane_dense_spread_01_leaves.pskx` (asset stock de Unreal Marketplace que Sandfall reutilizó). 5 patches asimétricos rotados, foco aline-side + flanks, mínimo tras jugador (cámara fija no lo ve). Pipeline:
-   - `scripts/blender/build_rock_platform.py:build_ivy_scatter()` — importa el FBX del template, aplica Decimate ratio 0.5 (300K → 150K tris), duplica N copias en posiciones explícitas `IVY_PATCHES`, scale no-uniforme `(s, s, s*IVY_HEIGHT_SCALE=0.15)` para aplastar las leaves verticales del ivy nativo a look "petalos tirados", merged en rock_obj
-   - Material `M_BlueIvy` con shader `Aline/Standard` + keyword `LUMINANCE_TINT` (ver más abajo) → recolor real azul saturado
-   - Preview en Blender: el script ahora crea placeholder materials con texturas reales + EEVEE nodes que reproducen el luminance-tint (`_make_preview_material()`) — viewport en Material Preview muestra resultado casi-final sin round-trip a BS
-   - Decisión clave: probamos 4 approaches (cluster scatter discreto, dense cluster scatter, rock-top duplicate + atlas-tile shader, ivy floor_plane scatter) → solo el último funcionó. Lección: para ground decoration en BS Vivify, **mesh asset choice > shader gymnastics** — un asset pack pre-built de "scattered carpet" gana siempre a tilear un atlas vía shader.
+   **Stage decoration — blue petals (done 2026-05-03):** scatter merged into the same `RockPlatform.fbx` as a second material slot/submesh. Mesh source: `Sandfall/Content/EnviroPacks/Real_Ivy_Pack/Meshes/foliage/ivy/SM_ivy_floor_plane_dense_spread_01_leaves.pskx` (stock Unreal Marketplace asset that Sandfall reused). 5 asymmetric rotated patches, aline-side focus + flanks, minimum behind the player (fixed camera doesn't see it). Pipeline:
+   - `scripts/blender/build_rock_platform.py:build_ivy_scatter()` — imports the template FBX, applies Decimate ratio 0.5 (300K → 150K tris), duplicates N copies at explicit `IVY_PATCHES` positions, non-uniform scale `(s, s, s*IVY_HEIGHT_SCALE=0.15)` to squash the native ivy's vertical leaves to a "fallen petals" look, merged into rock_obj
+   - Material `M_BlueIvy` with `Aline/Standard` shader + `LUMINANCE_TINT` keyword (see below) → real saturated blue recolor
+   - Blender preview: the script now creates placeholder materials with real textures + EEVEE nodes that reproduce the luminance-tint (`_make_preview_material()`) — viewport in Material Preview shows an almost-final result without round-trip to BS
+   - Key decision: we tried 4 approaches (discrete cluster scatter, dense cluster scatter, rock-top duplicate + atlas-tile shader, ivy floor_plane scatter) → only the last worked. Lesson: for ground decoration in BS Vivify, **mesh asset choice > shader gymnastics** — a pre-built "scattered carpet" asset pack always beats tiling an atlas via shader.
 
-   **Decoración del escenario — bushes rosas 3D (hecho 2026-05-03):** tercer submesh de `RockPlatform.fbx`, scatter aleatorio determinista (seed=23, BUSH_COUNT=14) de mesh `Sandfall/Content/EnviroPacks/Environment_Set/Environment/Foliage/Models/SM_ground_foliage_03_*.pskx` (~64 tris nativos según JSON, ~4.4K después de pskx import; 62K total tras 14 instancias). Restringido a `y >= 0.5` Blender pre-mirror = solo en frente del jugador (cámara fija no ve atrás). Material `M_PinkBush` con luminance tint pink-magenta overbright `(1.5, 0.4, 0.8)`. Aporta toques de color contrastante al ivy carpet azul + pequeñas protrusiones 3D. Receta consolidada en skill `vivify-environment` sección "Capa 3 — bushes 3D scatter".
+   **Stage decoration — 3D pink bushes (done 2026-05-03):** third submesh of `RockPlatform.fbx`, deterministic random scatter (seed=23, BUSH_COUNT=14) of mesh `Sandfall/Content/EnviroPacks/Environment_Set/Environment/Foliage/Models/SM_ground_foliage_03_*.pskx` (~64 native tris per JSON, ~4.4K after pskx import; 62K total after 14 instances). Restricted to `y >= 0.5` Blender pre-mirror = only in front of the player (fixed camera doesn't see behind). Material `M_PinkBush` with overbright pink-magenta luminance tint `(1.5, 0.4, 0.8)`. Adds contrasting color touches to the blue ivy carpet + small 3D protrusions. Recipe consolidated in `vivify-environment` skill, "Layer 3 — 3D bushes scatter" section.
 
-   **Estado escenario Phase 1**: completo. Total ~217K polys, 1 mesh, 3 submeshes (rock 9.8K + ivy 145K + bush 62K), 3 draw calls. Holgado para BS PC, OK para Quest si se necesita.
+   **Phase 1 stage state**: complete. Total ~217K polys, 1 mesh, 3 submeshes (rock 9.8K + ivy 145K + bush 62K), 3 draw calls. Plenty for BS PC, OK for Quest if needed.
 
-4.5. **Dash Y-jump bug — cerrado 2026-05-02** con fix en tres capas:
-   - **Blender / synthesize_root_motion v5**: normalizar frame 0 a origen por axis. Las curvas de los `.psa` traen baselines absolutos del rig de Unreal y no coinciden cross-clip (DashOut-Idle2 arrancaba a Z=604.49 mientras DashIn-Idle1 a Z=0); v5 resta el valor del frame 0 a todas las keyframes para que todos los clips arranquen en `(0,0,0)` object space. Idempotente con marca custom property.
-   - **Blender / import_all_psa**: detectar seq names genéricos ("DefaultSlot" en `_Montage.psa`) y renombrar usando el basename del archivo. `Paintress_DashOut-Idle1_Montage.psa` se silenciaba por colisión con DashIn-Idle1_Montage (alfabéticamente primero, ambos con seq "DefaultSlot"); el rename libera la colisión y recupera la action faltante.
-   - **Unity AnimatorController**: pose-mismatch entre clips se absorbe con blend > 0 en las transitions. DashOut-Idle1 (state nuevo, exit a Idle1 grounded) usa `exitTime=0.7 + duration=0.3` para que el blend se solape con los últimos 30% del clip — el aterrizaje ocurre durante el movimiento del dash en vez de "Aline llega a destino flotando y luego baja". Entry blend 0.3s para amortiguar despegue desde grounded. DashOut-Idle2 (floating→floating) sigue sin blend.
+4.5. **Dash Y-jump bug — closed 2026-05-02** with a fix in three layers:
+   - **Blender / synthesize_root_motion v5**: normalize frame 0 to origin per axis. The `.psa` curves carry absolute baselines from the Unreal rig and don't match cross-clip (DashOut-Idle2 started at Z=604.49 while DashIn-Idle1 at Z=0); v5 subtracts the frame 0 value from all keyframes so that all clips start at `(0,0,0)` object space. Idempotent with a custom property marker.
+   - **Blender / import_all_psa**: detect generic seq names ("DefaultSlot" in `_Montage.psa`) and rename using the file's basename. `Paintress_DashOut-Idle1_Montage.psa` was silenced by collision with DashIn-Idle1_Montage (alphabetically first, both with seq "DefaultSlot"); the rename frees the collision and recovers the missing action.
+   - **Unity AnimatorController**: pose-mismatch between clips is absorbed with blend > 0 on the transitions. DashOut-Idle1 (new state, exit to grounded Idle1) uses `exitTime=0.7 + duration=0.3` so the blend overlaps with the last 30% of the clip — the landing happens during the dash's motion instead of "Aline reaches destination floating and then drops". 0.3s entry blend to cushion takeoff from grounded. DashOut-Idle2 (floating→floating) keeps no blend.
 
-   Hallazgo clave: `Paintress_DashOut-Idle1_Montage.psa` y `Paintress_DashOut-Idle2.psa` contienen skeletal animation idéntica en Aline (verificado: 2604 fcurves, zero diferencia). El "grounded vs floating" semántico del juego original vivía en blueprints/Montage metadata de UE que no viajan al `.psa`. Replicamos el aterrizaje vía blend en Animator (técnica equivalente al "Blend Out duration" del Montage de UE). Patrón consolidado en skill `vivify-animations`.
+   Key finding: `Paintress_DashOut-Idle1_Montage.psa` and `Paintress_DashOut-Idle2.psa` contain identical skeletal animation on Aline (verified: 2604 fcurves, zero difference). The "grounded vs floating" semantics from the original game lived in UE blueprints/Montage metadata that don't travel to `.psa`. We replicate the landing via Animator blend (technique equivalent to UE's Montage "Blend Out duration"). Pattern consolidated in the `vivify-animations` skill.
 
-5. **Pelo de Aline** — **hecho 2026-05-03 (Fases 1 + 2)**.
+5. **Aline's hair** — **done 2026-05-03 (Phases 1 + 2)**.
 
-   Asset en `Sandfall/Content/Characters/Hair/Mirror_Family/Aline/` (NO en `Bun_Hairstyle/`). PSK + 4 texturas + Skeleton + AnimBlueprint + 3 MaterialInstances. **Cero `.psa` para el pelo** — Sandfall lo simulaba en runtime con AnimBlueprint (grafo de UE con constraints físicos sobre los strand bones), no porteable a Vivify.
+   Asset in `Sandfall/Content/Characters/Hair/Mirror_Family/Aline/` (NOT in `Bun_Hairstyle/`). PSK + 4 textures + Skeleton + AnimBlueprint + 3 MaterialInstances. **Zero `.psa` for the hair** — Sandfall simulated it at runtime with AnimBlueprint (UE graph with physical constraints over the strand bones), not portable to Vivify.
 
-   **Pipeline final operativo:**
-   - PSK + texturas exportadas via `mcp__fmodel__*`.
-   - PSK → FBX **rigged** via `scripts/blender/pskx_to_fbx.py` (preserva armature + skin weights). Output a `Sandfall/.../Aline/Aline_curator_hair_skl.fbx` + copia manual a `VivifyTemplate/Assets/Aline/Hair/`.
-   - El FBX incluye 163 bones (`Root` → 19 `Strand_X_1` top-level → cadenas hasta `Strand_X_Y_Z`), 32K verts, SkinnedMeshRenderer.
-   - Shader `Aline/Hair` (cards unlit cutout: `_MainTex` Color + `_AlphaMap` mask separada + `_Brightness` + `_AlphaCutoff=0.08` muy bajo para preservar mechones finos).
-   - Material `M_Aline_Hair` con `T_Hair_Aline_Color` + `T_Hair_Aline_Mask`, brightness 1.0.
-   - Instanciado como child del bone `head` del prefab. Path: `SK_Curator_Aline/root/pelvis/spine_*/.../neck_02/head/Aline_curator_hair_skl`.
-   - **Scale fix crítico:** `localScale = (100, 100, 100)` para compensar el chain scale 0.01 del rig de Aline.
-   - Pose final: `localPosition=(0,0,0) localRotation=identity` — el bind pose natural del rig de Sandfall posiciona el pelo "wind-blown / etereo" hacia arriba+atrás, encaja con el look del personaje en E33 sin tocar nada.
-   - Animator dedicado en el GameObject top con `HairSway.anim`: 19 bones top-level × 4 quaternion curves (`m_LocalRotation.x/y/z/w`) compuestas alrededor del bind pose de cada bone. Sway `±6° X / ±4° Z` con phase shift `i × 2π/19` para que los strands no se muevan en sync. Loop 2.5s a 30fps. Los sub-bones siguen por jerarquía → movimiento natural sin animarlos.
+   **Final operational pipeline:**
+   - PSK + textures exported via `mcp__fmodel__*`.
+   - PSK → **rigged** FBX via `scripts/blender/pskx_to_fbx.py` (preserves armature + skin weights). Output to `Sandfall/.../Aline/Aline_curator_hair_skl.fbx` + manual copy to `VivifyTemplate/Assets/Aline/Hair/`.
+   - The FBX includes 163 bones (`Root` → 19 top-level `Strand_X_1` → chains down to `Strand_X_Y_Z`), 32K verts, SkinnedMeshRenderer.
+   - `Aline/Hair` shader (unlit cutout cards: `_MainTex` Color + separate `_AlphaMap` mask + `_Brightness` + very low `_AlphaCutoff=0.08` to preserve fine strands).
+   - `M_Aline_Hair` material with `T_Hair_Aline_Color` + `T_Hair_Aline_Mask`, brightness 1.0.
+   - Instanced as a child of the prefab's `head` bone. Path: `SK_Curator_Aline/root/pelvis/spine_*/.../neck_02/head/Aline_curator_hair_skl`.
+   - **Critical scale fix:** `localScale = (100, 100, 100)` to compensate for the 0.01 chain scale of Aline's rig.
+   - Final pose: `localPosition=(0,0,0) localRotation=identity` — the natural bind pose of Sandfall's rig positions the hair "wind-blown / ethereal" upwards+backwards, fitting the character's E33 look without touching anything.
+   - Dedicated Animator on the top GameObject with `HairSway.anim`: 19 top-level bones × 4 quaternion curves (`m_LocalRotation.x/y/z/w`) composed around each bone's bind pose. Sway `±6° X / ±4° Z` with phase shift `i × 2π/19` so the strands don't move in sync. 2.5s loop at 30fps. Sub-bones follow by hierarchy → natural motion without animating them.
 
-   **Por qué bones (rig original) y NO DynamicBone:** bundles Vivify hacen script stripping → MonoBehaviour custom no se ejecuta en BS. DynamicBone/SpringBones/Magica Cloth simularían en Unity Editor pero quedarían inertes en BS. Animar bones via AnimationClip pre-baked es la única ruta viable. Detalle en [`vivify-materials → MonoBehaviour custom NO sobrevive al stripping`](../.claude/skills/vivify-materials/SKILL.md).
+   **Why bones (original rig) and NOT DynamicBone:** Vivify bundles do script stripping → custom MonoBehaviour doesn't execute in BS. DynamicBone/SpringBones/Magica Cloth would simulate in Unity Editor but stay inert in BS. Animating bones via pre-baked AnimationClip is the only viable route. Detail in [`vivify-materials → Custom MonoBehaviour does NOT survive stripping`](../.claude/skills/vivify-materials/SKILL.md).
 
-   **Performance:** 32K verts skinned + 163 bones + 19×4 curve evals por frame. Holgado en BS PC; ~0.3-0.5ms extra de Aline en Quest. Margen amplio.
+   **Performance:** 32K verts skinned + 163 bones + 19×4 curve evals per frame. Plenty in BS PC; ~0.3-0.5ms extra for Aline in Quest. Wide margin.
 
-   **Gotchas resueltos en el camino:**
-   - Si escalas armature + mesh por separado en Blender y aplicas, la deformación se compone con el bind pose y queda 100× más pequeña. Solución: **delegar el scale al FBX exporter** via `global_scale=0.01 + apply_scale_options='FBX_SCALE_ALL'` cuando hay armature. Pre-scale en Blender solo para mesh estático. Detalle en docstring de [`scripts/blender/pskx_to_fbx.py`](../scripts/blender/pskx_to_fbx.py).
-   - Re-import del FBX resetea el material del SMR al default `MI_Hair_NPCs_Aline_Curator/Standard`. Reasignar `M_Aline_Hair` post-import.
-   - `localScale=100` se preserva tras re-import; pose `(0,0,0)` también.
-   - Bind pose del hair viene rotado +X 270° por el FBX axis flip Blender→Unity, pero está absorbido en el child intermedio `Aline_curator_hair_skl/Aline_curator_hair_skl`. No tocar.
+   **Gotchas resolved along the way:**
+   - If you scale armature + mesh separately in Blender and apply, the deformation compounds with the bind pose and ends up 100× smaller. Solution: **delegate the scale to the FBX exporter** via `global_scale=0.01 + apply_scale_options='FBX_SCALE_ALL'` when there's an armature. Pre-scale in Blender only for static mesh. Detail in the docstring of [`scripts/blender/pskx_to_fbx.py`](../scripts/blender/pskx_to_fbx.py).
+   - Re-importing the FBX resets the SMR's material to the default `MI_Hair_NPCs_Aline_Curator/Standard`. Reassign `M_Aline_Hair` post-import.
+   - `localScale=100` is preserved after re-import; pose `(0,0,0)` too.
+   - The hair's bind pose comes rotated +X 270° from the Blender→Unity FBX axis flip, but it's absorbed in the intermediate child `Aline_curator_hair_skl/Aline_curator_hair_skl`. Don't touch.
 
-6. **Materiales Aline (BlackPart fresnel + CuratorFace)** — **hecho 2026-05-03**. Cinco slots auditados contra `SK_Curator_Aline.uasset` + override de `BP_Cine_Curator_Aline`:
-   - Slot 0 `Curator_Black_Body` → `M_Aline_BlackBody` con shader nuevo `Aline/Fresnel` (cutout fresnel; normal map `Curator_Black_Body_Normal`; params del MI BlackPart1: Alpha 0.35, Fresnel 0.5, FresnelR 2). Tuneado a `_Alpha=1.0, _FresnelExponent=3.0, _RimBoost=1.5, _AlphaCutoff=0.5` para que el rim solo aparezca en silueta (los parches de "piel quemada" se integran sin parecer overlay).
-   - Slot 1/2 `Curator_Body_001 / Curator_Body` → `M_Aline_Body_2 / M_Aline_Body_1` con shader nuevo `Aline/BodyLit` (BaseColor + Normal + AO + fake-light dirección). Tuneado a `_LightStrength=0.45, _Ambient=0.55, _BumpScale=1.5, _OcclusionStrength=0`. **Hallazgo:** la "ORM" (`OcclusionRoughnessMetallic`) que ripeó FModel **NO es una ORM packed estándar** — es una textura pseudocolor multichannel (naranja/verde/magenta) que probablemente codifica paint masks u otros effects, no AO/Roughness/Metallic. AO desactivado. Normal map sí da relief a las grietas.
-   - Slot 3 `Curator_Dress` → `M_Aline_Dress` con shader nuevo `Aline/EnergyMask` (translucent blend, sin clip — alpha gradient suave; usa `Curator_Dress_Normal` + `Curator_Dress_Opacity`). Tuneado a `_Alpha=0.85, _FresnelExponent=1.5, _RimBoost=1.0` para look "vestido de energía / wispy". `Cull Off` puede dar overdraw; valorar `Cull Back` si molesta.
-   - Slot 4 `Curator_Aline_Hole` → `M_Aline_Face` con shader nuevo `Aline/Face` (translucent + radial fade aproximando el M_CuratorFace de UE). Implementa también UV transform (`_UVScale`, `_UVOffset`, `_UVAngleDeg`) para soportar `Mask_Curator_Aline` mask-driven, pero la versión actual usa **solo radial** (`_Radius=0.40, _Hardness=0.2`) por simplicidad y control. La mask queda como opt-in para futuras iteraciones (más fiel pero menos predecible).
+6. **Aline materials (BlackPart fresnel + CuratorFace)** — **done 2026-05-03**. Five slots audited against `SK_Curator_Aline.uasset` + override in `BP_Cine_Curator_Aline`:
+   - Slot 0 `Curator_Black_Body` → `M_Aline_BlackBody` with new `Aline/Fresnel` shader (cutout fresnel; `Curator_Black_Body_Normal` normal map; BlackPart1 MI params: Alpha 0.35, Fresnel 0.5, FresnelR 2). Tuned to `_Alpha=1.0, _FresnelExponent=3.0, _RimBoost=1.5, _AlphaCutoff=0.5` so the rim only appears in silhouette (the "burnt skin" patches integrate without looking like an overlay).
+   - Slot 1/2 `Curator_Body_001 / Curator_Body` → `M_Aline_Body_2 / M_Aline_Body_1` with new `Aline/BodyLit` shader (BaseColor + Normal + AO + fake-light direction). Tuned to `_LightStrength=0.45, _Ambient=0.55, _BumpScale=1.5, _OcclusionStrength=0`. **Finding:** the "ORM" (`OcclusionRoughnessMetallic`) that FModel ripped is **NOT a standard packed ORM** — it's a multichannel pseudocolor texture (orange/green/magenta) that probably encodes paint masks or other effects, not AO/Roughness/Metallic. AO disabled. Normal map does provide relief on the cracks.
+   - Slot 3 `Curator_Dress` → `M_Aline_Dress` with new `Aline/EnergyMask` shader (translucent blend, no clip — smooth alpha gradient; uses `Curator_Dress_Normal` + `Curator_Dress_Opacity`). Tuned to `_Alpha=0.85, _FresnelExponent=1.5, _RimBoost=1.0` for an "energy dress / wispy" look. `Cull Off` may cause overdraw; consider `Cull Back` if it bothers.
+   - Slot 4 `Curator_Aline_Hole` → `M_Aline_Face` with new `Aline/Face` shader (translucent + radial fade approximating UE's M_CuratorFace). Also implements UV transform (`_UVScale`, `_UVOffset`, `_UVAngleDeg`) to support `Mask_Curator_Aline` mask-driven, but the current version uses **radial only** (`_Radius=0.40, _Hardness=0.2`) for simplicity and control. The mask stays as opt-in for future iterations (more faithful but less predictable).
 
-   **Hallazgo importante:** el SK directamente referencia el padre `M_CuratorFace` (UMaterial puro), no el MI `MI_CuratorFace_Aline`. El override correcto vive en el `BP_Cine_Curator_Aline.OverrideMaterials[4]`. Receta de "trazar SK + BP que lo usa" consolidada en skill `vivify-materials`.
+   **Important finding:** the SK directly references the parent `M_CuratorFace` (raw UMaterial), not the `MI_CuratorFace_Aline` MI. The correct override lives in `BP_Cine_Curator_Aline.OverrideMaterials[4]`. Recipe for "tracing SK + BP that uses it" consolidated in the `vivify-materials` skill.
 
-   **Workflow nuevo confirmado:** iterar shaders/materials via Scene view screenshot en lugar de Vivify Build + relaunch BS. Ahorra ~1min por iteración. Receta + gotcha del Toggle keyword no sincronizando via API en [`unity-rebuild → Iterar materiales/shaders sin round-trip a BS`](../.claude/skills/unity-rebuild/SKILL.md).
+   **New workflow confirmed:** iterate shaders/materials via Scene view screenshot instead of Vivify Build + relaunch BS. Saves ~1min per iteration. Recipe + gotcha for the Toggle keyword not syncing via API in [`unity-rebuild → Iterating materials/shaders without round-trip to BS`](../.claude/skills/unity-rebuild/SKILL.md).
 
-7. **Intro cosmética** — pending. Aline volando + posicionándose + fade-in de luces. Cosmético no jugable, da contexto narrativo y esconde setup técnico (instanciado, fade del skybox, etc.). Implementación: AnimateTrack sobre el track del prefab + trigger del Animator (`Hover` o equivalente del catálogo).
+7. **Cosmetic intro** — pending. Aline flying in + getting in position + light fade-in. Cosmetic non-playable, provides narrative context and hides technical setup (instancing, skybox fade, etc.). Implementation: AnimateTrack on the prefab's track + Animator trigger (`Hover` or equivalent from the catalog).
 
-**Diferido a post-Phase-1:**
-- **Paletas (`palette.pskx`, `palette1.pskx`)** que Aline sostiene. Validar primero si la cámara fija de BS las ve antes de invertir en el rip.
+**Deferred to post-Phase-1:**
+- **Palettes (`palette.pskx`, `palette1.pskx`)** that Aline holds. Validate first whether BS's fixed camera even sees them before investing in the rip.
 
-Cuando esté hecho, mover este bloque y la entrada equivalente de "Diferido post-torneo" abajo.
+When done, move this block and the equivalent "Deferred post-tournament" entry below.
 
-### 4. Prototipo de cada familia en sandbox
+### 4. Prototype of each family in sandbox
 
-Una instancia funcional de cada familia en un mapa/dificultad sandbox antes de tocar el mapa real. Criterio de éxito por prototipo: animación + VFX + parry + cleanup, instanciable dos veces sin estado residual. Snapshot por prototipo (`-Label "proto-fam-X"`).
+A working instance of each family in a sandbox map/difficulty before touching the real map. Success criterion per prototype: animation + VFX + parry + cleanup, instanceable twice without residual state. Snapshot per prototype (`-Label "proto-fam-X"`).
 
-**Orden sugerido:**
-1. **A con `Skill4`** (proyectiles pequeños tras giro, fase 1) — **mecánica core validada 2026-05-04, en fase polish**. `NormalStandard.dat` tiene la implementación: trigger `Skill4` en b=4, 7 spheres en semicírculo `(0, 3, 8)` radio 3m con spawns escalonados (b=10.67→18.67), 7 cubos BS nativos con `definitePosition` (sphere → player), spawn animation con scale-pop + 1 vuelta CW shape easeOutQuad, dissolve trick para ocultar el "primer viaje". Receta parameterizable en [`.claude/skills/vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md): la implementación de cada nuevo ataque familia A es solo "rellenar inputs" (trigger, beats, posiciones) y aplicar templates.
+**Suggested order:**
+1. **A with `Skill4`** (small projectiles after spin, phase 1) — **core mechanic validated 2026-05-04, in polish phase**. `NormalStandard.dat` has the implementation: trigger `Skill4` at b=4, 7 spheres in a semicircle `(0, 3, 8)` radius 3m with staggered spawns (b=10.67→18.67), 7 native BS cubes with `definitePosition` (sphere → player), spawn animation with scale-pop + 1 CW shape turn easeOutQuad, dissolve trick to hide the "first trip". Parameterizable recipe in [`.claude/skills/vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md): implementing each new family A attack is just "fill in inputs" (trigger, beats, positions) and apply templates.
 
-   **Polish — orden y plan concreto:**
+   **Polish — concrete order and plan:**
 
-   **a) Cube visual swap via `AssignObjectPrefab`** — **hecho 2026-05-04**.
+   **a) Cube visual swap via `AssignObjectPrefab`** — **done 2026-05-04**.
 
-   - Mesh: `Default Base.fbx` de [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) → copiado como `Assets/Aline/Prefabs/projectiles/NoteCube.fbx` (1536v / 3068t, sin UVs, normals + tangents OK, bounds 0.011 → compensado con `localScale=45` en el prefab).
-   - Shader [`Aline/Outline`](../VivifyTemplate/Assets/Aline/Shaders/AlineOutline.shader) — inverted-hull adaptado de Ronja (CC-BY 4.0), 2 passes opacos, offset del outline en world space, GPU instancing en pass 2 para que Vivify pase `_Color` per-instance (saber color: rojo si `c=0`, azul si `c=1`). Macros SPI en ambas passes. Sin `_MainTex` (la mesh no trae UVs). Receta consolidada en skill [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) sección "Outline shader (inverted-hull con saber color per-instance)".
-   - Material `M_NoteOutline` con `_BodyColor=(0.005, 0.005, 0.025, 1)` (azul muy profundo casi-negro), `_OutlineIntensity=2.0` (HDR para que el bloom de BS punche), `_OutlineThickness=0.02` (2cm world). GPU instancing habilitado.
-   - Prefab `NoteCube.prefab` con root + MeshRenderer en mismo GO. `localScale=(45, 45, 45)`. Asignado a `aline_bundle`.
-   - Evento `AssignObjectPrefab` en `NormalStandard.dat` (`b=0`, `loadMode=Single`, los 7 tracks de skill4, `anyDirectionAsset` porque los notes son `d=8`).
+   - Mesh: `Default Base.fbx` from [legoandmars/CustomNotesUnityProject](https://github.com/legoandmars/CustomNotesUnityProject) → copied as `Assets/Aline/Prefabs/projectiles/NoteCube.fbx` (1536v / 3068t, no UVs, normals + tangents OK, bounds 0.011 → compensated with `localScale=45` on the prefab).
+   - [`Aline/Outline`](../VivifyTemplate/Assets/Aline/Shaders/AlineOutline.shader) shader — inverted-hull adapted from Ronja (CC-BY 4.0), 2 opaque passes, outline offset in world space, GPU instancing on pass 2 so Vivify can pass `_Color` per-instance (saber color: red if `c=0`, blue if `c=1`). SPI macros in both passes. No `_MainTex` (the mesh has no UVs). Recipe consolidated in [`vivify-materials`](../.claude/skills/vivify-materials/SKILL.md) skill, "Outline shader (inverted-hull with per-instance saber color)" section.
+   - `M_NoteOutline` material with `_BodyColor=(0.005, 0.005, 0.025, 1)` (very deep almost-black blue), `_OutlineIntensity=2.0` (HDR so BS's bloom punches), `_OutlineThickness=0.02` (2cm world). GPU instancing enabled.
+   - `NoteCube.prefab` with root + MeshRenderer on the same GO. `localScale=(45, 45, 45)`. Assigned to `aline_bundle`.
+   - `AssignObjectPrefab` event in `NormalStandard.dat` (`b=0`, `loadMode=Single`, the 7 skill4 tracks, `anyDirectionAsset` because the notes are `d=8`).
 
-   **Gotcha mayor descubierto en el proceso (Heck animation timing per-note):** el doc heck dice que `customData.animation` per-note va relativa al **lifetime individual** del objeto, donde `t=0` = post-landing (acaba el NJS jump-in), `t=0.5` = hit time, `t=1` = despawn. **Durante el NJS jump-in los objetos usan estrictamente el primer punto de cada curve.** Eso significa que:
-   - `scale` curve original `[[0.1,0.1,0.1, 0.5], [1,1,1, 0.515], [1,1,1, 1]]` con primer punto `(0.1, 0.1, 0.1)` mantenía los notes visibles como **puntitos pequeños** durante todo el NJS travel desde far Z.
-   - Cambio a `[[0,0,0,0], [0,0,0,0.499], [1,1,1,0.515], [1,1,1,1]]` deja primer punto en `(0,0,0)` → cubes invisibles durante el jump-in. El pop a `t=0.5` sigue coincidiendo con sphere spawn (`b=hit_beat`) y rotation (`t=0.5..0.52`), todo sincronizado.
-   - El `dissolve` curve en convención Heck (`0=transparent, 1=opaque`) Vivify la mapea internamente a `_Cutout` per-instance, pero **`_Cutout` que Vivify pasa parece estar driven por proximidad al player, no por la dissolve curve**: si el shader la lee con `clip(cutout - 0.5)`, oculta los notes justo al dispararse al player. Por eso el shader **declara `_Cutout` per-instance pero NO la usa para discard activo** (queda como hook para parry / debris fade).
+   **Major gotcha discovered along the way (Heck per-note animation timing):** the Heck doc says that `customData.animation` per-note is relative to the object's **individual lifetime**, where `t=0` = post-landing (NJS jump-in ends), `t=0.5` = hit time, `t=1` = despawn. **During the NJS jump-in, objects strictly use the first point of each curve.** That means:
+   - `scale` curve original `[[0.1,0.1,0.1, 0.5], [1,1,1, 0.515], [1,1,1, 1]]` with first point `(0.1, 0.1, 0.1)` kept the notes visible as **small dots** during the whole NJS travel from far Z.
+   - Change to `[[0,0,0,0], [0,0,0,0.499], [1,1,1,0.515], [1,1,1,1]]` leaves the first point at `(0,0,0)` → cubes invisible during the jump-in. The pop at `t=0.5` still matches sphere spawn (`b=hit_beat`) and rotation (`t=0.5..0.52`), everything synced.
+   - The `dissolve` curve in Heck convention (`0=transparent, 1=opaque`) Vivify maps internally to `_Cutout` per-instance, but **the `_Cutout` that Vivify passes seems to be driven by player proximity, not by the dissolve curve**: if the shader reads it with `clip(cutout - 0.5)`, it hides the notes right as they fire at the player. That's why the shader **declares `_Cutout` per-instance but does NOT use it for active discard** (kept as a hook for parry / debris fade).
 
-   **Resuelto en el camino:** `dissolveArrow` desync (la limitación de `DisappearingArrowControllerBase` documentada en family-a-recipe). El cube custom no tiene geometría de arrow vanilla → el controller vanilla no tiene nada que tocar → no hay race condition.
+   **Resolved along the way:** `dissolveArrow` desync (the `DisappearingArrowControllerBase` limitation documented in family-a-recipe). The custom cube has no vanilla arrow geometry → the vanilla controller has nothing to touch → no race condition.
 
-   **Dot indicator añadido al prefab:** child GameObject con la mesh `Dot` de `Default Arrows.fbx` de CustomNotes (`NoteArrows.fbx` en el repo) y shader [`Aline/DotOverlay`](../VivifyTemplate/Assets/Aline/Shaders/AlineDotOverlay.shader) (color sólido HDR + `ZTest Always` + `ZWrite Off`). Posicionado en `localPosition=(0,0,0)` (centro del cube) con `localRotation=Euler(90,0,0)` para alinear el plano XY de la mesh con la cara visible. ZTest Always hace que el dot atraviese body+outline y aparezca siempre centrado al silhouette desde cualquier rotation face-to-player.
+   **Dot indicator added to the prefab:** child GameObject with the `Dot` mesh from CustomNotes' `Default Arrows.fbx` (`NoteArrows.fbx` in the repo) and [`Aline/DotOverlay`](../VivifyTemplate/Assets/Aline/Shaders/AlineDotOverlay.shader) shader (solid HDR color + `ZTest Always` + `ZWrite Off`). Positioned at `localPosition=(0,0,0)` (cube center) with `localRotation=Euler(90,0,0)` to align the mesh's XY plane with the visible face. ZTest Always makes the dot pass through body+outline and always appear centered to the silhouette from any face-to-player rotation.
 
-   **Direccionales (futuro):** infraestructura ya lista — `NoteArrows.fbx` trae también la mesh `Arrow`. Para `d=0..7` crear `NoteCubeDir.prefab` análogo con un Arrow child apuntando local +Y (BS rota el prefab según `d`); aplicar via `AssignObjectPrefab.colorNotes.asset` (en lugar de `anyDirectionAsset`) sobre los tracks direccionales. Misma rotation `Euler(90,0,0)` para el child probablemente.
+   **Directional (future):** infrastructure already in place — `NoteArrows.fbx` also brings the `Arrow` mesh. For `d=0..7` create an analogous `NoteCubeDir.prefab` with an Arrow child pointing local +Y (BS rotates the prefab according to `d`); apply via `AssignObjectPrefab.colorNotes.asset` (instead of `anyDirectionAsset`) on the directional tracks. Probably the same `Euler(90,0,0)` rotation for the child.
 
-   Detalle operativo + nuevo template de evento en skill [`vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md). Patrón shader del DotOverlay en [`vivify-materials → Dot/Arrow indicator overlay shader`](../.claude/skills/vivify-materials/SKILL.md). Decisión consolidada en [DECISIONES.md → "Cube swap via AssignObjectPrefab + outline shader inverted-hull"](DECISIONES.md).
+   Operational detail + new event template in the [`vivify-mapping/family-a-recipe.md`](../.claude/skills/vivify-mapping/family-a-recipe.md) skill. DotOverlay shader pattern in [`vivify-materials → Dot/Arrow indicator overlay shader`](../.claude/skills/vivify-materials/SKILL.md). Consolidated decision in [DECISIONES.md → "Cube swap via AssignObjectPrefab + inverted-hull outline shader"](DECISIONES.md).
 
-   **b) Partículas para sphere telegraph + cube smoke envelope/trail** — **hecho 2026-05-05** (b1 + b2 unificados; el plan original tenía Trail Renderer separado pero al final un ParticleSystem child resolvió los dos roles + el de "telegraph" mejor).
+   **b) Particles for sphere telegraph + cube smoke envelope/trail** — **done 2026-05-05** (b1 + b2 unified; the original plan had a separate Trail Renderer but in the end a child ParticleSystem solved both roles + the "telegraph" one better).
 
-   **Diseño final (3 ParticleSystems coordinados, todos `Aline/ParticleSmoke` shader):**
+   **Final design (3 coordinated ParticleSystems, all `Aline/ParticleSmoke` shader):**
 
-   - **`SphereBurst.prefab`** (1 ParticleSystem, World sim): instanciado al `spawn_beat[i]` de cada sphere. Sustituye visualmente las telegraph spheres del aviso — burst de humo oscuro (14 puffs, lifetime 1.5-2.2s, auto-destroy via `stopAction=Destroy`). Material `M_Smoke` con `_CoreOpacity=0.45` (humo difuso/sutil, no domina la escena). Las telegraph spheres del .dat (`InstantiatePrefab` + `DestroyObject` para `skill4_sphere_*`) se ELIMINARON — el burst es ahora todo el telegraph visual.
-   - **`NoteCube.prefab → SmokeEnvelope` child** (Local sim): envoltura contenida pegada al cube durante todo su lifetime. `simulationSpace=Local` → particles attached al cube transform; `scalingMode=Hierarchy` + `localScale=(1/45, 1/45, 1/45)` → hereda el `lossyScale=0` del cube root durante NJS jump-in → automáticamente invisible hasta el `scale-pop`. Rate 15/s, lifetime 0.6-1.0s, startSize 0.8-1.2, alpha peak 0.95.
-   - **`NoteCube.prefab → SmokeTrailWorld` child** (World sim): cola que queda atrás cuando el cube se dispara. Misma técnica de scaling para invisibility durante jump-in. Rate 30/s (densidad alta para que la cola lea continua a velocidades altas, no como "balines"), lifetime 0.7-1.0s, alpha peak 0.85 desde t=0 (sin fade-in, evita gap visible entre cube y cola).
+   - **`SphereBurst.prefab`** (1 ParticleSystem, World sim): instanced at `spawn_beat[i]` of each sphere. Visually replaces the warning telegraph spheres — dark smoke burst (14 puffs, lifetime 1.5-2.2s, auto-destroy via `stopAction=Destroy`). `M_Smoke` material with `_CoreOpacity=0.45` (diffuse/subtle smoke, doesn't dominate the scene). The .dat telegraph spheres (`InstantiatePrefab` + `DestroyObject` for `skill4_sphere_*`) were REMOVED — the burst is now the entire visual telegraph.
+   - **`NoteCube.prefab → SmokeEnvelope` child** (Local sim): contained envelope stuck to the cube for its whole lifetime. `simulationSpace=Local` → particles attached to cube transform; `scalingMode=Hierarchy` + `localScale=(1/45, 1/45, 1/45)` → inherits the `lossyScale=0` from the cube root during NJS jump-in → automatically invisible until the `scale-pop`. Rate 15/s, lifetime 0.6-1.0s, startSize 0.8-1.2, alpha peak 0.95.
+   - **`NoteCube.prefab → SmokeTrailWorld` child** (World sim): tail left behind when the cube fires. Same scaling technique for invisibility during jump-in. Rate 30/s (high density so the tail reads continuous at high speeds, not as "pellets"), lifetime 0.7-1.0s, alpha peak 0.85 from t=0 (no fade-in, avoids a visible gap between cube and tail).
 
-   **Recetas / shaders nuevos consolidados en skills:**
-   - [`vivify-materials → Particle shaders en bundles Vivify`](../.claude/skills/vivify-materials/SKILL.md): vertex inputs requeridos (POSITION + COLOR + TEXCOORD0; los shaders POSITION-only para mesh estática NO valen para billboard particles), aditivo HDR vs alpha-blend, simulationSpace=Local vs World, truco scalingMode=Hierarchy+localScale=1/parent_scale, alpha curves sin fade-in para trails.
-   - [`vivify-mapping/family-a-recipe.md → Modelo conceptual + Cube swap`](../.claude/skills/vivify-mapping/family-a-recipe.md): arquitectura "telegraph + cube" actualizada al modelo de 3 ParticleSystems; templates de eventos (`InstantiatePrefab(SphereBurst)` reemplaza a sphere+destroy).
+   **New recipes / shaders consolidated in skills:**
+   - [`vivify-materials → Particle shaders in Vivify bundles`](../.claude/skills/vivify-materials/SKILL.md): required vertex inputs (POSITION + COLOR + TEXCOORD0; POSITION-only shaders for static mesh do NOT work for billboard particles), additive HDR vs alpha-blend, simulationSpace=Local vs World, scalingMode=Hierarchy+localScale=1/parent_scale trick, alpha curves without fade-in for trails.
+   - [`vivify-mapping/family-a-recipe.md → Conceptual model + Cube swap`](../.claude/skills/vivify-mapping/family-a-recipe.md): "telegraph + cube" architecture updated to the 3 ParticleSystems model; event templates (`InstantiatePrefab(SphereBurst)` replaces sphere+destroy).
 
-   **Pendiente de validar (no bloqueante):**
-   - VR test (sensación de humo contenido + cola en headset puede leer distinto que en flatscreen).
-   - Velocidad de cubos más alta (`travel_beats` < 2): hipotesis es que el rate de 30/s del trail ya cubre, pero confirmar empíricamente cuando se llegue al polish (d).
-   - "Borrón / haze" al spawn beat (un quad aditivo grande puntual) diferido a iteración 2 si el telegraph sin él se siente flojo.
+   **Pending validation (non-blocking):**
+   - VR test (the feel of contained smoke + tail in headset may read differently than on flatscreen).
+   - Higher cube speed (`travel_beats` < 2): hypothesis is that the 30/s trail rate already covers it, but confirm empirically when we get to polish (d).
+   - "Blur / haze" at spawn beat (a one-shot large additive quad) deferred to iteration 2 if the telegraph feels weak without it.
 
-   **c) Hit particle** — finetune visual cuando el saber corte el cubo. Diferido hasta validar (a) y (b).
+   **c) Hit particle** — visual finetune when the saber cuts the cube. Deferred until (a) and (b) are validated.
 
-   **d) Tunear `travel_beats`** — actual 2 beats (1.2s). Probablemente bajar a 1-1.5 para más intensidad cuando combat sea real.
+   **d) Tune `travel_beats`** — currently 2 beats (1.2s). Probably drop to 1-1.5 for more intensity when combat is real.
 
-   **e) Quitar `uninteractable: true`** y configurar `c` (color, alternar 0/1 por flow) y `d` (cut direction, según ángulo de aproximación de cada cubo) para parry puntuable.
+   **e) Remove `uninteractable: true`** and configure `c` (color, alternating 0/1 per flow) and `d` (cut direction, per approach angle of each cube) for scorable parry.
 
-   **Limpieza pendiente**: `d:/vivify_repo/ShaderTutorials/` quedó como dir vacío con `.git` corrupto tras un clone fallido (proceso fantasma bloqueando). El shader que necesitamos ya está descargado en `_outline-shader-ref/`. Borrar manualmente cuando el proceso libere el lock (reboot soluciona).
-2. **A con `Skill3`** (3 piedras gigantes, fase 1) — variante de Skill4 (mismo patrón hold-then-launch, N=3, NJS más baja, scale grande).
-3. **B con `DashIn-Idle1`** (mele estándar, fase 1) — valida la choreography de tres beats (DashIn + golpe + DashOut). Caso aparte (Aline se mueve, no hay proyectil).
-4. **F con `Skill2_Start/Loop/End`** (carga + explosión, fase 1) — valida secuencia multi-stage de triggers y timing largo.
-5. **E con `Skill1`** (multi-hit chain, fase 1) — valida cadena de N parries sincronizados con N hits embebidos en el clip.
-6. **D standalone** (shrinking indicator, sin source anim) — valida que el indicador construido en Unity transmite el feel de E33.
-7. **B + modificador C con `Skill5`** — valida composición familia + modificador (Blit + SetMaterialProperty).
+   **Pending cleanup**: `d:/vivify_repo/ShaderTutorials/` was left as an empty dir with corrupted `.git` after a failed clone (zombie process holding a lock). The shader we need is already downloaded in `_outline-shader-ref/`. Delete manually when the process releases the lock (reboot fixes).
+2. **A with `Skill3`** (3 giant rocks, phase 1) — variant of Skill4 (same hold-then-launch pattern, N=3, lower NJS, big scale).
+3. **B with `DashIn-Idle1`** (standard melee, phase 1) — validates the three-beat choreography (DashIn + hit + DashOut). Separate case (Aline moves, no projectile).
+4. **F with `Skill2_Start/Loop/End`** (charge + explosion, phase 1) — validates multi-stage trigger sequence and long timing.
+5. **E with `Skill1`** (multi-hit chain, phase 1) — validates a chain of N parries synced with N hits embedded in the clip.
+6. **D standalone** (shrinking indicator, no source anim) — validates that the Unity-built indicator conveys the E33 feel.
+7. **B + modifier C with `Skill5`** — validates family + modifier composition (Blit + SetMaterialProperty).
 
-**Cuando 2-3 familias estén implementadas:** consolidar el patrón en una función helper que parametrice (N, posiciones, NJS, scale, prefab) — evitar copy-paste por familia.
+**Once 2-3 families are implemented:** consolidate the pattern into a helper function that parameterizes (N, positions, NJS, scale, prefab) — avoid copy-paste per family.
 
-### 5. Canción definitiva
+### 5. Definitive song
 
-Cuando los 4 contratos estén probados. Decidir pieza concreta del OST de E33 con criterio: duración suficiente para 5 fases, clima coherente con showcase. Importar `.ogg` al `beatsaber-map/`, ajustar BPM y duración. Anotar en `DECISIONES.md`.
+Once the 4 contracts are proven. Decide a concrete piece from the E33 OST with the criteria: enough duration for 5 phases, atmosphere coherent with the showcase. Import the `.ogg` into `beatsaber-map/`, adjust BPM and duration. Note in `DECISIONES.md`.
 
-### 6. Wireado narrativo del state machine
+### 6. Narrative wiring of the state machine
 
-Depende del catálogo de familias (paso 1) y de la identificación de triggers (paso 2). Definir qué familia (y qué `Skill_X` del Animator) dispara cada fase del boss fight. Componer la línea de tiempo del mapa instanciando templates de la skill, no escribiendo eventos a mano cada vez. Snapshot del mapa antes de bloque grande de events.
+Depends on the family catalog (step 1) and trigger identification (step 2). Define which family (and which `Skill_X` from the Animator) fires each phase of the boss fight. Compose the map's timeline by instancing skill templates, not writing events by hand each time. Snapshot the map before a big block of events.
 
-### 7. Setup de ReMapper
+### 7. ReMapper setup
 
-Levantar Deno + primer script en `ReMapper-master/`. Probable pero no obligatorio: si la composición se beneficia de scriptear instanciaciones de familias, ReMapper es el sitio. Output target: directo a `beatsaber-map/ExpertPlusStandard.dat` o staging intermedio. Rellenar la skill `remapper-scripting` durante este paso.
+Bring up Deno + first script in `ReMapper-master/`. Likely but not mandatory: if the composition benefits from scripting family instancing, ReMapper is the place. Output target: directly to `beatsaber-map/ExpertPlusStandard.dat` or intermediate staging. Fill in the `remapper-scripting` skill during this step.
 
-### 8. Diseño narrativo y pulido
+### 8. Narrative design and polish
 
-Traducir la estructura por fases de [PRODUCTO.md](PRODUCTO.md) en secuencia concreta de ataques. Iteración de legibilidad con feedback externo (VR + ojos de tercero).
+Translate the phase structure of [PRODUCTO.md](PRODUCTO.md) into a concrete attack sequence. Readability iteration with external feedback (VR + third-party eyes).
 
 ---
 
 ## Side-projects
 
-### Port mínimo de unity-mcp a Unity 2019.4 — DONE
+### Minimal port of unity-mcp to Unity 2019.4 — DONE
 
-Fork operativo en `d:\vivify_repo\unity-mcp/` (`luisep92/unity_vivify_mcp`), enganchado al proyecto Aline. Pendiente: cuando lleve unas sesiones rodando, evaluar PR a upstream `CoplayDev/unity-mcp`. Los commits están organizados con un cambio conceptual cada uno y mensajes en inglés, pensados para cherry-pick limpio. Detalle en [unity-mcp/README.md](../../unity-mcp/README.md).
+Working fork in `d:\vivify_repo\unity-mcp/` (`luisep92/unity_vivify_mcp`), wired to the Aline project. Pending: once it has a few sessions under its belt, evaluate a PR to upstream `CoplayDev/unity-mcp`. The commits are organized with one conceptual change each and English messages, intended for clean cherry-pick. Detail in [unity-mcp/README.md](../../unity-mcp/README.md).
 
 ---
 
-## Decisiones de diseño abiertas
+## Open design decisions
 
-Beats narrativos identificados pero pendientes de decisión, antes del wireado del state machine (paso 5):
+Narrative beats identified but pending decision, before wiring the state machine (step 5):
 
-- **Clímax fase 2 — `Skill8` con Aline gigante.** El usuario lo identifica como "ataque que sería realmente impresionante meter". La animación tal cual depende de una segunda Aline (gigante, en el fondo) que da bolas de energía, más una serie de golpes propios. Tres opciones a evaluar: (a) **rip de FModel** del modelo de la Aline gigante + segundo prefab + animator separado — gran scope; (b) **recortar `Skill8`** a solo la serie de golpes y aceptar que el espectáculo de la fase 2 venga de otro sitio; (c) **reemplazar el contexto** con algo distinto que sostenga el momento sin la gigante. Conversación dedicada antes de prototipar fase 2.
-- **`Skill9` ausente.** Trigger declarado en el Animator pero **sin clip importado**. Sospecha del usuario: era el ataque de la Aline gigante en E33. Si el clímax (decisión anterior) va por la opción (a), `Skill9` es candidato a extraer del dump (`Sandfall/`) vía FModel y meterlo en el FBX. Si va por (b)/(c), `Skill9` se descarta.
-- **`Skill11` ausente.** Gap en numeración del Animator, sin pista de qué era. No prioritario.
+- **Phase 2 climax — `Skill8` with giant Aline.** The user identifies it as "the attack that would be really impressive to land". The animation as-is depends on a second Aline (giant, in the background) shooting energy balls, plus a series of her own hits. Three options to evaluate: (a) **FModel rip** of the giant Aline model + second prefab + separate animator — big scope; (b) **trim `Skill8`** down to just the hit series and accept that phase 2's spectacle comes from elsewhere; (c) **replace the context** with something different that sustains the moment without the giant. Dedicated conversation before prototyping phase 2.
+- **`Skill9` absent.** Trigger declared in the Animator but **with no imported clip**. User suspicion: it was the giant Aline's attack in E33. If the climax (previous decision) goes with option (a), `Skill9` is a candidate to extract from the dump (`Sandfall/`) via FModel and bring into the FBX. If it goes with (b)/(c), `Skill9` is dropped.
+- **`Skill11` absent.** Gap in Animator numbering, no clue what it was. Not a priority.
 
-## Diferido post-torneo
+## Deferred post-tournament
 
-Limpieza para cuando el mapa esté entregado:
+Cleanup for once the map is shipped:
 
-- **Rename `my_vivify_template/` → `aline-boss-fight/`**. Procedimiento: cerrar VSCode, `cd d:\vivify_repo && ren my_vivify_template aline-boss-fight`, reabrir VSCode. Junctions y `.git` viajan con la carpeta.
-- **Traducir docs/skills al inglés** si en algún momento se publica el repo a la comunidad de Vivify (internacional).
-- **Cambiar `origin/main`** del template upstream (`Swifter1243/VivifyTemplate`) al remote propio cuando se monte en GitHub.
-- **Upgrade unlit → lit/PBR para Aline**. Normal/ORM/Emissive ya descritos en `MI_Curator_Aline_*.json` del dump. Implica copiar PNGs adicionales, ampliar `Aline/Standard` (o crear `Aline/Lit`), decidir modelo de iluminación. (Los slots negros y las paletas están subidos al paso 3 del orden activo.)
+- **Rename `my_vivify_template/` → `aline-boss-fight/`**. Procedure: close VSCode, `cd d:\vivify_repo && ren my_vivify_template aline-boss-fight`, reopen VSCode. Junctions and `.git` travel with the folder.
+- **Translate docs/skills to English** if at some point the repo gets published to the Vivify community (international).
+- **Change `origin/main`** from the upstream template (`Swifter1243/VivifyTemplate`) to our own remote when set up on GitHub.
+- **Upgrade unlit → lit/PBR for Aline**. Normal/ORM/Emissive already described in `MI_Curator_Aline_*.json` from the dump. Implies copying additional PNGs, extending `Aline/Standard` (or creating `Aline/Lit`), deciding on a lighting model. (The black slots and palettes are bumped up to step 3 of the active order.)

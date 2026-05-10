@@ -21,7 +21,7 @@ Both are short. The portfolio writeup with more context lives at [luisescolano.c
 
 - [`VivifyTemplate/`](VivifyTemplate/) — Unity 2019.4 project. Custom Aline prefab, scene, materials, animation rigs. The Unity template a new mapper would fork.
 - [`beatsaber-map/`](beatsaber-map/) — the playable `.dat` (V3 beatmap + V2 Info), event timing, custom data.
-- [`docs/`](docs/) — internal product/architecture/decisions docs *(in Spanish — they are working docs for me, not user-facing yet)*. The split mirrors the [`docs-governance`](.claude/skills/docs-governance/SKILL.md) skill: `PRODUCTO.md` (goal), `ARQUITECTURA.md` (technical pipeline), `DECISIONES.md` (decision log), `NEXT_STEPS.md` (work queue).
+- [`docs/`](docs/) — internal product/architecture/decisions docs. The split mirrors the [`docs-governance`](.claude/skills/docs-governance/SKILL.md) skill: `PRODUCTO.md` (goal), `ARQUITECTURA.md` (technical pipeline), `DECISIONES.md` (decision log), `NEXT_STEPS.md` (work queue).
 - [`scripts/`](scripts/) — Blender scripts for the `.psa` → FBX pipeline, CRC sync, map snapshotting, calibration build.
 - [`.claude/skills/`](.claude/skills/) — Claude Code skills, one per workflow layer:
   - `vivify-mapping` — `.dat` editing, Vivify events, families catalogue, settings setter

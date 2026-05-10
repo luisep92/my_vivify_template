@@ -1,14 +1,14 @@
 # my-notes — scratchpad
 
-Notas vivas, dudas a medio cocer, hallazgos que todavía no encajan en otro doc. Lo que se confirma o madura emigra a su sitio:
+Live notes, half-baked questions, findings that don't yet fit in another doc. What gets confirmed or matures migrates to its place:
 
-- Concepto / narrativa / deadlines → [PRODUCTO.md](PRODUCTO.md)
+- Concept / narrative / deadlines → [PRODUCTO.md](PRODUCTO.md)
 - Pipeline / stack / paths → [ARQUITECTURA.md](ARQUITECTURA.md)
-- Estado y próximos pasos → [NEXT_STEPS.md](NEXT_STEPS.md)
-- Decisiones grandes con su porqué → [DECISIONES.md](DECISIONES.md)
+- State and next steps → [NEXT_STEPS.md](NEXT_STEPS.md)
+- Big decisions with their rationale → [DECISIONES.md](DECISIONES.md)
 
 ---
 
-## Pendiente de cocer
+## Pending to cook
 
-(vacío — añadir aquí ideas, dudas, cosas a investigar)
+(empty — add ideas, questions, things to investigate here)
