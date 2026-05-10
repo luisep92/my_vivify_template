@@ -38,12 +38,13 @@ Both are short. The portfolio writeup with more context lives at [luisescolano.c
 
 ## External tools the harness wires in
 
-Both shipped as standalone repos but designed to live inside this workflow:
+The first two are mine — built when the friction of the manual loop got in the way. The third is community-maintained and slots into the same chain:
 
 - **[`fmodel-mcp`](https://github.com/luisep92/fmodel-mcp)** — MCP wrapper around FModel + CUE4Parse for inspecting and exporting Unreal Engine assets from Claude. Driver was 30+ FModel GUI queries per session for E33; the MCP turns each into one tool call.
 - **[`unity_vivify_mcp`](https://github.com/luisep92/unity_vivify_mcp)** — minimal fork of [`CoplayDev/unity-mcp`](https://github.com/CoplayDev/unity-mcp) backported to Unity 2019.4 (BS modding targets 2019.4; upstream requires 2021.3+). Strips post-2020 APIs, rewrites ~41 sites of C# 8/9 syntax to 7.3.
+- **[`blender-mcp`](https://github.com/ahujasid/blender-mcp)** — community MCP that exposes Blender to Claude. Sits between `fmodel-mcp` (asset extraction) and `unity_vivify_mcp` (in-engine assembly), driving the `.psa` → FBX conversion and the prep work needed before Unity import.
 
-The pattern: build tooling rather than absorb the friction. Both came out of a problem I couldn't solve at the speed I needed.
+The pattern: build tooling rather than absorb the friction. The two MCPs I wrote came out of problems I couldn't solve at the speed I needed; the harness wires them together with `blender-mcp` and the skills below into a single workflow Claude can drive end to end.
 
 ---
 
